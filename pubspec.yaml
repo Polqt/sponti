@@ -1,5 +1,5 @@
 name: sponti
-description: "A new Flutter project."
+description: "Sponti is a location-based discovery app designed specifically for Bacolod City that helps you break free from endless doomscrolling and turn your free time into real, memorable experiences. Instead of wasting hours on social media watching other people live their lives, Sponti gets you off your phone and into the world around you."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -35,32 +35,74 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # BAAS: Backend (auth, database, storage, realtime)
+  supabase_flutter: ^2.12.0 
+
+  # Location & Permissions
+  geolocator: ^14.0.2 # GPS coordinates, distance calculation
+  permission_handler: ^12.0.1 # Runtime permissions (location, camera, photos)
+  geocoding: ^4.0.0 # Reverse geocoding (coordinates to address)
+
+  # State Management
+
+  # Routing
+  go_router: ^17.1.0
+
+  # Dependency Injection
+
+  # Functional Programming
+  equatable: ^2.0.8 
+  dartz: ^0.10.1
+
+  # Networking
+  dio: ^5.9.1 # HTTP client 
+  connectivity_plus: ^7.0.0 # Network connectivity status
+
+  # Local Storage
+  hive_flutter: ^1.1.0
+
+  # UI Components
+  cached_network_image: ^3.4.1 # Image caching and placeholders
+  shimmer: ^3.0.0 # Skeleton loading placeholders
+  flutter_svg: ^2.2.3 # SVG image support
+  lottie: ^3.3.2 # lottie animations for onboarding and surprises
+  animations: ^2.1.1 # Material motion animations for smooth transitions
+
+  # URL & External Actions
+  url_launcher: ^6.3.2 # Open directions in external maps app
+  share_plus: ^12.0.1 # Share places with friends
+
+  # Environment 
+  flutter_dotenv: ^6.0.0
+
+  # Utilities
+  intl: ^0.20.2 # Date formatting
+  uuid: ^4.5.3 # Generate unique IDs
+  timeago: ^3.7.1 # "5 minutes ago" style timestamps for reviews
+  collection: ^1.19.1 # Utility functions for collections (lists, maps, etc.)
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+  # Code Generation
+  build_runner: ^2.11.1 # Runs code generators
+  freezed: ^3.2.5 # Immutable models/unions code gen
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
 flutter:
-
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
