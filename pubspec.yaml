@@ -93,6 +93,7 @@ dev_dependencies:
   # Code Generation
   build_runner: ^2.11.1 # Runs code generators
   freezed: ^3.2.5 # Immutable models/unions code gen
+  injectable_generator: ^2.7.1+4 # Dependency injection code gen
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
