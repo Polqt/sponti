@@ -1,3 +1,7 @@
+/// Data-layer exceptions.
+/// These are thrown by datasources and caught by repository implementations,
+/// which convert them to [Failure] types using dartz [Either].
+library;
 // Data-layer exceptions.
 // These are thrown by datasources and caught by repository implementations,
 // which convert them to [Failure] types using dartz [Either].
