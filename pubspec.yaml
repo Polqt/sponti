@@ -81,6 +81,10 @@ dependencies:
   timeago: ^3.7.1 # "5 minutes ago" style timestamps for reviews
   collection: ^1.19.1 # Utility functions for collections (lists, maps, etc.)
 
+  #
+  get_it: ^9.2.1
+  injectable: ^2.7.1+4
+
 
 dev_dependencies:
   flutter_test:
