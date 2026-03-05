@@ -134,7 +134,8 @@ class Location extends Equatable {
   final String? websiteUrl;
   final String? instagramHandle;
   final String? submittedBy;
-  final double? distanceKm; // Computed distance from user's location, not stored in DB
+  final double?
+  distanceKm; // Computed distance from user's location, not stored in DB
   final DateTime createdAt;
   final DateTime? updatedAt;
 

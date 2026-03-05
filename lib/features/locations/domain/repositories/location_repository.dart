@@ -1,34 +1,38 @@
 import 'package:dartz/dartz.dart';
-import 'package:sponti/core/errors/failures.dart';
-import 'package:sponti/features/locations/domain/entities/location.dart';
+import '../../../../core/errors/failures.dart';
+import '../entities/location.dart';
 
 abstract interface class LocationRepository {
-  // Fetch all locations
-  Future<Either<Failures, List<Location>>> getLocations({
-    LocationCategory? category,
-    bool? hiddenGemsOnly,
+  // Fetch all locations with pagination
+  Future<Either<Failure, List<Location>>> getAllLocations({
     int page = 0,
     int pageSize = 20,
   });
 
-  // Fetch a single location by ID
-  Future<Either<Failures, Location>> getLocationById(String id);
+  // Fetch a single location by its ID
+  Future<Either<Failure, Location>> getLocationById(String id);
 
-  // Location within [radiusKm] of coords
-  Future<Either<Failures, List<Location>>> getNearbyLocations({
+  // Fetch locations near a specific latitude and longitude within a certain radius
+  Future<Either<Failure, List<Location>>> getNearbyLocations({
     required double latitude,
     required double longitude,
     double radiusKm = 5.0,
   });
 
-  // Full text + tag
-  Future<Either<Failures, List<Location>>> searchLocations(String query);
+  // Fetch locations that belong to a specific category
+  Future<Either<Failure, List<Location>>> filterByCategory(
+    LocationCategory category,
+  );
 
-  // Curated list of hidden gems
-  Future<Either<Failures, List<Location>>> getHiddenGems();
+  // Search for locations by name or description
+  Future<Either<Failure, List<Location>>> searchLocations(String query);
 
-  // Get a random location, optionally filtered by category
-  Future<Either<Failures, Location>> getRandomLocation({
-    LocationCategory? category,
-  });
+  // Create a new location
+  Future<Either<Failure, Location>> createLocation(Location location);
+
+  // Update an existing location
+  Future<Either<Failure, Location>> updateLocation(Location location);
+
+  // Delete a location by its ID
+  Future<Either<Failure, void>> deleteLocation(String id);
 }

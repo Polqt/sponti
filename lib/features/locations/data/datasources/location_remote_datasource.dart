@@ -1,146 +1,59 @@
+import 'package:injectable/injectable.dart';
+import 'package:sponti/core/constants/api_constants.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/locations/data/models/location_model.dart';
 import 'package:sponti/features/locations/domain/entities/location.dart';
-import 'package:sponti/config/supabase_options.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:injectable/injectable.dart';
 
-abstract interface class LocationRemoteDatasource {
-  Future<List<LocationModel>> getLocations({
-    LocationCategory? category,
-    bool? hiddenGemsOnly,
-    int page = 0,
-    int pageSize = 20,
-  });
-
+abstract interface class LocationRemoteDataSource {
+  Future<List<LocationModel>> getAllLocations({int page, int pageSize});
   Future<LocationModel> getLocationById(String id);
-
   Future<List<LocationModel>> getNearbyLocations({
     required double latitude,
     required double longitude,
-    double radiusKm = 5.0,
+    double radiusKm,
   });
-
+  Future<List<LocationModel>> filterByCategory(LocationCategory category);
   Future<List<LocationModel>> searchLocations(String query);
-  Future<List<LocationModel>> getHiddenGems();
-  Future<LocationModel> getRandomLocation({LocationCategory? category});
+  Future<LocationModel> createLocation(LocationModel model);
+  Future<LocationModel> updateLocation(LocationModel model);
+  Future<void> deleteLocation(String id);
 }
 
-@LazySingleton(as: LocationRemoteDatasource)
-class LocationRemoteDataSourceImpl implements LocationRemoteDatasource {
+/// Supabase column selector — reused across all queries.
+const _columns = '''
+  id, name, description, category, latitude, longitude, address,
+  landmark, price_range, photos, tags, rating, review_count,
+  check_in_count, is_hidden_gem, is_verified, has_wifi,
+  is_pet_friendly, has_parking, open_time, close_time, days_open,
+  special_hours_note, contact_number, website_url, instagram_handle,
+  submitted_by, created_at, updated_at
+''';
+
+@LazySingleton(as: LocationRemoteDataSource)
+class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   const LocationRemoteDataSourceImpl(this._client);
 
   final SupabaseClient _client;
 
-  // Base query selecting all necessary fields from the locations table
-  PostgrestFilterBuilder<List<Map<String, dynamic>>> get _baseQuery =>
-      _client.from(SupabaseTables.locations).select('''
-        id, name, description, category, latitude, longitude, address,
-        landmark, price_range, photos, tags, rating, review_count,
-        check_in_count, is_hidden_gem, is_verified, has_wifi,
-        is_pet_friendly, has_parking, open_time, close_time, days_open,
-        special_hours_note, contact_number, website_url, instagram_handle,
-        created_at
-      ''');
-
-  // Implementation of getLocations with pagination,
-  // filtering by category and hidden gems
   @override
-  Future<List<LocationModel>> getLocations({
-    LocationCategory? category,
-    bool? hiddenGemsOnly,
+  Future<List<LocationModel>> getAllLocations({
     int page = 0,
     int pageSize = 20,
   }) async {
     try {
-      var query = _baseQuery;
+      final from = page * pageSize;
+      final to = from + pageSize - 1;
 
-      if (category != null) {
-        query = query.eq('category', category.name);
-      }
-      if (hiddenGemsOnly == true) {
-        query = query.eq('is_hidden_gem', true);
-      }
-
-      final response = await query
+      final response = await _client
+          .from(ApiConstants.locationsTable)
+          .select(_columns)
           .order('created_at', ascending: false)
-          .range(page * pageSize, (page + 1) * pageSize - 1);
-
-      return response.map(LocationModel.fromJson).toList();
-    } on PostgrestException catch (e) {
-      throw ServerException('Failed to fetch locations: ${e.message}');
-    } catch (e) {
-      throw ServerException('Failed to fetch locations: $e');
-    }
-  }
-
-  @override
-  Future<LocationModel> getLocationById(String id) async {
-    try {
-      final response = await _baseQuery.eq('id', id).single();
-      return LocationModel.fromJson(response);
-    } on PostgrestException catch (e) {
-      if (e.code == 'PGRST116') {
-        throw ServerException('Location not found');
-      }
-      throw ServerException('Failed to fetch location: ${e.message}');
-    } catch (e) {
-      throw ServerException('Failed to fetch location: $e');
-    }
-  }
-
-  @override
-  Future<List<LocationModel>> getNearbyLocations({
-    required double latitude,
-    required double longitude,
-    double radiusKm = 5.0,
-  }) async {
-    try {
-      // For simplicity, we assume the RPC function uses the user's current location
-      // to compute distances and return nearby locations. In a real implementation,
-      // you would pass the latitude and longitude as parameters to the RPC function.
-      final response = await _client.rpc(
-        SupabaseRPC.getNearbyLocations,
-        params: {},
-      );
-      return (response as List<dynamic>)
-          .map((e) => LocationModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } on PostgrestException catch (e) {
-      throw ServerException('Failed to fetch nearby locations: ${e.message}');
-    } catch (e) {
-      throw ServerException('Failed to fetch nearby locations: $e');
-    }
-  }
-
-  @override
-  Future<List<LocationModel>> searchLocations(String query) async {
-    try {
-      // For simplicity, we assume the RPC function performs a full-text search on the locations table.
-      final response = await _client.rpc(
-        SupabaseRPC.searchLocations,
-        params: {'search_query': query},
-      );
+          .range(from, to);
 
       return (response as List<dynamic>)
           .map((e) => LocationModel.fromJson(e as Map<String, dynamic>))
           .toList();
-    } on PostgrestException catch (e) {
-      throw ServerException('Failed to search locations: ${e.message}');
-    } catch (e) {
-      throw ServerException('Failed to search locations: $e');
-    }
-  }
-
-  @override
-  Future<List<LocationModel>> getHiddenGems() async {
-    try {
-      final response = await _baseQuery
-          .eq('is_hidden_gem', true)
-          .order('rating', ascending: false)
-          .limit(20);
-
-      return response.map(LocationModel.fromJson).toList();
     } on PostgrestException catch (e) {
       throw ServerException(e.message);
     } catch (e) {
@@ -149,32 +62,134 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDatasource {
   }
 
   @override
-  Future<LocationModel> getRandomLocation({LocationCategory? category}) async {
+  Future<LocationModel> getLocationById(String id) async {
     try {
-      var query = _client.from(SupabaseTables.locations).select();
+      final response = await _client
+          .from(ApiConstants.locationsTable)
+          .select(_columns)
+          .eq('id', id)
+          .single();
 
-      // Supabase doesn't support random ordering directly,
-      // so we use a workaround by ordering by a random UUID
-      if (category != null) {
-        query = query.eq('category', category.name) as dynamic;
-      }
-
-      final response = await (query as PostgrestFilterBuilder)
-          .order('created_at', ascending: false)
-          .limit(50);
-
-      final list =
-          (response as List<dynamic>)
-              .map((e) => LocationModel.fromJson(e as Map<String, dynamic>))
-              .toList()
-            ..shuffle();
-
-      if (list.isEmpty) {
-        throw NotFoundException('No locations found');
-      }
-      return list.first;
+      return LocationModel.fromJson(response);
+    } on PostgrestException catch (e) {
+      // PGRST116 = no rows found
+      if (e.code == 'PGRST116') throw const NotFoundException();
+      throw ServerException(e.message);
     } catch (e) {
-      throw ServerException('Failed to fetch random location: $e');
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<List<LocationModel>> getNearbyLocations({
+    required double latitude,
+    required double longitude,
+    double radiusKm = 5.0,
+  }) async {
+    try {
+      // Calls PostGIS RPC: get_nearby_locations(lat, lng, radius_km)
+      // Returns locations sorted by distance with a `distance_km` column.
+      final response = await _client.rpc(
+        ApiConstants.rpcGetNearbyLocations,
+        params: {'lat': latitude, 'lng': longitude, 'radius_km': radiusKm},
+      );
+
+      return (response as List<dynamic>)
+          .map((e) => LocationModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<List<LocationModel>> filterByCategory(
+    LocationCategory category,
+  ) async {
+    try {
+      final response = await _client
+          .from(ApiConstants.locationsTable)
+          .select(_columns)
+          .eq('category', category.name)
+          .order('rating', ascending: false);
+
+      return (response as List<dynamic>)
+          .map((e) => LocationModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<List<LocationModel>> searchLocations(String query) async {
+    try {
+      // Uses Supabase RPC with PostgreSQL full-text search.
+      // See migration for the function definition.
+      final response = await _client.rpc(
+        ApiConstants.rpcSearchLocations,
+        params: {'search_query': query.trim()},
+      );
+
+      return (response as List<dynamic>)
+          .map((e) => LocationModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<LocationModel> createLocation(LocationModel model) async {
+    try {
+      final response = await _client
+          .from(ApiConstants.locationsTable)
+          .insert(model.toJson())
+          .select(_columns)
+          .single();
+
+      return LocationModel.fromJson(response);
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<LocationModel> updateLocation(LocationModel model) async {
+    try {
+      final response = await _client
+          .from(ApiConstants.locationsTable)
+          .update(
+            model.toJson()..['updated_at'] = DateTime.now().toIso8601String(),
+          )
+          .eq('id', model.id)
+          .select(_columns)
+          .single();
+
+      return LocationModel.fromJson(response);
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<void> deleteLocation(String id) async {
+    try {
+      await _client.from(ApiConstants.locationsTable).delete().eq('id', id);
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
     }
   }
 }
