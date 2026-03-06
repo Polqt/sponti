@@ -4,8 +4,7 @@ class SupabaseOptions {
   SupabaseOptions._();
 
   static String get supabaseUrl => dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
-  static String get supabaseAnonKey =>
-      dotenv.env['PUBLIC_SUPABASE_ANON_KEY'] ?? '';
+  static String get supabaseAnonKey => dotenv.env['PUBLIC_SUPABASE_KEY'] ?? '';
 }
 
 abstract final class SupabaseTables {
