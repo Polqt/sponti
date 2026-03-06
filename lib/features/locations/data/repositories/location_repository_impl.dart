@@ -44,7 +44,13 @@ class LocationRepositoryImpl implements LocationRepository {
       );
 
       // Cache only the first page, to avoid filling up the cache with too many items
-      if (page == 0) await _local.cacheLocations(locations);
+      if (page == 0) {
+        try {
+          await _local.cacheLocations(locations);
+        } on CacheException {
+          // Best-effort cache write; do not fail the remote read.
+        }
+      }
       return Right(locations);
     } on ServerException catch (e) {
       // If remote fails, try cache (only for the first page)
