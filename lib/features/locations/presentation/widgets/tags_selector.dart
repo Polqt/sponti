@@ -123,6 +123,12 @@ class _TagsSelectorState extends State<TagsSelector> {
       _controller.clear();
       return; // Already selected
     }
+    final max = widget.maxSelectable;
+    if (max != null && _selected.length >= max) {
+      _controller.clear();
+      _showInput = false;
+      return; // Max limit reached
+    }
 
     setState(() {
       _selected.add(tag);

@@ -63,7 +63,7 @@ class LocationLocalDataSourceImpl implements LocationLocalDataSource {
       final box = await _box;
       final jsonList = locations.map((l) => l.toJson()).toList();
       await box.put(_locationsKey, jsonList);
-      await box.put(_cachedAtKey, jsonList);
+      await box.put(_cachedAtKey, DateTime.now());
     } catch (e) {
       throw CacheException(e.toString());
     }
