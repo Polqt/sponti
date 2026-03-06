@@ -76,9 +76,6 @@ class LocationRepositoryImpl implements LocationRepository {
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
   }
 
   @override

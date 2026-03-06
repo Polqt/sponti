@@ -57,7 +57,7 @@ class LocationLocalDataSourceImpl implements LocationLocalDataSource {
     }
   }
 
-  `@override`
+  @override
   Future<void> cacheLocations(List<LocationModel> locations) async {
     try {
       final box = await _box;
