@@ -18,8 +18,10 @@ abstract final class SpontiFormatter {
   }
 
   // Rating
+  static String rating(double value) => value.toStringAsFixed(1);
+
   // Formats a rating (0-5) to a string with 1 decimal place
-  static String reviewsCount(int count) {
+  static String reviewCount(int count) {
     if (count < 1000) return count.toString();
     return '${(count / 1000).toStringAsFixed(1)}k';
   }

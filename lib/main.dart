@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:sponti/config/dependency_injection.dart';
 import 'package:sponti/config/routes/app_router.dart';
+import 'package:sponti/core/theme/app_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
@@ -50,6 +51,7 @@ class SpontiApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Sponti',
       debugShowCheckedModeBanner: false,
+      theme: SpontiTheme.light,
       routerConfig: appRouter,
     );
   }

@@ -29,11 +29,11 @@ enum PriceRange {
   moderate(2, 'Moderate', '₱₱'),
   expensive(3, 'Premium', '₱₱₱');
 
-  const PriceRange(this.level, this.label, this.emoji);
+  const PriceRange(this.level, this.label, this.symbol);
 
   final int level;
   final String label;
-  final String emoji;
+  final String symbol;
 
   static PriceRange fromString(String price) => PriceRange.values.firstWhere(
     (p) => p.name == price,
@@ -134,7 +134,8 @@ class Location extends Equatable {
   final String? websiteUrl;
   final String? instagramHandle;
   final String? submittedBy;
-  final double? distanceKm; // Computed distance from user's location, not stored in DB
+  final double?
+  distanceKm; // Computed distance from user's location, not stored in DB
   final DateTime createdAt;
   final DateTime? updatedAt;
 

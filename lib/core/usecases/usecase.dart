@@ -5,12 +5,12 @@ import 'package:dartz/dartz.dart';
 import 'package:equatable/equatable.dart';
 import 'package:sponti/core/errors/failures.dart';
 
-abstract interface class Usecase<Type, Params> {
+abstract interface class UseCase<Type, Params> {
   Future<Either<Failure, Type>> call(Params params);
 }
 
 // Use case with no parameters.
-abstract interface class NoParamsUsecase<Type> {
+abstract interface class NoParamsUseCase<Type> {
   Future<Either<Failure, Type>> call();
 }
 
