@@ -28,6 +28,15 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Read keys from local.properties
+        val fbAppId: String = project.findProperty("FB_APP_ID") as? String ?: ""
+        val fbClientToken: String = project.findProperty("FB_CLIENT_TOKEN") as? String ?: ""
+
+        // Inject strings into R.string
+        resValue("string", "facebook_app_id", fbAppId)
+        resValue("string", "facebook_client_token", fbClientToken)
+        resValue("string", "fb_login_protocol_scheme", "fb$fbAppId")
     }
 
     buildTypes {
