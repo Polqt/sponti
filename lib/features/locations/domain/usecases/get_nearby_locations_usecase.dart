@@ -7,11 +7,21 @@ import 'package:sponti/features/locations/domain/entities/location.dart';
 import 'package:sponti/features/locations/domain/repositories/location_repository.dart';
 
 class GetNearbyLocationsParams extends Equatable {
-  const GetNearbyLocationsParams({
+  GetNearbyLocationsParams({
     required this.latitude,
     required this.longitude,
     this.radiusKm = 5.0,
-  });
+  }) {
+    if (latitude < -90 || latitude > 90) {
+      throw ArgumentError.value(latitude, 'latitude', 'Must be in [-90, 90]');
+    }
+    if (longitude < -180 || longitude > 180) {
+      throw ArgumentError.value(longitude, 'longitude', 'Must be in [-180, 180]');
+    }
+    if (radiusKm <= 0) {
+      throw ArgumentError.value(radiusKm, 'radiusKm', 'Must be > 0');
+    }
+  }
 
   final double latitude;
   final double longitude;
