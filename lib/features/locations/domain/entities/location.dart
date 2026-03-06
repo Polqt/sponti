@@ -29,11 +29,11 @@ enum PriceRange {
   moderate(2, 'Moderate', '₱₱'),
   expensive(3, 'Premium', '₱₱₱');
 
-  const PriceRange(this.level, this.label, this.emoji);
+  const PriceRange(this.level, this.label, this.symbol);
 
   final int level;
   final String label;
-  final String emoji;
+  final String symbol;
 
   static PriceRange fromString(String price) => PriceRange.values.firstWhere(
     (p) => p.name == price,
