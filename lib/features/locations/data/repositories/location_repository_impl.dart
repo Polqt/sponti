@@ -63,6 +63,19 @@ class LocationRepositoryImpl implements LocationRepository {
         }
       }
       return Left(ServerFailure(e.message));
+    } on NetworkException catch (e) {
+      if (page == 0) {
+        try {
+          final cached = await _local.getCachedLocations();
+          return Right(cached);
+        } catch (_) {
+          return Left(NetworkFailure(e.message));
+        }
+      }
+      return Left(NetworkFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
