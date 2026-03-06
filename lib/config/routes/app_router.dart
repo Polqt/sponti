@@ -20,22 +20,22 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 // Router configuration using GoRouter
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: Routes.onboarding,
+  initialLocation: Routes.home,
   debugLogDiagnostics: true,
-  redirect: (context, state) {
-    final session = Supabase.instance.client.auth.currentSession;
-    final isAuth = session != null;
-    final isOnAuthRoute =
-        state.matchedLocation == Routes.signIn ||
-        state.matchedLocation == Routes.onboarding;
+  // redirect: (context, state) {
+  //   final session = Supabase.instance.client.auth.currentSession;
+  //   final isAuth = session != null;
+  //   final isOnAuthRoute =
+  //       state.matchedLocation == Routes.signIn ||
+  //       state.matchedLocation == Routes.onboarding;
 
-    // If the user is not authenticated and trying to access a protected route, redirect to onboarding
-    if (!isAuth && !isOnAuthRoute) return Routes.signIn;
+  //   // If the user is not authenticated and trying to access a protected route, redirect to onboarding
+  //   if (!isAuth && !isOnAuthRoute) return Routes.signIn;
 
-    // If the user is authenticated and trying to access an auth route, redirect to home
-    if (isAuth && isOnAuthRoute) return Routes.home;
-    return null;
-  },
+  //   // If the user is authenticated and trying to access an auth route, redirect to home
+  //   if (isAuth && isOnAuthRoute) return Routes.home;
+  //   return null;
+  // },
   routes: [
     // Public routes
 
