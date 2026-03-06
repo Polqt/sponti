@@ -30,8 +30,8 @@ void main() async {
 
   // Initialize Supabase with the URL and anon key from environment variables
   await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    url: dotenv.env['PUBLIC_SUPABASE_URL']!,
+    anonKey: dotenv.env['PUBLIC_SUPABASE_KEY']!,
   );
 
   // Initialize Hive for local storage
