@@ -96,7 +96,7 @@ class _OAuthButton extends StatelessWidget {
       'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
       width: 22,
       height: 22,
-      errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata, size: 24),
+      errorBuilder: (_, _, _) => const Icon(Icons.g_mobiledata, size: 24),
     ),
     backgroundColor: Colors.white,
     textColor: SpontiColors.textPrimary,

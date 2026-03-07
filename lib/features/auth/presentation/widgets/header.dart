@@ -9,16 +9,6 @@ class Header extends StatelessWidget {
     final theme = Theme.of(context);
     return Column(
       children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: SpontiColors.primary,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: const Center(child: Text('⚡', style: TextStyle(fontSize: 40))),
-        ),
-        const SizedBox(height: 24),
         Text(
           'Sponti',
           style: theme.textTheme.displayLarge?.copyWith(
