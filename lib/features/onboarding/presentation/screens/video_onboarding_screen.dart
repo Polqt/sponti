@@ -37,6 +37,7 @@ class _VideoOnboardingScreenState extends State<VideoOnboardingScreen> {
     print('🎬 Initializing video...');
     _videoController = VideoPlayerController.asset('assets/videos/onboarding.mp4')
       ..initialize().then((_) {
+        if (!mounted) return;
         print('Video initialized successfully');
         setState(() {});
         _videoController.play();
