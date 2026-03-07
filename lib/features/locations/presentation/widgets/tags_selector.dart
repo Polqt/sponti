@@ -96,6 +96,7 @@ class _TagsSelectorState extends State<TagsSelector> {
   }
 
   // Add new tag from input
+  @override
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();

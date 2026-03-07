@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get_it/get_it.dart';
@@ -38,4 +39,7 @@ abstract class RegisterModule {
             logPrint: (obj) => debugPrint(obj.toString()),
           ),
         ]);
+
+  @lazySingleton
+  Connectivity get connectivity => Connectivity();
 }

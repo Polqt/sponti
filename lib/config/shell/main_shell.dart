@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/app_router.dart';
+import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 
@@ -11,10 +12,19 @@ class MainShell extends ConsumerWidget {
   final Widget child;
 
   static const _tabs = [
-    (icon: Icons.explore_rounded, label: 'Explore', route: Routes.home),
-    (icon: Icons.map_rounded, label: 'Map', route: Routes.map),
-    (icon: Icons.bookmark_rounded, label: 'Saved', route: Routes.favorites),
-    (icon: Icons.person_rounded, label: 'Profile', route: Routes.profile),
+    (
+      icon: Icons.location_on_rounded,
+      label: 'Spots',
+      route: RouteName.location,
+    ),
+    (
+      icon: Icons.explore_rounded,
+      label: 'Discover',
+      route: RouteName.discovery,
+    ),
+    (icon: Icons.map_rounded, label: 'Explore', route: RouteName.explore),
+    (icon: Icons.bookmark_rounded, label: 'Saved', route: RouteName.favorites),
+    (icon: Icons.person_rounded, label: 'Profile', route: RouteName.profile),
   ];
 
   @override
@@ -69,12 +79,12 @@ class _SpontiBottomBar extends StatelessWidget {
           height: 60,
           child: Row(
             children: [
-              // Left 2 tabs
-              ..._buildTabs(context, 0, 2),
-              // Center spacer for FAB
+              // Tabs 0, 1 — left of FAB
+              ..._buildTabs(0, 2),
+              // Gap for the centred FAB
               const SizedBox(width: 80),
-              // Right 2 tabs
-              ..._buildTabs(context, 2, 4),
+              // Tabs 2, 3, 4 — right of FAB
+              ..._buildTabs(2, 5),
             ],
           ),
         ),
@@ -82,19 +92,17 @@ class _SpontiBottomBar extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildTabs(BuildContext context, int from, int to) {
-    return [
-      for (int i = from; i < to; i++)
-        Expanded(
-          child: _NavItem(
-            icon: tabs[i].icon,
-            label: tabs[i].label,
-            isActive: activeTab == i,
-            onTap: () => onTap(i),
-          ),
+  List<Widget> _buildTabs(int from, int to) => [
+    for (int i = from; i < to; i++)
+      Expanded(
+        child: _NavItem(
+          icon: tabs[i].icon,
+          label: tabs[i].label,
+          isActive: activeTab == i,
+          onTap: () => onTap(i),
         ),
-    ];
-  }
+      ),
+  ];
 }
 
 class _NavItem extends StatelessWidget {
@@ -120,7 +128,7 @@ class _NavItem extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
               color: isActive
                   ? SpontiColors.primary.withValues(alpha: 0.12)

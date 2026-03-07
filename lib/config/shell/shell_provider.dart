@@ -1,12 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/config/routes/route_name.dart';
 
-
 /// The shell tabs in order, index must match the bottom nav order.
 enum ShellTab {
-  home(0, RouteName.home),
-  explore(1, RouteName.explore),
-  map(2, RouteName.map),
+  location(0, RouteName.location),
+  discovery(1, RouteName.discovery),
+  explore(2, RouteName.explore),
   favorites(3, RouteName.favorites),
   profile(4, RouteName.profile);
 
@@ -19,7 +18,7 @@ enum ShellTab {
   static ShellTab fromLocation(String location) {
     return ShellTab.values.firstWhere(
       (t) => location.startsWith(t.route),
-      orElse: () => ShellTab.home,
+      orElse: () => ShellTab.location,
     );
   }
 }
