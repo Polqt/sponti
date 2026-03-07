@@ -4,8 +4,11 @@ import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:sponti/features/locations/presentation/screens/location_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:sponti/features/onboarding/presentation/screens/video_onboarding_screen.dart';
+import 'package:sponti/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 
 abstract final class Routes {
+  static const String videoOnboarding = '/video-onboarding';
   static const String onboarding = '/onboarding';
   static const String signIn = '/signin';
 
@@ -42,6 +45,10 @@ final appRouter = GoRouter(
     return null;
   },
   routes: [
+    GoRoute(
+      path: Routes.videoOnboarding,
+      builder: (context, state) => const VideoOnboardingScreen(),
+    ),
     // Public routes
     // GoRoute(
     //   path: RouteName.onboarding,

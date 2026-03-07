@@ -75,6 +75,7 @@ dependencies:
   flutter_svg: ^2.2.3 # SVG image support
   lottie: ^3.3.2 # lottie animations for onboarding and surprises
   animations: ^2.1.1 # Material motion animations for smooth transitions
+  video_player: ^2.10.0 # Video playback for onboarding
 
   # URL & External Actions
   url_launcher: ^6.3.2 # Open directions in external maps app
@@ -115,7 +116,8 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/animations/
-    - .env
+    - assets/videos/
+    - .env.local
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

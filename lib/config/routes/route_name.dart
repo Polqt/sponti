@@ -4,6 +4,7 @@
 
 abstract final class RouteName {
   // Authentication
+  static const String videoOnboarding = '/video-onboarding';
   static const String onboarding = '/onboarding';
   static const String signin = '/signin';
 
