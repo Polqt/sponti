@@ -46,4 +46,7 @@ app.*.map.json
 
 /local.properties
 
+
+/supabase/.temp
+
 *env
