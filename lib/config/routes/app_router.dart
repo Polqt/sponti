@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
+import 'package:sponti/config/shell/main_shell.dart';
 import 'package:sponti/features/auth/presentation/screens/sign_in_screen.dart';
+import 'package:sponti/features/discovery/presentation/screens/map_screen.dart';
+import 'package:sponti/features/discovery/presentation/screens/surprise_screen.dart';
+import 'package:sponti/features/explore/presentation/screens/explore_screen.dart';
+import 'package:sponti/features/favorites/presentation/screens/favorites_screen.dart';
+import 'package:sponti/features/locations/presentation/screens/location_detail_screen.dart';
 import 'package:sponti/features/locations/presentation/screens/location_screen.dart';
 import 'package:sponti/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:sponti/features/onboarding/presentation/screens/video_onboarding_screen.dart';
+import 'package:sponti/features/profile/presentation/screens/profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract final class Routes {
@@ -14,16 +21,19 @@ abstract final class Routes {
 
   static const String profile = '/profile';
   static const String discovery = '/discovery';
+  static const String explore = '/explore';
   static const String favorites = '/favorites';
 
   static const String spotDetail = '/spot/:id';
   static const String surprise = '/surprise';
 }
 
-// Navigator keys for each route, used for navigation and state management
+// Root navigator — full-screen routes push on top of everything (no bottom nav)
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
-// Router configuration using GoRouter
+// Shell navigator — tab routes render inside MainShell (with bottom nav)
+final _shellNavigatorKey = GlobalKey<NavigatorState>();
+
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: Routes.videoOnboarding,
@@ -36,85 +46,76 @@ final appRouter = GoRouter(
         state.matchedLocation == Routes.signIn ||
         state.matchedLocation == Routes.videoOnboarding;
 
-    // Check if user has completed onboarding video
     final datasource = OnboardingLocalDatasourceImpl();
     final hasCompletedOnboarding = await datasource.hasCompletedOnboarding();
 
-    // If user hasn't completed video onboarding and not already on that screen, redirect there
     if (!hasCompletedOnboarding && !isOnVideoOnboarding) {
       return Routes.videoOnboarding;
     }
 
-    // Allow user to stay on video onboarding screen to watch it
-    // The screen itself will navigate to sign-in when "Start Exploring" is tapped
-    if (isOnVideoOnboarding) {
-      return null;
-    }
+    if (isOnVideoOnboarding) return null;
 
-    // If the user is not authenticated and trying to access a protected route, redirect to sign-in
     if (!isAuth && !isOnAuthRoute) return Routes.signIn;
 
-    // If the user is authenticated and trying to access an auth route, redirect to home
     if (isAuth && isOnAuthRoute) return Routes.location;
 
     return null;
   },
   routes: [
-    // Onboarding
+    // ── Auth & onboarding (no shell) ──────────────────────────────────
     GoRoute(
       path: RouteName.videoOnboarding,
       builder: (context, state) => const VideoOnboardingScreen(),
     ),
-
-    // Auth
     GoRoute(
       path: RouteName.signin,
       builder: (context, state) => const SignInScreen(),
     ),
 
-    // Full screen routes (outside shell)
-    // GoRoute(
-    //   parentNavigatorKey: _rootNavigatorKey,
-    //   path: RouteName.locationDetail,
-    //   builder: (context, state) =>
-    //       LocationDetailScreen(id: state.pathParameters['id']!),
-    // ),
-    // GoRoute(
-    //   parentNavigatorKey: _rootNavigatorKey,
-    //   path: RouteName.search,
-    //   builder: (context, state) => const SearchScreen(),
-    // ),
-    // GoRoute(
-    //   parentNavigatorKey: _rootNavigatorKey,
-    //   path: RouteName.suggest,
-    //   builder: (context, state) => const SuggestScreen(),
-    // ),
-    // GoRoute(
-    //   parentNavigatorKey: _rootNavigatorKey,
-    //   path: RouteName.surprise,
-    //   builder: (context, state) => const SurpriseScreen(),
-    // ),
-
-    // Shell with bottom nav
+    // ── Full-screen routes (above the shell — no bottom nav) ──────────
     GoRoute(
-      path: RouteName.location,
-      builder: (context, state) => const LocationScreen(),
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.locationDetail,
+      builder: (context, state) =>
+          LocationDetailScreen(id: state.pathParameters['id']!),
     ),
-    // GoRoute(
-    //   path: RouteName.discovery,
-    //   builder: (context, state) => const MapScreen(),
-    // ),
-    // GoRoute(
-    //   path: RouteName.explore,
-    //   builder: (context, state) => const ExploreScreen(),
-    // ),
-    // GoRoute(
-    //   path: RouteName.favorites,
-    //   builder: (context, state) => const FavoritesScreen(),
-    // ),
-    // GoRoute(
-    //   path: RouteName.profile,
-    //   builder: (context, state) => const ProfileScreen(),
-    // ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.surprise,
+      builder: (context, state) => const SurpriseScreen(),
+    ),
+
+    // ── Shell with bottom navigation bar ──────────────────────────────
+    ShellRoute(
+      navigatorKey: _shellNavigatorKey,
+      builder: (context, state, child) => MainShell(child: child),
+      routes: [
+        GoRoute(
+          path: RouteName.location,
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: LocationScreen()),
+        ),
+        GoRoute(
+          path: RouteName.discovery,
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: MapScreen()),
+        ),
+        GoRoute(
+          path: RouteName.explore,
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: ExploreScreen()),
+        ),
+        GoRoute(
+          path: RouteName.favorites,
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: FavoritesScreen()),
+        ),
+        GoRoute(
+          path: RouteName.profile,
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: ProfileScreen()),
+        ),
+      ],
+    ),
   ],
 );

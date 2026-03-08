@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sponti/config/routes/app_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
@@ -34,7 +33,7 @@ class MainShell extends ConsumerWidget {
     return Scaffold(
       body: child,
       floatingActionButton: _SurpriseFab(
-        onTap: () => context.push(Routes.surprise),
+        onTap: () => context.push(RouteName.surprise),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _SpontiBottomBar(
