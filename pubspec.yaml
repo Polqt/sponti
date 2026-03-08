@@ -46,6 +46,9 @@ dependencies:
   geolocator: ^14.0.2 # GPS coordinates, distance calculation
   permission_handler: ^12.0.1 # Runtime permissions (location, camera, photos)
   geocoding: ^4.0.0 # Reverse geocoding (coordinates to address)
+  crypto: ^3.0.7
+  latlong2: ^0.9.1
+  flutter_map: ^8.2.2
 
   # State Management
   riverpod: ^2.6.1
@@ -75,7 +78,7 @@ dependencies:
   flutter_svg: ^2.2.3 # SVG image support
   lottie: ^3.3.2 # lottie animations for onboarding and surprises
   animations: ^2.1.1 # Material motion animations for smooth transitions
-  video_player: ^2.10.0 # Video playback for onboarding
+  video_player: ^2.11.0 # Video playback for onboarding
 
   # URL & External Actions
   url_launcher: ^6.3.2 # Open directions in external maps app
@@ -89,10 +92,6 @@ dependencies:
   uuid: ^4.5.3 # Generate unique IDs
   timeago: ^3.7.1 # "5 minutes ago" style timestamps for reviews
   collection: ^1.19.1 # Utility functions for collections (lists, maps, etc.)
-  
-  crypto: ^3.0.7
-  latlong2: ^0.9.1
-  flutter_map: ^8.2.2
 
 dev_dependencies:
   flutter_test:
