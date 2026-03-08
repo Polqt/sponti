@@ -3,17 +3,15 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:sponti/features/locations/presentation/screens/location_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:sponti/features/onboarding/presentation/screens/video_onboarding_screen.dart';
 import 'package:sponti/features/onboarding/data/datasources/onboarding_local_datasource.dart';
+import 'package:sponti/features/onboarding/presentation/screens/video_onboarding_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract final class Routes {
   static const String videoOnboarding = '/video-onboarding';
-  static const String onboarding = '/onboarding';
   static const String signIn = '/signin';
-
-  static const String explore = '/explore';
   static const String location = '/location';
+
   static const String profile = '/profile';
   static const String discovery = '/discovery';
   static const String favorites = '/favorites';
@@ -28,32 +26,47 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 // Router configuration using GoRouter
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: Routes.location,
+  initialLocation: Routes.videoOnboarding,
   debugLogDiagnostics: true,
-  redirect: (context, state) {
+  redirect: (context, state) async {
     final session = Supabase.instance.client.auth.currentSession;
     final isAuth = session != null;
+    final isOnVideoOnboarding = state.matchedLocation == Routes.videoOnboarding;
     final isOnAuthRoute =
         state.matchedLocation == Routes.signIn ||
-        state.matchedLocation == Routes.onboarding;
+        state.matchedLocation == Routes.videoOnboarding;
 
-    // If the user is not authenticated and trying to access a protected route, redirect to onboarding
+    // Check if user has completed onboarding video
+    final datasource = OnboardingLocalDatasourceImpl();
+    final hasCompletedOnboarding = await datasource.hasCompletedOnboarding();
+
+    // If user hasn't completed video onboarding and not already on that screen, redirect there
+    if (!hasCompletedOnboarding && !isOnVideoOnboarding) {
+      return Routes.videoOnboarding;
+    }
+
+    // Allow user to stay on video onboarding screen to watch it
+    // The screen itself will navigate to sign-in when "Start Exploring" is tapped
+    if (isOnVideoOnboarding) {
+      return null;
+    }
+
+    // If the user is not authenticated and trying to access a protected route, redirect to sign-in
     if (!isAuth && !isOnAuthRoute) return Routes.signIn;
 
     // If the user is authenticated and trying to access an auth route, redirect to home
     if (isAuth && isOnAuthRoute) return Routes.location;
+
     return null;
   },
   routes: [
+    // Onboarding
     GoRoute(
-      path: Routes.videoOnboarding,
+      path: RouteName.videoOnboarding,
       builder: (context, state) => const VideoOnboardingScreen(),
     ),
-    // Public routes
-    // GoRoute(
-    //   path: RouteName.onboarding,
-    //   builder: (context, state) => const SplashScreen(),
-    // ),
+
+    // Auth
     GoRoute(
       path: RouteName.signin,
       builder: (context, state) => const SignInScreen(),

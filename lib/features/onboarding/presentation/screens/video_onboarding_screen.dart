@@ -18,33 +18,19 @@ class _VideoOnboardingScreenState extends State<VideoOnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    print('🎬 VideoOnboardingScreen initState called');
-    
-    // TEMPORARY: Reset onboarding for testing
-    // Remove this after testing is complete
-    _resetOnboardingForTesting();
-    
     _initializeVideo();
   }
 
-  Future<void> _resetOnboardingForTesting() async {
-    final datasource = OnboardingLocalDatasourceImpl();
-    await datasource.resetOnboarding();
-    print('🔄 Onboarding reset for testing');
-  }
-
   Future<void> _initializeVideo() async {
-    print('🎬 Initializing video...');
-    _videoController = VideoPlayerController.asset('assets/videos/onboarding.mp4')
-      ..initialize().then((_) {
-        if (!mounted) return;
-        print('Video initialized successfully');
-        setState(() {});
-        _videoController.play();
-        print('Video started playing');
-      }).catchError((error) {
-        print('Video initialization error: $error');
-      });
+    _videoController =
+        VideoPlayerController.asset('assets/videos/onboarding.mp4')
+          ..initialize()
+              .then((_) {
+                if (!mounted) return;
+                setState(() {});
+                _videoController.play();
+              })
+              .catchError((error) {});
 
     _videoController.addListener(_onVideoStatusChanged);
   }
@@ -66,7 +52,7 @@ class _VideoOnboardingScreenState extends State<VideoOnboardingScreen> {
   void _goToLogin() async {
     final datasource = OnboardingLocalDatasourceImpl();
     await datasource.markOnboardingAsCompleted();
-    
+
     if (mounted) {
       context.go(Routes.signIn);
     }
@@ -87,9 +73,7 @@ class _VideoOnboardingScreenState extends State<VideoOnboardingScreen> {
           ? Stack(
               fit: StackFit.expand,
               children: [
-                SizedBox.expand(
-                  child: VideoPlayer(_videoController),
-                ),
+                SizedBox.expand(child: VideoPlayer(_videoController)),
                 if (_isVideoFinished)
                   Positioned(
                     bottom: 60,
@@ -128,9 +112,7 @@ class _VideoOnboardingScreenState extends State<VideoOnboardingScreen> {
                   ),
               ],
             )
-          : const Center(
-              child: CircularProgressIndicator(),
-            ),
+          : const Center(child: CircularProgressIndicator()),
     );
   }
 }

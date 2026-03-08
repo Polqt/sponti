@@ -49,4 +49,8 @@ app.*.map.json
 
 /supabase/.temp
 
-*env
+# Environment variables
+.env
+.env.local
+.env.*.local
+
