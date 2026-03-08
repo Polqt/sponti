@@ -17,7 +17,7 @@ class SignInScreen extends ConsumerWidget {
 
     // Navigate to home screen if authenticated
     ref.listen(authProvider, (_, next) {
-      if (next.valueOrNull != null) context.go(RouteName.discovery);
+      if (next.valueOrNull != null) context.go(RouteName.location);
     });
 
     return Scaffold(
