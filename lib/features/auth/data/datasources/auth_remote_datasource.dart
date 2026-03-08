@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -19,7 +21,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   final SupabaseClient _client;
 
-  static final _googleServerClientId = dotenv.env['GOOGLE_SERVER_CLIENT_ID']!;
+  static String get _googleServerClientId =>
+      dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ?? '';
+
+  static bool _googleInitialized = false;
 
   @override
   User? get currentUser => _client.auth.currentUser;
@@ -27,14 +32,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 
+  Future<void> _ensureGoogleInitialized() async {
+    if (!_googleInitialized) {
+      await GoogleSignIn.instance.initialize(
+        serverClientId: _googleServerClientId,
+      );
+      _googleInitialized = true;
+    }
+  }
+
   @override
   Future<User> signInWithGoogle() async {
     try {
-      final googleSignIn = GoogleSignIn.instance;
-      await googleSignIn.initialize(serverClientId: _googleServerClientId);
+      await _ensureGoogleInitialized();
 
       // Trigger the Google Sign-In flow
-      final googleUser = await googleSignIn.authenticate();
+      final googleUser = await GoogleSignIn.instance.authenticate();
       final idToken = googleUser.authentication.idToken;
       if (idToken == null) {
         throw const AuthException('No ID token from Google.');
@@ -61,24 +74,23 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<User> signInWithFacebook() async {
     try {
-      final result = await FacebookAuth.instance.login(
-        permissions: ['email', 'public_profile'],
+      // Facebook on Android doesn't provide OIDC ID tokens, so we use
+      // Supabase's server-side OAuth flow (opens browser).
+      final success = await _client.auth.signInWithOAuth(
+        OAuthProvider.facebook,
+        redirectTo: 'io.supabase.sponti://login-callback/',
       );
 
-      if (result.status == LoginStatus.cancelled) {
-        throw const AuthException('Facebook sign-in cancelled.');
+      if (!success) {
+        throw const AuthException('Facebook sign-in failed to launch.');
       }
 
-      if (result.status != LoginStatus.success || result.accessToken == null) {
-        throw AuthException(result.message ?? 'Facebook sign-in failed.');
-      }
+      // Wait for the auth state to change after the browser redirect
+      final authState = await _client.auth.onAuthStateChange
+          .firstWhere((state) => state.event == AuthChangeEvent.signedIn)
+          .timeout(const Duration(minutes: 2));
 
-      final response = await _client.auth.signInWithIdToken(
-        provider: OAuthProvider.facebook,
-        idToken: result.accessToken!.tokenString,
-      );
-
-      final user = response.user;
+      final user = authState.session?.user;
       if (user == null) throw const AuthException('Facebook sign-in failed.');
       return user;
     } catch (e) {
@@ -88,14 +100,17 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> signOut() async {
+    // Always clear the local Supabase session first, even if provider
+    // sign-outs fail (e.g. no internet).
+    await _client.auth.signOut(scope: SignOutScope.local);
+
+    // Best-effort sign out from third-party providers
     try {
-      await Future.wait([
-        GoogleSignIn.instance.signOut(),
-        FacebookAuth.instance.logOut(),
-      ]);
-      await _client.auth.signOut();
-    } catch (e) {
-      throw AuthException(e.toString());
-    }
+      await _ensureGoogleInitialized();
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
+    try {
+      await FacebookAuth.instance.logOut();
+    } catch (_) {}
   }
 }

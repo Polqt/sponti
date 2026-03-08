@@ -18,17 +18,7 @@ class _VideoOnboardingScreenState extends State<VideoOnboardingScreen> {
   @override
   void initState() {
     super.initState();
-
-    // TEMPORARY: Reset onboarding for testing
-    // Remove this after testing is complete
-    _resetOnboardingForTesting();
-
     _initializeVideo();
-  }
-
-  Future<void> _resetOnboardingForTesting() async {
-    final datasource = OnboardingLocalDatasourceImpl();
-    await datasource.resetOnboarding();
   }
 
   Future<void> _initializeVideo() async {
