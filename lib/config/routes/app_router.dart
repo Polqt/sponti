@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/main_shell.dart';
-import 'package:sponti/features/auth/presentation/screens/sign_in_screen.dart';
-import 'package:sponti/features/discovery/presentation/screens/map_screen.dart';
-import 'package:sponti/features/discovery/presentation/screens/surprise_screen.dart';
-import 'package:sponti/features/explore/presentation/screens/explore_screen.dart';
-import 'package:sponti/features/favorites/presentation/screens/favorites_screen.dart';
-import 'package:sponti/features/locations/presentation/screens/location_detail_screen.dart';
-import 'package:sponti/features/locations/presentation/screens/location_screen.dart';
-import 'package:sponti/features/onboarding/data/datasources/onboarding_local_datasource.dart';
-import 'package:sponti/features/onboarding/presentation/screens/video_onboarding_screen.dart';
-import 'package:sponti/features/profile/presentation/screens/profile_screen.dart';
+import 'package:sponti/features/auth/view/screens/sign_in_screen.dart';
+import 'package:sponti/features/discovery/view/screens/map_screen.dart';
+import 'package:sponti/features/discovery/view/screens/surprise_screen.dart';
+import 'package:sponti/features/explore/view/screens/explore_screen.dart';
+import 'package:sponti/features/favorites/view/screens/favorites_screen.dart';
+import 'package:sponti/features/locations/view/screens/location_detail_screen.dart';
+import 'package:sponti/features/locations/view/screens/location_screen.dart';
+import 'package:sponti/features/onboarding/repository/onboarding_local_data_source.dart';
+import 'package:sponti/features/onboarding/view/screens/video_onboarding_screen.dart';
+import 'package:sponti/features/profile/view/screens/edit_profile_screen.dart';
+import 'package:sponti/features/profile/view/screens/profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract final class Routes {
@@ -28,10 +29,7 @@ abstract final class Routes {
   static const String surprise = '/surprise';
 }
 
-// Root navigator — full-screen routes push on top of everything (no bottom nav)
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
-
-// Shell navigator — tab routes render inside MainShell (with bottom nav)
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
@@ -46,23 +44,20 @@ final appRouter = GoRouter(
         state.matchedLocation == Routes.signIn ||
         state.matchedLocation == Routes.videoOnboarding;
 
-    final datasource = OnboardingLocalDatasourceImpl();
-    final hasCompletedOnboarding = await datasource.hasCompletedOnboarding();
+    final dataSource = OnboardingLocalDataSourceImpl();
+    final hasCompletedOnboarding = await dataSource.hasCompletedOnboarding();
 
     if (!hasCompletedOnboarding && !isOnVideoOnboarding) {
       return Routes.videoOnboarding;
     }
 
     if (isOnVideoOnboarding) return null;
-
     if (!isAuth && !isOnAuthRoute) return Routes.signIn;
-
     if (isAuth && isOnAuthRoute) return Routes.location;
 
     return null;
   },
   routes: [
-    // ── Auth & onboarding (no shell) ──────────────────────────────────
     GoRoute(
       path: RouteName.videoOnboarding,
       builder: (context, state) => const VideoOnboardingScreen(),
@@ -71,8 +66,6 @@ final appRouter = GoRouter(
       path: RouteName.signin,
       builder: (context, state) => const SignInScreen(),
     ),
-
-    // ── Full-screen routes (above the shell — no bottom nav) ──────────
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
       path: RouteName.locationDetail,
@@ -81,11 +74,14 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.editProfile,
+      builder: (context, state) => const EditProfileScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
       path: RouteName.surprise,
       builder: (context, state) => const SurpriseScreen(),
     ),
-
-    // ── Shell with bottom navigation bar ──────────────────────────────
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) => MainShell(child: child),
