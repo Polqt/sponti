@@ -58,9 +58,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           : _bioController.text.trim(),
     );
 
-    final success = await ref.read(profileProvider.notifier).updateProfile(
-      updated,
-    );
+    final success = await ref
+        .read(profileProvider.notifier)
+        .updateProfile(updated);
 
     if (mounted) {
       setState(() {
@@ -86,11 +86,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final picked = await ProfilePhotoPicker.show(context);
     if (picked == null) return;
 
-    await ref.read(profileProvider.notifier).uploadPhoto(
-      userId: authUser.id,
-      bytes: picked.bytes,
-      extension: picked.extension,
-    );
+    await ref
+        .read(profileProvider.notifier)
+        .uploadPhoto(
+          userId: authUser.id,
+          bytes: picked.bytes,
+          extension: picked.extension,
+        );
   }
 
   @override

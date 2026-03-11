@@ -144,11 +144,13 @@ Future<void> _pickAndUploadPhoto(
   final picked = await ProfilePhotoPicker.show(context);
   if (picked == null) return;
 
-  await ref.read(profileProvider.notifier).uploadPhoto(
-    userId: userId,
-    bytes: picked.bytes,
-    extension: picked.extension,
-  );
+  await ref
+      .read(profileProvider.notifier)
+      .uploadPhoto(
+        userId: userId,
+        bytes: picked.bytes,
+        extension: picked.extension,
+      );
 }
 
 void _confirmSignOut(BuildContext context, WidgetRef ref) {

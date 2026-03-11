@@ -121,15 +121,6 @@ class AppErrorState extends StatelessWidget {
                 ),
               ),
             ],
-            if (onRetry != null) ...[
-              const SizedBox(height: 28),
-              AppButton(
-                label: retryLabel,
-                prefixIcon: Icons.refresh_rounded,
-                onPressed: onRetry,
-                isFullWidth: false,
-              ),
-            ],
           ],
         ),
       ),
@@ -137,7 +128,7 @@ class AppErrorState extends StatelessWidget {
   }
 }
 
-// Async State Builder 
+// Async State Builder
 
 /// Wraps a [AsyncValue] and renders loading, error, and data states
 // in a consistent way. Reduces boilerplate in every screen.
