@@ -50,6 +50,9 @@ dependencies:
   latlong2: ^0.9.1
   flutter_map: ^8.2.2
 
+  # Image Handling
+  image_picker: ^1.2.1
+
   # State Management
   riverpod: ^2.6.1
   flutter_riverpod: ^2.6.1
