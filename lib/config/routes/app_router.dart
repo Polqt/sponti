@@ -36,7 +36,7 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: Routes.videoOnboarding,
+  initialLocation: Routes.location,
   debugLogDiagnostics: true,
   redirect: (context, state) async {
     final session = Supabase.instance.client.auth.currentSession;
