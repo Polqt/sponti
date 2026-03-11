@@ -5,11 +5,13 @@ import 'package:dartz/dartz.dart';
 import 'package:equatable/equatable.dart';
 import 'package:sponti/core/errors/failures.dart';
 
+// ignore: avoid_types_as_parameter_names
 abstract interface class UseCase<Type, Params> {
   Future<Either<Failure, Type>> call(Params params);
 }
 
 // Use case with no parameters.
+// ignore: avoid_types_as_parameter_names
 abstract interface class NoParamsUseCase<Type> {
   Future<Either<Failure, Type>> call();
 }
