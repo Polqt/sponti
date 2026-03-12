@@ -89,10 +89,9 @@ class _SpontiBottomBar extends StatelessWidget {
         decoration: BoxDecoration(
           color: SpontiColors.surface.withValues(alpha: 0.96),
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: SpontiColors.outline),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 18,
               offset: const Offset(0, 8),
             ),
