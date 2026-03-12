@@ -25,6 +25,7 @@ abstract final class SupabaseBuckets {
 
 abstract final class SupabaseRPC {
   static const String getUserStats = 'get_user_stats';
+  static const String getTrendingLocations = 'get_trending_locations';
   static const String getNearbyLocations = 'get_nearby_locations';
   static const String getLocationWithStats = 'get_location_with_stats';
   static const String searchLocations = 'search_locations';

@@ -21,7 +21,10 @@ class UserProfileModel extends UserProfile {
         username: json['username'] as String?,
         bio: json['bio'] as String?,
         avatarUrl: json['avatar_url'] as String?,
-        checkInCount: (json['check_in_count'] as num?)?.toInt() ?? 0,
+        checkInCount:
+            (json['check_in_count'] as num? ?? json['total_check_ins'] as num?)
+                ?.toInt() ??
+            0,
         favoritesCount: (json['favorites_count'] as num?)?.toInt() ?? 0,
         spotsSuggested: (json['spots_suggested'] as num?)?.toInt() ?? 0,
         createdAt: DateTime.parse(json['created_at'] as String),

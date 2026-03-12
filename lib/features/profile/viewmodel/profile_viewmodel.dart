@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sponti/core/errors/failures.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:sponti/features/profile/model/user_profile.dart';
 import 'package:sponti/features/profile/repository/profile_remote_data_source.dart';
@@ -19,7 +20,7 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
 class ProfileViewModel extends AsyncNotifier<UserProfile?> {
   @override
   Future<UserProfile?> build() async {
-    final user = ref.watch(currentUserProvider);
+    final user = await ref.watch(authProvider.future);
     if (user == null) {
       return null;
     }
@@ -27,7 +28,12 @@ class ProfileViewModel extends AsyncNotifier<UserProfile?> {
     final result = await ref.read(profileRepositoryProvider).getUserProfile(
       user.id,
     );
-    return result.fold((_) => null, (profile) => profile);
+    return result.fold((failure) {
+      if (failure is NotFoundFailure) {
+        return null;
+      }
+      throw StateError(failure.message);
+    }, (profile) => profile);
   }
 
   Future<bool> updateProfile(UserProfile profile) async {

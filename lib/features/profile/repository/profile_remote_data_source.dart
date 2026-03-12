@@ -23,26 +23,71 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
 
   static const _columns = '''
     id, full_name, username, bio, avatar_url,
-    check_in_count, favorites_count, spots_suggested,
+    total_check_ins,
     created_at, updated_at
   ''';
 
   @override
   Future<UserProfileModel> getUserProfile(String userId) async {
     try {
-      final response = await _client
-          .from(SupabaseTables.profiles)
-          .select(_columns)
-          .eq('id', userId)
-          .single();
+      final profile = await _fetchProfile(userId);
+      if (profile != null) {
+        return profile;
+      }
 
-      return UserProfileModel.fromJson(response);
+      await _createProfileIfMissing(userId);
+
+      final repaired = await _fetchProfile(userId);
+      if (repaired == null) throw const NotFoundException();
+
+      return repaired;
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') throw const NotFoundException();
       throw ServerException(e.message);
     } catch (e) {
       throw ServerException(e.toString());
     }
+  }
+
+  Future<UserProfileModel?> _fetchProfile(String userId) async {
+    final response = await _client
+        .from(SupabaseTables.profiles)
+        .select(_columns)
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (response == null) {
+      return null;
+    }
+
+    return UserProfileModel.fromJson(response);
+  }
+
+  Future<void> _createProfileIfMissing(String userId) async {
+    final authUser = _client.auth.currentUser;
+    if (authUser == null || authUser.id != userId) {
+      return;
+    }
+
+    final meta = authUser.userMetadata ?? const <String, dynamic>{};
+    final fullName =
+        _metaString(meta, 'full_name') ?? _metaString(meta, 'name') ?? '';
+    final avatarUrl =
+        _metaString(meta, 'avatar_url') ?? _metaString(meta, 'picture') ?? '';
+
+    await _client.from(SupabaseTables.profiles).upsert({
+      'id': userId,
+      'full_name': fullName,
+      'avatar_url': avatarUrl,
+      'bio': '',
+    }, onConflict: 'id');
+  }
+
+  String? _metaString(Map<String, dynamic> meta, String key) {
+    final raw = meta[key];
+    if (raw is! String) return null;
+    final value = raw.trim();
+    return value.isEmpty ? null : value;
   }
 
   @override
