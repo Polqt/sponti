@@ -1,20 +1,9 @@
-import java.util.Properties
-
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
-
-// Read Facebook keys from local.properties
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.inputStream().use { localProperties.load(it) }
-}
-val fbAppId: String = localProperties.getProperty("FB_APP_ID", "")
-val fbClientToken: String = localProperties.getProperty("FB_CLIENT_TOKEN", "")
 
 android {
     namespace = "com.example.sponti"
@@ -39,11 +28,6 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-
-        // Inject Facebook strings into R.string
-        resValue("string", "facebook_app_id", fbAppId)
-        resValue("string", "facebook_client_token", fbClientToken)
-        resValue("string", "fb_login_protocol_scheme", "fb$fbAppId")
     }
 
     buildTypes {

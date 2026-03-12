@@ -39,8 +39,6 @@ dependencies:
   supabase_flutter: ^2.12.0 
 
   # Authentication
-  google_sign_in: ^7.2.0
-  flutter_facebook_auth: ^7.1.5
 
   # Location & Permissions
   geolocator: ^14.0.2 # GPS coordinates, distance calculation
