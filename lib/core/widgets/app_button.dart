@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 
-// ─── Variants & Sizes ────────────────────────────────────────────────────────
-
 enum AppButtonVariant { primary, secondary, outline, ghost, destructive }
 
 enum AppButtonSize {
@@ -28,8 +26,6 @@ enum AppButtonSize {
     AppButtonSize.large => const EdgeInsets.symmetric(horizontal: 32),
   };
 }
-
-// ─── AppButton ───────────────────────────────────────────────────────────────
 
 /// A unified button widget covering every variant in the app.
 ///
@@ -189,8 +185,6 @@ class AppButton extends StatelessWidget {
     ),
   };
 }
-
-// ─── Button Content ──────────────────────────────────────────────────────────
 
 class _ButtonContent extends StatelessWidget {
   const _ButtonContent({
