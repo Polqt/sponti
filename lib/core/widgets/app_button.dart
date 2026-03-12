@@ -155,9 +155,14 @@ class AppButton extends StatelessWidget {
             child: content,
           );
 
-    return isFullWidth
-        ? SizedBox(width: double.infinity, child: button)
-        : button;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final canExpand = constraints.maxWidth.isFinite;
+        return isFullWidth && canExpand
+            ? SizedBox(width: double.infinity, child: button)
+            : button;
+      },
+    );
   }
 
   bool _isOutlined(AppButtonVariant v) =>
