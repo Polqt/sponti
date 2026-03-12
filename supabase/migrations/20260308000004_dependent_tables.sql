@@ -1,9 +1,10 @@
 -- Migration: Create dependent tables (reviews, check_ins, favorites, suggestions, location_photos)
 -- All reference profiles(id) and locations(id).
 
--- REVIEWS
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 CREATE TABLE public.reviews (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   location_id  UUID NOT NULL REFERENCES public.locations(id) ON DELETE CASCADE,
   user_id      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   rating       INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
@@ -17,9 +18,8 @@ CREATE TABLE public.reviews (
 CREATE INDEX idx_reviews_location ON public.reviews(location_id);
 CREATE INDEX idx_reviews_user     ON public.reviews(user_id);
 
--- CHECK-INS
 CREATE TABLE public.check_ins (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   location_id  UUID NOT NULL REFERENCES public.locations(id) ON DELETE CASCADE,
   user_id      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   note         TEXT DEFAULT '',
@@ -31,9 +31,8 @@ CREATE INDEX idx_checkins_location ON public.check_ins(location_id);
 CREATE INDEX idx_checkins_user     ON public.check_ins(user_id);
 CREATE INDEX idx_checkins_created  ON public.check_ins(created_at DESC);
 
--- FAVORITES
 CREATE TABLE public.favorites (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   location_id  UUID NOT NULL REFERENCES public.locations(id) ON DELETE CASCADE,
   user_id      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -42,9 +41,8 @@ CREATE TABLE public.favorites (
 
 CREATE INDEX idx_favorites_user ON public.favorites(user_id);
 
--- SUGGESTIONS
 CREATE TABLE public.suggestions (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   name         TEXT NOT NULL,
   description  TEXT DEFAULT '',
@@ -60,9 +58,8 @@ CREATE TABLE public.suggestions (
 CREATE INDEX idx_suggestions_user   ON public.suggestions(user_id);
 CREATE INDEX idx_suggestions_status ON public.suggestions(status);
 
--- LOCATION PHOTOS
 CREATE TABLE public.location_photos (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   location_id  UUID NOT NULL REFERENCES public.locations(id) ON DELETE CASCADE,
   user_id      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   photo_url    TEXT NOT NULL,

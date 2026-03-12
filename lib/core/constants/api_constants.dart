@@ -11,8 +11,9 @@ abstract final class ApiConstants {
 
   // RPC Functions 
   static const String rpcGetNearbyLocations = 'get_nearby_locations';
+  static const String rpcGetTrendingLocations = 'get_trending_locations';
   static const String rpcSearchLocations = 'search_locations';
-  static const String rpcGetLocationWithStats = 'get_locatiton_with_stats';
+  static const String rpcGetLocationWithStats = 'get_location_with_stats';
 
   // Storage buckets
   static const String locationPhotosBucket = 'location-photos';

@@ -13,8 +13,7 @@ class VideoOnboardingScreen extends ConsumerStatefulWidget {
       _VideoOnboardingScreenState();
 }
 
-class _VideoOnboardingScreenState
-    extends ConsumerState<VideoOnboardingScreen> {
+class _VideoOnboardingScreenState extends ConsumerState<VideoOnboardingScreen> {
   late VideoPlayerController _videoController;
   bool _isVideoFinished = false;
 
@@ -105,8 +104,6 @@ class _VideoOnboardingScreenState
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.arrow_forward, size: 18),
                           ],
                         ),
                       ),

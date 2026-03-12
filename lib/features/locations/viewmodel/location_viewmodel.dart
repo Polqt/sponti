@@ -6,7 +6,9 @@ import 'package:sponti/features/locations/repository/location_repository.dart';
 import 'package:sponti/features/locations/repository/location_repository_impl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-final locationLocalDataSourceProvider = Provider<LocationLocalDataSource>((ref) {
+final locationLocalDataSourceProvider = Provider<LocationLocalDataSource>((
+  ref,
+) {
   return const LocationLocalDataSourceImpl();
 });
 
@@ -109,7 +111,9 @@ class LocationsViewModel extends AsyncNotifier<List<Location>> {
     List<Location> locations;
 
     if (filter.selectedCategory != null) {
-      final result = await repository.filterByCategory(filter.selectedCategory!);
+      final result = await repository.filterByCategory(
+        filter.selectedCategory!,
+      );
       locations = result.fold((f) => throw Exception(f.message), (l) => l);
     } else {
       final result = await repository.getAllLocations();
@@ -144,15 +148,16 @@ class LocationsViewModel extends AsyncNotifier<List<Location>> {
   }
 }
 
-final locationsProvider = AsyncNotifierProvider<LocationsViewModel, List<Location>>(
-  LocationsViewModel.new,
-);
+final locationsProvider =
+    AsyncNotifierProvider<LocationsViewModel, List<Location>>(
+      LocationsViewModel.new,
+    );
 
 final locationDetailProvider = FutureProvider.autoDispose
     .family<Location, String>((ref, id) async {
-      final result = await ref.read(locationRepositoryProvider).getLocationById(
-        id,
-      );
+      final result = await ref
+          .read(locationRepositoryProvider)
+          .getLocationById(id);
       return result.fold((f) => throw Exception(f.message), (l) => l);
     });
 
@@ -172,11 +177,13 @@ class NearbyParams {
 
 final nearbyLocationsProvider = FutureProvider.autoDispose
     .family<List<Location>, NearbyParams>((ref, params) async {
-      final result = await ref.read(locationRepositoryProvider).getNearbyLocations(
-        latitude: params.latitude,
-        longitude: params.longitude,
-        radiusKm: params.radiusKm,
-      );
+      final result = await ref
+          .read(locationRepositoryProvider)
+          .getNearbyLocations(
+            latitude: params.latitude,
+            longitude: params.longitude,
+            radiusKm: params.radiusKm,
+          );
       return result.fold(
         (failure) => throw Exception(failure.message),
         (locations) => locations,
@@ -191,9 +198,9 @@ final searchResultsProvider = FutureProvider.autoDispose<List<Location>>((
   final query = ref.watch(searchQueryProvider);
   if (query.trim().isEmpty) return [];
 
-  final result = await ref.read(locationRepositoryProvider).searchLocations(
-    query,
-  );
+  final result = await ref
+      .read(locationRepositoryProvider)
+      .searchLocations(query);
   return result.fold(
     (failure) => throw Exception(failure.message),
     (locations) => locations,
@@ -207,9 +214,9 @@ class CreateLocationViewModel
 
   Future<bool> create(Location location) async {
     state = const AsyncLoading();
-    final result = await ref.read(locationRepositoryProvider).createLocation(
-      location,
-    );
+    final result = await ref
+        .read(locationRepositoryProvider)
+        .createLocation(location);
     return result.fold(
       (failure) {
         state = AsyncError(failure.message, StackTrace.current);
@@ -236,9 +243,9 @@ class UpdateLocationViewModel
 
   Future<bool> updateLocation(Location location) async {
     state = const AsyncLoading();
-    final result = await ref.read(locationRepositoryProvider).updateLocation(
-      location,
-    );
+    final result = await ref
+        .read(locationRepositoryProvider)
+        .updateLocation(location);
     return result.fold(
       (failure) {
         state = AsyncError(failure.message, StackTrace.current);
@@ -265,9 +272,9 @@ class DeleteLocationViewModel extends AutoDisposeAsyncNotifier<bool> {
 
   Future<bool> delete(String id) async {
     state = const AsyncLoading();
-    final result = await ref.read(locationRepositoryProvider).deleteLocation(
-      id,
-    );
+    final result = await ref
+        .read(locationRepositoryProvider)
+        .deleteLocation(id);
     return result.fold(
       (failure) {
         state = AsyncError(failure.message, StackTrace.current);

@@ -1,9 +1,6 @@
 -- Migration: RPC functions (nearby locations, full-text search, location with stats)
 -- Requires: postgis extension (migration 0001), locations table (migration 0003)
 
--- NEARBY LOCATIONS (PostGIS)
--- Called by: _client.rpc('get_nearby_locations', params: {lat, lng, radius_km})
--- Returns: all location columns + distance_km, sorted by distance
 CREATE OR REPLACE FUNCTION get_nearby_locations(
   lat DOUBLE PRECISION,
   lng DOUBLE PRECISION,
@@ -37,22 +34,19 @@ AS $$
     l.special_hours_note, l.contact_number,
     l.website_url, l.instagram_handle, l.submitted_by,
     l.created_at, l.updated_at,
-    ST_Distance(
-      ST_SetSRID(ST_MakePoint(l.longitude, l.latitude), 4326)::geography,
-      ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
+    extensions.ST_Distance(
+      extensions.ST_SetSRID(extensions.ST_MakePoint(l.longitude, l.latitude), 4326)::extensions.geography,
+      extensions.ST_SetSRID(extensions.ST_MakePoint(lng, lat), 4326)::extensions.geography
     ) / 1000.0 AS distance_km
   FROM public.locations l
-  WHERE ST_DWithin(
-    ST_SetSRID(ST_MakePoint(l.longitude, l.latitude), 4326)::geography,
-    ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
+  WHERE extensions.ST_DWithin(
+    extensions.ST_SetSRID(extensions.ST_MakePoint(l.longitude, l.latitude), 4326)::extensions.geography,
+    extensions.ST_SetSRID(extensions.ST_MakePoint(lng, lat), 4326)::extensions.geography,
     radius_km * 1000
   )
   ORDER BY distance_km ASC;
 $$;
 
--- FULL-TEXT SEARCH
--- Called by: _client.rpc('search_locations', params: {search_query})
--- Uses the generated tsvector column `fts` on locations, plus ILIKE fallback
 CREATE OR REPLACE FUNCTION search_locations(search_query TEXT)
 RETURNS SETOF public.locations
 LANGUAGE sql STABLE
@@ -68,8 +62,6 @@ AS $$
   LIMIT 50;
 $$;
 
--- LOCATION WITH STATS
--- Called by: _client.rpc('get_location_with_stats', params: {location_uuid})
 CREATE OR REPLACE FUNCTION get_location_with_stats(location_uuid UUID)
 RETURNS SETOF public.locations
 LANGUAGE sql STABLE

@@ -2,7 +2,7 @@
 -- Column names and types match LocationModel.fromJson exactly.
 
 CREATE TABLE public.locations (
-  id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name               TEXT NOT NULL,
   description        TEXT NOT NULL DEFAULT '',
   category           TEXT NOT NULL DEFAULT 'food'
@@ -35,13 +35,11 @@ CREATE TABLE public.locations (
   updated_at         TIMESTAMPTZ DEFAULT now()
 );
 
--- Indexes for common query patterns
 CREATE INDEX idx_locations_category   ON public.locations(category);
 CREATE INDEX idx_locations_rating     ON public.locations(rating DESC);
 CREATE INDEX idx_locations_created    ON public.locations(created_at DESC);
 CREATE INDEX idx_locations_hidden_gem ON public.locations(is_hidden_gem) WHERE is_hidden_gem = true;
 
--- Full-text search vector (generated column)
 ALTER TABLE public.locations
   ADD COLUMN fts tsvector
   GENERATED ALWAYS AS (

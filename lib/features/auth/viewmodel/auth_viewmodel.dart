@@ -57,12 +57,18 @@ class AuthViewModel extends AsyncNotifier<AuthUser?> {
     );
   }
 
-  Future<void> signOut() async {
+  Future<bool> signOut() async {
     final repository = ref.read(authRepositoryProvider);
     final result = await repository.signOut();
-    result.fold(
-      (failure) => state = AsyncError(failure.message, StackTrace.current),
-      (_) => state = const AsyncData(null),
+    return result.fold(
+      (failure) {
+        state = AsyncError(failure.message, StackTrace.current);
+        return false;
+      },
+      (_) {
+        state = const AsyncData(null);
+        return true;
+      },
     );
   }
 }

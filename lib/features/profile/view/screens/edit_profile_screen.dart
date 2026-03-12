@@ -41,42 +41,44 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_isSaving || !(_formKey.currentState?.validate() ?? false)) return;
 
     final profile = ref.read(profileProvider).value;
     if (profile == null) return;
 
     setState(() => _isSaving = true);
 
+    final normalizedUsername = _usernameController.text.trim().replaceFirst(
+      RegExp(r'^@+'),
+      '',
+    );
+    final normalizedBio = _bioController.text.trim();
+
     final updated = profile.copyWith(
       fullName: _nameController.text.trim(),
-      username: _usernameController.text.trim().isEmpty
-          ? null
-          : _usernameController.text.trim(),
-      bio: _bioController.text.trim().isEmpty
-          ? null
-          : _bioController.text.trim(),
+      username: normalizedUsername,
+      bio: normalizedBio,
     );
 
-    final success = await ref.read(profileProvider.notifier).updateProfile(
-      updated,
-    );
+    final success = await ref
+        .read(profileProvider.notifier)
+        .updateProfile(updated);
 
-    if (mounted) {
-      setState(() {
-        _isSaving = false;
-        if (success) {
-          context.pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile updated successfully')),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to update profile')),
-          );
-        }
-      });
+    if (!mounted) return;
+
+    setState(() => _isSaving = false);
+
+    if (success) {
+      context.pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully')),
+      );
+      return;
     }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Failed to update profile')));
   }
 
   Future<void> _changePhoto() async {
@@ -86,11 +88,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final picked = await ProfilePhotoPicker.show(context);
     if (picked == null) return;
 
-    await ref.read(profileProvider.notifier).uploadPhoto(
-      userId: authUser.id,
-      bytes: picked.bytes,
-      extension: picked.extension,
-    );
+    await ref
+        .read(profileProvider.notifier)
+        .uploadPhoto(
+          userId: authUser.id,
+          bytes: picked.bytes,
+          extension: picked.extension,
+        );
   }
 
   @override
@@ -109,34 +113,144 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         title: const Text('Edit Profile'),
         actions: [
           Padding(
-            padding: const EdgeInsetsGeometry.only(right: 12),
+            padding: const EdgeInsets.only(right: 12),
             child: AppButton(
               label: 'Save',
               size: AppButtonSize.small,
+              isFullWidth: false,
               isLoading: _isSaving,
               onPressed: _save,
             ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (profile != null)
-                Center(
-                  child: ProfileHeader(
-                    profile: profile,
-                    onAvatarTap: _changePhoto,
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (profile != null)
+                  Center(
+                    child: ProfileHeader(
+                      profile: profile,
+                      onAvatarTap: _changePhoto,
+                    ),
+                  ),
+                const SizedBox(height: 32),
+                const _FieldLabel('Name'),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _nameController,
+                  textInputAction: TextInputAction.next,
+                  decoration: _decoration(hintText: 'Enter your full name'),
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    if (text.isEmpty) {
+                      return 'Name is required';
+                    }
+                    if (text.length < 2) {
+                      return 'Name must be at least 2 characters';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                const _FieldLabel('Username'),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _usernameController,
+                  textInputAction: TextInputAction.next,
+                  autocorrect: false,
+                  maxLength: 20,
+                  decoration: _decoration(
+                    hintText: 'Choose a username',
+                    prefixText: '@',
+                    counterText: '',
+                  ),
+                  validator: (value) {
+                    final raw = value?.trim() ?? '';
+                    if (raw.isEmpty) return null;
+                    final username = raw.replaceFirst(RegExp(r'^@+'), '');
+                    final isValid = RegExp(
+                      r'^[a-zA-Z0-9_.]{3,20}$',
+                    ).hasMatch(username);
+                    if (!isValid) {
+                      return 'Use 3-20 letters, numbers, "_" or "."';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                const _FieldLabel('Bio'),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _bioController,
+                  textInputAction: TextInputAction.newline,
+                  maxLines: 4,
+                  maxLength: 160,
+                  decoration: _decoration(
+                    hintText: 'Tell people about yourself',
                   ),
                 ),
-              const SizedBox(height: 32),
-            ],
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+InputDecoration _decoration({
+  required String hintText,
+  String? prefixText,
+  String? counterText,
+}) {
+  const radius = BorderRadius.all(Radius.circular(12));
+  const border = OutlineInputBorder(
+    borderRadius: radius,
+    borderSide: BorderSide(color: SpontiColors.outline),
+  );
+
+  return InputDecoration(
+    hintText: hintText,
+    prefixText: prefixText,
+    counterText: counterText,
+    filled: true,
+    fillColor: SpontiColors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    enabledBorder: border,
+    focusedBorder: border.copyWith(
+      borderSide: const BorderSide(color: SpontiColors.primary, width: 1.4),
+    ),
+    errorBorder: border.copyWith(
+      borderSide: const BorderSide(color: SpontiColors.error),
+    ),
+    focusedErrorBorder: border.copyWith(
+      borderSide: const BorderSide(color: SpontiColors.error, width: 1.4),
+    ),
+  );
+}
+
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: SpontiColors.textSecondary,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
       ),
     );
   }
