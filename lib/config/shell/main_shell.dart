@@ -4,184 +4,272 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
+import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key, required this.child});
 
   final Widget child;
 
-  static const _tabs = [
-    (
-      icon: Icons.location_on_rounded,
-      label: 'Spots',
-      route: RouteName.location,
-    ),
-    (
-      icon: Icons.explore_rounded,
-      label: 'Discover',
-      route: RouteName.discovery,
-    ),
-    (icon: Icons.map_rounded, label: 'Explore', route: RouteName.explore),
-    (icon: Icons.bookmark_rounded, label: 'Saved', route: RouteName.favorites),
-    (icon: Icons.person_rounded, label: 'Profile', route: RouteName.profile),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeTab = ref.watch(activeTabProvider);
+    final route = GoRouterState.of(context).matchedLocation;
+    final activeIndex = _resolveActiveIndex(route);
+
+    if (activeIndex != null) {
+      final tabState = ref.watch(activeTabProvider);
+      if (tabState != activeIndex) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(activeTabProvider.notifier).state = activeIndex;
+        });
+      }
+    }
+
+    final authUser = ref.watch(currentUserProvider);
+    final profile = ref.watch(profileProvider).valueOrNull;
+    final avatarUrl = profile?.avatarUrl ?? authUser?.avatarUrl;
 
     return Scaffold(
+      extendBody: true,
       body: child,
-      floatingActionButton: _SurpriseFab(
-        onTap: () => context.push(RouteName.surprise),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _SpontiBottomBar(
-        activeTab: activeTab,
-        tabs: _tabs,
-        onTap: (index) {
-          ref.read(activeTabProvider.notifier).state = index;
-          context.go(_tabs[index].route);
-        },
+        activeRoute: route,
+        avatarUrl: avatarUrl,
+        onTapExplore: () => context.go(RouteName.location),
+        onTapMap: () => context.go(RouteName.discovery),
+        onTapSurprise: () => context.push(RouteName.surprise),
+        onTapSaved: () => context.go(RouteName.favorites),
+        onTapProfile: () => context.go(RouteName.profile),
       ),
     );
+  }
+
+  int? _resolveActiveIndex(String route) {
+    if (route.startsWith(RouteName.location)) return 0;
+    if (route.startsWith(RouteName.discovery)) return 1;
+    if (route.startsWith(RouteName.favorites)) return 2;
+    if (route.startsWith(RouteName.profile)) return 3;
+    return null;
   }
 }
 
 class _SpontiBottomBar extends StatelessWidget {
   const _SpontiBottomBar({
-    required this.activeTab,
-    required this.tabs,
-    required this.onTap,
+    required this.activeRoute,
+    required this.avatarUrl,
+    required this.onTapExplore,
+    required this.onTapMap,
+    required this.onTapSurprise,
+    required this.onTapSaved,
+    required this.onTapProfile,
   });
 
-  final int activeTab;
-  final List<({IconData icon, String label, String route})> tabs;
-  final ValueChanged<int> onTap;
+  final String activeRoute;
+  final String? avatarUrl;
+  final VoidCallback onTapExplore;
+  final VoidCallback onTapMap;
+  final VoidCallback onTapSurprise;
+  final VoidCallback onTapSaved;
+  final VoidCallback onTapProfile;
+
+  bool get _isExploreActive => activeRoute.startsWith(RouteName.location);
+  bool get _isMapActive => activeRoute.startsWith(RouteName.discovery);
+  bool get _isSavedActive => activeRoute.startsWith(RouteName.favorites);
+  bool get _isProfileActive => activeRoute.startsWith(RouteName.profile);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: SpontiColors.outline)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Container(
+        height: 78,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: SpontiColors.surface.withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: SpontiColors.outline),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            _TabIcon(
+              icon: Icons.groups_2_outlined,
+              activeIcon: Icons.groups_2_rounded,
+              isActive: _isExploreActive,
+              onTap: onTapExplore,
+            ),
+            _TabIcon(
+              icon: Icons.map_outlined,
+              activeIcon: Icons.map_rounded,
+              isActive: _isMapActive,
+              onTap: onTapMap,
+            ),
+            Expanded(
+              child: _CenterSurpriseButton(
+                onTap: onTapSurprise,
+              ),
+            ),
+            _TabIcon(
+              icon: Icons.local_offer_outlined,
+              activeIcon: Icons.local_offer_rounded,
+              isActive: _isSavedActive,
+              onTap: onTapSaved,
+            ),
+            _ProfileTab(
+              avatarUrl: avatarUrl,
+              isActive: _isProfileActive,
+              onTap: onTapProfile,
+            ),
+          ],
+        ),
       ),
-      child: SafeArea(
-        child: SizedBox(
-          height: 60,
-          child: Row(
+    );
+  }
+}
+
+class _TabIcon extends StatelessWidget {
+  const _TabIcon({
+    required this.icon,
+    required this.activeIcon,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final IconData activeIcon;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 52,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Center(
+          child: Icon(
+            isActive ? activeIcon : icon,
+            size: 27,
+            color: isActive ? SpontiColors.textPrimary : SpontiColors.textMuted,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CenterSurpriseButton extends StatelessWidget {
+  const _CenterSurpriseButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [SpontiColors.primary, SpontiColors.primaryLight],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: [
+              BoxShadow(
+                color: SpontiColors.primary.withValues(alpha: 0.45),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Tabs 0, 1 — left of FAB
-              ..._buildTabs(0, 2),
-              // Gap for the centred FAB
-              const SizedBox(width: 80),
-              // Tabs 2, 3, 4 — right of FAB
-              ..._buildTabs(2, 5),
+              Icon(Icons.auto_awesome_rounded, size: 18, color: Colors.white),
+              SizedBox(width: 6),
+              Text(
+                'surprise me',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
   }
-
-  List<Widget> _buildTabs(int from, int to) => [
-    for (int i = from; i < to; i++)
-      Expanded(
-        child: _NavItem(
-          icon: tabs[i].icon,
-          label: tabs[i].label,
-          isActive: activeTab == i,
-          onTap: () => onTap(i),
-        ),
-      ),
-  ];
 }
 
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
+class _ProfileTab extends StatelessWidget {
+  const _ProfileTab({
+    required this.avatarUrl,
     required this.isActive,
     required this.onTap,
   });
 
-  final IconData icon;
-  final String label;
+  final String? avatarUrl;
   final bool isActive;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    final hasAvatar = avatarUrl != null && avatarUrl!.isNotEmpty;
+
+    return SizedBox(
+      width: 52,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: isActive ? 36 : 32,
+            height: isActive ? 36 : 32,
             decoration: BoxDecoration(
-              color: isActive
-                  ? SpontiColors.primary.withValues(alpha: 0.12)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isActive ? SpontiColors.primary : SpontiColors.outline,
+                width: isActive ? 2.2 : 1.4,
+              ),
             ),
-            child: Icon(
-              icon,
-              size: 22,
-              color: isActive ? SpontiColors.primary : SpontiColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-              color: isActive ? SpontiColors.primary : SpontiColors.textMuted,
+            child: ClipOval(
+              child: hasAvatar
+                  ? Image.network(
+                      avatarUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _avatarFallback(),
+                    )
+                  : _avatarFallback(),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
-}
 
-class _SurpriseFab extends StatelessWidget {
-  const _SurpriseFab({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 62,
-        height: 62,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: const LinearGradient(
-            colors: [SpontiColors.primary, SpontiColors.primaryLight],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: SpontiColors.primary.withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.shuffle_rounded, color: Colors.white, size: 28),
+  Widget _avatarFallback() {
+    return Container(
+      color: SpontiColors.surfaceVariant,
+      child: const Icon(
+        Icons.person_rounded,
+        size: 18,
+        color: SpontiColors.textMuted,
       ),
     );
   }

@@ -5,9 +5,8 @@ import 'package:sponti/config/routes/route_name.dart';
 enum ShellTab {
   location(0, RouteName.location),
   discovery(1, RouteName.discovery),
-  explore(2, RouteName.explore),
-  favorites(3, RouteName.favorites),
-  profile(4, RouteName.profile);
+  favorites(2, RouteName.favorites),
+  profile(3, RouteName.profile);
 
   const ShellTab(this.tabIndex, this.route);
 
