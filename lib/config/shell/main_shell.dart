@@ -228,7 +228,8 @@ class _ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasAvatar = avatarUrl != null && avatarUrl!.isNotEmpty;
+    final avatar = avatarUrl;
+    final hasAvatar = avatar != null && avatar.isNotEmpty;
 
     return SizedBox(
       width: 52,
@@ -250,7 +251,7 @@ class _ProfileTab extends StatelessWidget {
             child: ClipOval(
               child: hasAvatar
                   ? Image.network(
-                      avatarUrl!,
+                      avatar,
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => _avatarFallback(),
                     )
