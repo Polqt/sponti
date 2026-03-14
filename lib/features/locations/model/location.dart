@@ -3,18 +3,27 @@ import 'package:flutter/material.dart';
 import 'package:sponti/features/locations/model/coordinates.dart';
 
 enum LocationCategory {
-  food('Munch', 'ðŸ´', 0xFFE8612C),
-  coffee('CafÃ©s', 'â˜•', 0xFF7B4F2E),
-  nature('Stroll', 'ðŸŒ¿', 0xFF3A7D44),
-  nightlife('Nightlife', 'ðŸŒ™', 0xFF4A3B8C),
-  arts('Arts', 'ðŸŽ¨', 0xFFD4458C),
-  activities('Fun', 'âš¡', 0xFF2C8C8E);
+  food('Munch', '🍴', 0xFFE8612C),
+  coffee('Cafés', '☕', 0xFF7B4F2E),
+  nature('Stroll', '🌿', 0xFF3A7D44),
+  nightlife('Nightlife', '🌙', 0xFF4A3B8C),
+  arts('Arts', '🎨', 0xFFD4458C),
+  activities('Fun', '⚡', 0xFF2C8C8E);
 
   const LocationCategory(this.label, this.emoji, this.colorValue);
 
   final String label;
   final String emoji;
   final int colorValue;
+
+  IconData get icon => switch (this) {
+    LocationCategory.food => Icons.restaurant_rounded,
+    LocationCategory.coffee => Icons.local_cafe_rounded,
+    LocationCategory.nature => Icons.park_rounded,
+    LocationCategory.nightlife => Icons.nightlife_rounded,
+    LocationCategory.arts => Icons.palette_rounded,
+    LocationCategory.activities => Icons.sports_esports_rounded,
+  };
 
   static LocationCategory fromString(String category) =>
       LocationCategory.values.firstWhere(
@@ -24,10 +33,10 @@ enum LocationCategory {
 }
 
 enum PriceRange {
-  free(0, 'Free', 'âœ¦'),
-  budget(1, 'Budget', 'â‚±'),
-  moderate(2, 'Moderate', 'â‚±â‚±'),
-  expensive(3, 'Premium', 'â‚±â‚±â‚±');
+  free(0, 'Free', '✦'),
+  budget(1, 'Budget', '₱'),
+  moderate(2, 'Moderate', '₱₱'),
+  expensive(3, 'Premium', '₱₱₱');
 
   const PriceRange(this.level, this.label, this.symbol);
 
@@ -58,22 +67,18 @@ class OperatingHours extends Equatable {
     final now = DateTime.now();
     if (!daysOpen.contains(now.weekday)) return false;
 
-    final op = _parseTime(openTime);
-    final cl = _parseTime(closeTime);
-    final cur = TimeOfDay.fromDateTime(now);
-
-    final opMin = op.hour * 60 + op.minute;
-    final clMin = cl.hour * 60 + cl.minute;
-    final curMin = cur.hour * 60 + cur.minute;
+    final opMin = _toMinutes(openTime);
+    final clMin = _toMinutes(closeTime);
+    final curMin = now.hour * 60 + now.minute;
 
     return clMin < opMin
         ? curMin >= opMin || curMin < clMin
         : curMin >= opMin && curMin <= clMin;
   }
 
-  static TimeOfDay _parseTime(String time) {
+  static int _toMinutes(String time) {
     final parts = time.split(':');
-    return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    return int.parse(parts[0]) * 60 + int.parse(parts[1]);
   }
 
   @override
@@ -140,6 +145,10 @@ class Location extends Equatable {
   bool get isOpenNow => operatingHours?.isOpenNow ?? false;
   String get primaryPhoto => photoUrls.isNotEmpty ? photoUrls.first : '';
   bool get hasPhotos => photoUrls.isNotEmpty;
+  bool get hasContact =>
+      contactNumber != null ||
+      websiteUrl != null ||
+      instagramHandle != null;
 
   Location copyWith({
     String? name,

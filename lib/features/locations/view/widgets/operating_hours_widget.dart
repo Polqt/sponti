@@ -49,7 +49,7 @@ class _CompactHours extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         Text(
-          'Â· ${SpontiFormatter.operatingHours(hours.openTime, hours.closeTime)}',
+          '· ${SpontiFormatter.operatingHours(hours.openTime, hours.closeTime)}',
           style: const TextStyle(fontSize: 12, color: SpontiColors.textMuted),
         ),
       ],
@@ -70,7 +70,7 @@ class _FullHours extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: SpontiColors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: SpontiColors.outline),
       ),
       child: Column(
@@ -84,30 +84,39 @@ class _FullHours extends StatelessWidget {
                 color: SpontiColors.primary,
               ),
               const SizedBox(width: 8),
-              Text('Hours', style: theme.textTheme.titleMedium),
+              Text(
+                'Hours',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               const Spacer(),
               _StatusChip(isOpen: isOpen),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Text(
-                SpontiFormatter.operatingHours(hours.openTime, hours.closeTime),
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              _DayIndicatorRow(daysOpen: hours.daysOpen),
-            ],
+          const SizedBox(height: 14),
+          Text(
+            SpontiFormatter.operatingHours(hours.openTime, hours.closeTime),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
+          const SizedBox(height: 12),
+          _DayIndicatorRow(daysOpen: hours.daysOpen),
           if (hours.specialNote != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              '* ${hours.specialNote}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontStyle: FontStyle.italic,
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: SpontiColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '* ${hours.specialNote}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: SpontiColors.textSecondary,
+                ),
               ),
             ),
           ],
@@ -131,13 +140,24 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: Text(
-        isOpen ? 'Open now' : 'Closed',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            isOpen ? 'Open now' : 'Closed',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -152,30 +172,32 @@ class _DayIndicatorRow extends StatelessWidget {
     final today = DateTime.now().weekday;
 
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: List.generate(7, (i) {
         final weekday = i + 1;
         final isOpen = daysOpen.contains(weekday);
         final isToday = weekday == today;
 
-        return Container(
-          margin: const EdgeInsets.only(left: 3),
-          width: 26,
-          height: 26,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isOpen ? SpontiColors.primary : SpontiColors.surfaceVariant,
-            borderRadius: BorderRadius.circular(6),
-            border: isToday
-                ? Border.all(color: SpontiColors.primary, width: 2)
-                : null,
-          ),
-          child: Text(
-            SpontiFormatter.dayInitial(weekday),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: isOpen ? Colors.white : SpontiColors.textMuted,
+        return Expanded(
+          child: Container(
+            margin: EdgeInsets.only(left: i == 0 ? 0 : 4),
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isOpen
+                  ? SpontiColors.primary
+                  : SpontiColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(8),
+              border: isToday
+                  ? Border.all(color: SpontiColors.primary, width: 2)
+                  : null,
+            ),
+            child: Text(
+              SpontiFormatter.dayInitial(weekday),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: isOpen ? Colors.white : SpontiColors.textMuted,
+              ),
             ),
           ),
         );

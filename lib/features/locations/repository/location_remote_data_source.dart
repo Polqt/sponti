@@ -33,23 +33,39 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
 
   final SupabaseClient _client;
 
+  /// Converts storage paths in [photos] JSONB to full public URLs.
+  Map<String, dynamic> _resolvePhotoUrls(Map<String, dynamic> json) {
+    final rawPhotos = json['photos'] as List<dynamic>? ?? [];
+    if (rawPhotos.isEmpty) return json;
+
+    final resolved = rawPhotos.map((path) {
+      final p = path.toString();
+      if (p.startsWith('http')) return p;
+      return _client.storage
+          .from(ApiConstants.locationPhotosBucket)
+          .getPublicUrl(p);
+    }).toList();
+
+    return {...json, 'photos': resolved};
+  }
+
   @override
   Future<List<LocationModel>> getAllLocations({
     int page = 0,
     int pageSize = 20,
   }) async {
     try {
-      final from = page * pageSize;
-      final to = from + pageSize - 1;
-
       final response = await _client
           .from(ApiConstants.locationsTable)
           .select(_columns)
-          .order('created_at', ascending: false)
-          .range(from, to);
+          .order('created_at', ascending: false);
 
       return (response as List<dynamic>)
-          .map((e) => LocationModel.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => LocationModel.fromJson(
+              _resolvePhotoUrls(e as Map<String, dynamic>),
+            ),
+          )
           .toList();
     } on PostgrestException catch (e) {
       throw ServerException(e.message);
@@ -67,7 +83,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
           .eq('id', id)
           .single();
 
-      return LocationModel.fromJson(response);
+      return LocationModel.fromJson(_resolvePhotoUrls(response));
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') throw const NotFoundException();
       throw ServerException(e.message);
@@ -89,7 +105,11 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
       );
 
       return (response as List<dynamic>)
-          .map((e) => LocationModel.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => LocationModel.fromJson(
+              _resolvePhotoUrls(e as Map<String, dynamic>),
+            ),
+          )
           .toList();
     } on PostgrestException catch (e) {
       throw ServerException(e.message);
@@ -110,7 +130,11 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
           .order('rating', ascending: false);
 
       return (response as List<dynamic>)
-          .map((e) => LocationModel.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => LocationModel.fromJson(
+              _resolvePhotoUrls(e as Map<String, dynamic>),
+            ),
+          )
           .toList();
     } on PostgrestException catch (e) {
       throw ServerException(e.message);
@@ -128,7 +152,11 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
       );
 
       return (response as List<dynamic>)
-          .map((e) => LocationModel.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => LocationModel.fromJson(
+              _resolvePhotoUrls(e as Map<String, dynamic>),
+            ),
+          )
           .toList();
     } on PostgrestException catch (e) {
       throw ServerException(e.message);
@@ -146,7 +174,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
           .select(_columns)
           .single();
 
-      return LocationModel.fromJson(response);
+      return LocationModel.fromJson(_resolvePhotoUrls(response));
     } on PostgrestException catch (e) {
       throw ServerException(e.message);
     } catch (e) {
@@ -166,7 +194,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
           .select(_columns)
           .single();
 
-      return LocationModel.fromJson(response);
+      return LocationModel.fromJson(_resolvePhotoUrls(response));
     } on PostgrestException catch (e) {
       throw ServerException(e.message);
     } catch (e) {
