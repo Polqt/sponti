@@ -7,6 +7,7 @@ import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
 import 'package:sponti/core/widgets/glass_container.dart';
+import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/bottom_rail_panel.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
@@ -51,6 +52,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   Widget build(BuildContext context) {
     final locationsAsync = ref.watch(locationsProvider);
     final filter = ref.watch(locationFilterProvider);
+    final favoriteIds = ref.watch(favoriteIdSetProvider);
     final locations = locationsAsync.valueOrNull ?? const <Location>[];
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
