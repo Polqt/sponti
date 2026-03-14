@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/theme/app_colors.dart';
@@ -62,6 +63,11 @@ class _DetailBody extends StatelessWidget {
               const SizedBox(height: 20),
 
               QuickInfoRow(location: location),
+
+              if (location.photoUrls.length > 1) ...[
+                const SizedBox(height: 20),
+                _PhotoGallery(photoUrls: location.photoUrls),
+              ],
 
               if (location.description.isNotEmpty) ...[
                 const SizedBox(height: 20),
@@ -147,6 +153,85 @@ class _DetailBody extends StatelessWidget {
               const SizedBox(height: 20),
               StatsRow(location: location),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PhotoGallery extends StatelessWidget {
+  const _PhotoGallery({required this.photoUrls});
+
+  final List<String> photoUrls;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.photo_library_outlined,
+              size: 18,
+              color: SpontiColors.textSecondary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Photos',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: SpontiColors.textPrimary,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '${photoUrls.length} photos',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: SpontiColors.textMuted),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 160,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: photoUrls.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: CachedNetworkImage(
+                  imageUrl: photoUrls[index],
+                  width: 220,
+                  height: 160,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => Container(
+                    width: 220,
+                    height: 160,
+                    color: SpontiColors.outline.withValues(alpha: 0.2),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: SpontiColors.primary,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (_, _, _) => Container(
+                    width: 220,
+                    height: 160,
+                    color: SpontiColors.outline.withValues(alpha: 0.2),
+                    child: const Icon(
+                      Icons.broken_image_outlined,
+                      color: SpontiColors.textMuted,
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],

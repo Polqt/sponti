@@ -39,14 +39,10 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
     int pageSize = 20,
   }) async {
     try {
-      final from = page * pageSize;
-      final to = from + pageSize - 1;
-
       final response = await _client
           .from(ApiConstants.locationsTable)
           .select(_columns)
-          .order('created_at', ascending: false)
-          .range(from, to);
+          .order('created_at', ascending: false);
 
       return (response as List<dynamic>)
           .map((e) => LocationModel.fromJson(e as Map<String, dynamic>))
