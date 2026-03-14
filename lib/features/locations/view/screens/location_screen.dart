@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
@@ -42,6 +43,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   Widget build(BuildContext context) {
     final locationsAsync = ref.watch(locationsProvider);
     final filter = ref.watch(locationFilterProvider);
+    final favoriteIds = ref.watch(favoriteIdSetProvider);
     final locations = locationsAsync.valueOrNull ?? const <Location>[];
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final categoriesBottom = bottomInset + 104;
@@ -181,11 +183,14 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               bottom: previewBottom,
               child: _LocationPreviewRail(
                 locations: locations,
+                favoriteIds: favoriteIds,
                 selectedId: selectedId,
                 onTapLocation: (location) {
                   _focusLocation(location);
                   context.push(RouteName.locationDetailPath(location.id));
                 },
+                onToggleFavorite: (location) =>
+                    ref.read(favoriteIdsProvider.notifier).toggle(location.id),
               ),
             ),
           Positioned(
@@ -203,17 +208,20 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   }
 }
 
-
 class _LocationPreviewRail extends StatelessWidget {
   const _LocationPreviewRail({
     required this.locations,
+    required this.favoriteIds,
     required this.selectedId,
     required this.onTapLocation,
+    required this.onToggleFavorite,
   });
 
   final List<Location> locations;
+  final Set<String> favoriteIds;
   final String? selectedId;
   final ValueChanged<Location> onTapLocation;
+  final ValueChanged<Location> onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -233,16 +241,16 @@ class _LocationPreviewRail extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: isSelected
-                    ? SpontiColors.primary
-                    : Colors.transparent,
+                color: isSelected ? SpontiColors.primary : Colors.transparent,
                 width: 2,
               ),
             ),
             child: LocationCard(
               location: location,
               width: 248,
+              isSaved: favoriteIds.contains(location.id),
               onTap: () => onTapLocation(location),
+              onSaveToggle: () => onToggleFavorite(location),
             ),
           );
         },
