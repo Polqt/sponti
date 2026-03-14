@@ -1,8 +1,9 @@
 import 'package:dartz/dartz.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/core/errors/failures.dart';
-import 'package:sponti/features/favorites/favorites_remote_data_source.dart';
-import 'package:sponti/features/favorites/favorites_repository.dart';
+import 'package:sponti/features/favorites/model/favorite.dart';
+import 'package:sponti/features/favorites/repository/favorites_remote_data_source.dart';
+import 'package:sponti/features/favorites/repository/favorites_repository.dart';
 import 'package:sponti/features/locations/model/location.dart';
 
 class FavoritesRepositoryImpl implements FavoritesRepository {
@@ -25,12 +26,27 @@ class FavoritesRepositoryImpl implements FavoritesRepository {
   }
 
   @override
+  Future<Either<Failure, List<Favorite>>> getFavorites() =>
+      _guard(_remote.getFavorites);
+
+  @override
   Future<Either<Failure, List<String>>> getFavoriteLocationIds() =>
-      _guard(_remote.getFavoriteLocationIds);
+      _guard(() async {
+        final favorites = await _remote.getFavorites();
+        return favorites
+            .map((favorite) => favorite.locationId)
+            .toList(growable: false);
+      });
 
   @override
   Future<Either<Failure, List<Location>>> getFavoriteLocations() =>
-      _guard(_remote.getFavoriteLocations);
+      _guard(() async {
+        final favorites = await _remote.getFavorites();
+        return favorites
+            .map((favorite) => favorite.location)
+            .whereType<Location>()
+            .toList(growable: false);
+      });
 
   @override
   Future<Either<Failure, void>> addFavorite(String locationId) =>

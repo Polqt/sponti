@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
-import 'package:sponti/features/favorites/favorites_viewmodel.dart';
+import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
@@ -208,7 +208,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   }
 }
 
-
 class _LocationPreviewRail extends StatelessWidget {
   const _LocationPreviewRail({
     required this.locations,
@@ -242,9 +241,7 @@ class _LocationPreviewRail extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: isSelected
-                    ? SpontiColors.primary
-                    : Colors.transparent,
+                color: isSelected ? SpontiColors.primary : Colors.transparent,
                 width: 2,
               ),
             ),

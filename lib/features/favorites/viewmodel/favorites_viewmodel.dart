@@ -1,10 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sponti/features/favorites/favorites_remote_data_source.dart';
-import 'package:sponti/features/favorites/favorites_repository.dart';
-import 'package:sponti/features/favorites/favorites_repository_impl.dart';
+import 'package:sponti/features/favorites/model/favorite.dart';
+import 'package:sponti/features/favorites/repository/favorites_remote_data_source.dart';
+import 'package:sponti/features/favorites/repository/favorites_repository.dart';
+import 'package:sponti/features/favorites/repository/favorites_repository_impl.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+final favoritesRemoteDataSourceProvider = Provider<FavoritesRemoteDataSource>((
+  ref,
+) {
+  return FavoritesRemoteDataSourceImpl(Supabase.instance.client);
+});
+
+final favoritesRepositoryProvider = Provider<FavoritesRepository>((ref) {
+  return FavoritesRepositoryImpl(ref.watch(favoritesRemoteDataSourceProvider));
+});
 
 class FavoritesViewModel extends AsyncNotifier<List<String>> {
   FavoritesRepository get _repository => ref.read(favoritesRepositoryProvider);
@@ -35,14 +46,9 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
         : await _repository.addFavorite(locationId);
 
     result.fold(
-      (failure) => state = AsyncError(
-        StateError(failure.message),
-        StackTrace.current,
-      ),
-      (_) {
-        ref.invalidate(favoriteLocationsProvider);
-        ref.invalidate(profileProvider);
-      },
+      (failure) =>
+          state = AsyncError(StateError(failure.message), StackTrace.current),
+      (_) => _invalidateDependentProviders(),
     );
 
     if (result.isLeft()) {
@@ -57,14 +63,9 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
 
     final result = await _repository.removeFavorite(locationId);
     result.fold(
-      (failure) => state = AsyncError(
-        StateError(failure.message),
-        StackTrace.current,
-      ),
-      (_) {
-        ref.invalidate(favoriteLocationsProvider);
-        ref.invalidate(profileProvider);
-      },
+      (failure) =>
+          state = AsyncError(StateError(failure.message), StackTrace.current),
+      (_) => _invalidateDependentProviders(),
     );
 
     if (result.isLeft()) {
@@ -84,20 +85,15 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
       }
     }
 
+    _invalidateDependentProviders();
+  }
+
+  void _invalidateDependentProviders() {
+    ref.invalidate(favoritesProvider);
     ref.invalidate(favoriteLocationsProvider);
     ref.invalidate(profileProvider);
   }
 }
-
-final favoritesRemoteDataSourceProvider = Provider<FavoritesRemoteDataSource>((
-  ref,
-) {
-  return FavoritesRemoteDataSourceImpl(Supabase.instance.client);
-});
-
-final favoritesRepositoryProvider = Provider<FavoritesRepository>((ref) {
-  return FavoritesRepositoryImpl(ref.watch(favoritesRemoteDataSourceProvider));
-});
 
 final favoriteIdsProvider =
     AsyncNotifierProvider<FavoritesViewModel, List<String>>(
@@ -109,8 +105,17 @@ final favoriteIdSetProvider = Provider<Set<String>>((ref) {
   return ids.toSet();
 });
 
+final favoritesProvider = FutureProvider<List<Favorite>>((ref) async {
+  final result = await ref.read(favoritesRepositoryProvider).getFavorites();
+  return result.fold((failure) {
+    throw StateError(failure.message);
+  }, (favorites) => favorites);
+});
+
 final favoriteLocationsProvider = FutureProvider<List<Location>>((ref) async {
-  final result = await ref.read(favoritesRepositoryProvider).getFavoriteLocations();
+  final result = await ref
+      .read(favoritesRepositoryProvider)
+      .getFavoriteLocations();
   return result.fold((failure) {
     throw StateError(failure.message);
   }, (locations) => locations);
