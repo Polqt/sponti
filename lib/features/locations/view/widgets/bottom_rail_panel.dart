@@ -17,6 +17,8 @@ class BottomRailPanel extends StatefulWidget {
     required this.onExpandChanged,
     required this.onTapCategory,
     required this.onTapLocation,
+    required this.favoriteIds,
+    required this.onTapFavorite,
   });
 
   final List<Location> locations;
@@ -27,6 +29,8 @@ class BottomRailPanel extends StatefulWidget {
   final ValueChanged<bool> onExpandChanged;
   final ValueChanged<LocationCategory> onTapCategory;
   final ValueChanged<Location> onTapLocation;
+  final Set<String> favoriteIds;
+  final ValueChanged<Location> onTapFavorite;
 
   @override
   State<BottomRailPanel> createState() => _BottomRailPanelState();
@@ -194,8 +198,15 @@ class _BottomRailPanelState extends State<BottomRailPanel> {
                                     child: LocationCard(
                                       location: location,
                                       width: 200,
+                                      isSaved: widget.favoriteIds.contains(
+                                        location.id,
+                                      ),
                                       onTap: () =>
                                           widget.onTapLocation(location),
+                                      onSaveToggle: () =>
+                                          widget.onTapFavorite(location),
+                                      savedIcon: Icons.favorite_border_rounded,
+                                      savedActiveIcon: Icons.favorite_rounded,
                                     ),
                                   );
                                 },

@@ -48,6 +48,10 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     setState(() => _isRailExpanded = expanded);
   }
 
+  Future<void> _handleFavoriteTap(Location location) async {
+    await ref.read(favoriteIdsProvider.notifier).toggle(location.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final locationsAsync = ref.watch(locationsProvider);
@@ -192,11 +196,13 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
             selectedCategory: filter.selectedCategory,
             isExpanded: _isRailExpanded,
             bottomInset: bottomInset,
+            favoriteIds: favoriteIds,
             onExpandChanged: _setRailExpanded,
             onTapCategory: _onTapCategory,
             onTapLocation: (location) {
               context.push(RouteName.locationDetailPath(location.id));
             },
+            onTapFavorite: _handleFavoriteTap,
           ),
         ],
       ),
