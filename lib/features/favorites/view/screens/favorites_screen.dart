@@ -12,6 +12,7 @@ class FavoritesScreen extends ConsumerWidget {
     final favoriteIdsAsync = ref.watch(favoriteIdsProvider);
     final favoriteLocationsAsync = ref.watch(favoriteLocationsProvider);
     final searchQuery = ref.watch(favoritesSearchQueryProvider);
+    final selectedCategory = ref.watch(favoritesCategoryFilterProvider);
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -20,8 +21,12 @@ class FavoritesScreen extends ConsumerWidget {
           favoriteIdsAsync: favoriteIdsAsync,
           favoriteLocationsAsync: favoriteLocationsAsync,
           searchQuery: searchQuery,
+          selectedCategory: selectedCategory,
           onSearchChanged: (value) {
             ref.read(favoritesSearchQueryProvider.notifier).state = value;
+          },
+          onCategoryChanged: (value) {
+            ref.read(favoritesCategoryFilterProvider.notifier).state = value;
           },
         ),
       ),

@@ -12,14 +12,18 @@ class FavoritesBody extends StatelessWidget {
     required this.favoriteIdsAsync,
     required this.favoriteLocationsAsync,
     required this.searchQuery,
+    required this.selectedCategory,
     required this.onSearchChanged,
+    required this.onCategoryChanged,
     super.key,
   });
 
   final AsyncValue<List<String>> favoriteIdsAsync;
   final AsyncValue<List<Location>> favoriteLocationsAsync;
   final String searchQuery;
+  final LocationCategory? selectedCategory;
   final ValueChanged<String> onSearchChanged;
+  final ValueChanged<LocationCategory?> onCategoryChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +40,11 @@ class FavoritesBody extends StatelessWidget {
 
     final favoriteLocations =
         favoriteLocationsAsync.valueOrNull ?? const <Location>[];
-    final filteredLocations = _filterLocations(favoriteLocations, searchQuery);
+    final filteredLocations = _filterLocations(
+      favoriteLocations,
+      searchQuery,
+      selectedCategory,
+    );
 
     return CustomScrollView(
       slivers: [
@@ -57,15 +65,23 @@ class FavoritesBody extends StatelessWidget {
                   'Keep your next Bacolod plan ready to go.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 18),
-                _SavedSummaryCard(
-                  totalCount: favoriteLocations.length,
-                  filteredCount: filteredLocations.length,
-                ),
                 const SizedBox(height: 16),
                 _FavoritesSearchField(
                   initialValue: searchQuery,
                   onChanged: onSearchChanged,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Category',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: SpontiColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _FavoritesCategoryFilters(
+                  selectedCategory: selectedCategory,
+                  onChanged: onCategoryChanged,
                 ),
               ],
             ),
@@ -127,12 +143,25 @@ class _EmptyStateSection extends StatelessWidget {
   }
 }
 
-List<Location> _filterLocations(List<Location> locations, String rawQuery) {
+List<Location> _filterLocations(
+  List<Location> locations,
+  String rawQuery,
+  LocationCategory? selectedCategory,
+) {
   final query = rawQuery.trim().toLowerCase();
-  if (query.isEmpty) return locations;
 
   return locations
       .where((location) {
+        final matchesCategory =
+            selectedCategory == null || location.category == selectedCategory;
+        if (!matchesCategory) {
+          return false;
+        }
+
+        if (query.isEmpty) {
+          return true;
+        }
+
         final haystack = [
           location.name,
           location.address,
@@ -145,67 +174,111 @@ List<Location> _filterLocations(List<Location> locations, String rawQuery) {
       .toList(growable: false);
 }
 
-class _SavedSummaryCard extends StatelessWidget {
-  const _SavedSummaryCard({
-    required this.totalCount,
-    required this.filteredCount,
+class _FavoritesCategoryFilters extends StatelessWidget {
+  const _FavoritesCategoryFilters({
+    required this.selectedCategory,
+    required this.onChanged,
   });
 
-  final int totalCount;
-  final int filteredCount;
+  final LocationCategory? selectedCategory;
+  final ValueChanged<LocationCategory?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFE6D7), Color(0xFFFFF3E8)],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: SpontiColors.outline),
-      ),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: SpontiColors.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.bookmark_rounded,
-              color: SpontiColors.primary,
-            ),
+          _FavoritesCategoryChip(
+            label: 'All',
+            icon: Icons.grid_view_rounded,
+            isSelected: selectedCategory == null,
+            color: SpontiColors.primary,
+            onTap: () => onChanged(null),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$totalCount saved',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  filteredCount == totalCount
-                      ? 'Everything you bookmarked is ready here.'
-                      : '$filteredCount result${filteredCount == 1 ? '' : 's'} from your saved list.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
+          for (final category in LocationCategory.values) ...[
+            const SizedBox(width: 10),
+            _FavoritesCategoryChip(
+              label: category.label,
+              icon: _categoryFilterIcon(category),
+              isSelected: selectedCategory == category,
+              color: Color(category.colorValue),
+              onTap: () => onChanged(
+                selectedCategory == category ? null : category,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
+}
+
+class _FavoritesCategoryChip extends StatelessWidget {
+  const _FavoritesCategoryChip({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final foregroundColor = isSelected ? color : SpontiColors.textSecondary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? color.withValues(alpha: 0.14)
+                : SpontiColors.surfaceVariant.withValues(alpha: 0.82),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: isSelected ? color : SpontiColors.outline,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: foregroundColor),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: foregroundColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+IconData _categoryFilterIcon(LocationCategory category) {
+  return switch (category) {
+    LocationCategory.food => Icons.restaurant_rounded,
+    LocationCategory.coffee => Icons.local_cafe_rounded,
+    LocationCategory.nature => Icons.park_rounded,
+    LocationCategory.nightlife => Icons.nightlife_rounded,
+    LocationCategory.arts => Icons.palette_rounded,
+    LocationCategory.activities => Icons.sports_esports_rounded,
+  };
 }
 
 class _FavoritesSearchField extends StatelessWidget {
