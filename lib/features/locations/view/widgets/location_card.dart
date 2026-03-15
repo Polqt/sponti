@@ -16,8 +16,8 @@ class LocationCard extends StatelessWidget {
     this.onTap,
     this.isSaved = false,
     this.onSaveToggle,
-    this.savedIcon = Icons.bookmark_outline_rounded,
-    this.savedActiveIcon = Icons.bookmark_rounded,
+    this.savedIcon = Icons.favorite_border_rounded,
+    this.savedActiveIcon = Icons.favorite_rounded,
   });
 
   final Location location;
