@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sponti/core/theme/app_theme.dart';
-import 'package:sponti/features/favorites/favorites_viewmodel.dart';
 import 'package:sponti/features/favorites/view/screens/favorites_screen.dart';
+import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/locations/model/coordinates.dart';
 import 'package:sponti/features/locations/model/location.dart';
-import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
 void main() {
   testWidgets('shows empty state when there are no saved places', (
@@ -19,7 +18,14 @@ void main() {
       ProviderScope(
         overrides: [
           favoriteIdsProvider.overrideWith(TestFavoritesViewModel.new),
-          locationsProvider.overrideWith(TestLocationsViewModel.new),
+          favoriteLocationsProvider.overrideWith(
+            (ref) async {
+              final ids = await ref.watch(favoriteIdsProvider.future);
+              return testLocations
+                  .where((location) => ids.contains(location.id))
+                  .toList(growable: false);
+            },
+          ),
         ],
         child: const _TestApp(child: FavoritesScreen()),
       ),
@@ -53,7 +59,14 @@ void main() {
       ProviderScope(
         overrides: [
           favoriteIdsProvider.overrideWith(TestFavoritesViewModel.new),
-          locationsProvider.overrideWith(TestLocationsViewModel.new),
+          favoriteLocationsProvider.overrideWith(
+            (ref) async {
+              final ids = await ref.watch(favoriteIdsProvider.future);
+              return testLocations
+                  .where((location) => ids.contains(location.id))
+                  .toList(growable: false);
+            },
+          ),
         ],
         child: const _TestApp(child: FavoritesScreen()),
       ),
@@ -99,11 +112,6 @@ class TestFavoritesViewModel extends FavoritesViewModel {
     }
     state = AsyncData(updated);
   }
-}
-
-class TestLocationsViewModel extends LocationsViewModel {
-  @override
-  Future<List<Location>> build() async => [...testLocations];
 }
 
 class _TestApp extends StatelessWidget {
