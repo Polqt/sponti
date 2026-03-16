@@ -1,10 +1,8 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/core/utils/icon_helpers.dart';
 
 List<Location> filterLocations(
   List<Location> locations,
@@ -170,8 +168,8 @@ class _FavoritesCategoryIcon extends StatelessWidget {
       return Icon(fallbackIcon, size: 16, color: foregroundColor);
     }
 
-    return FutureBuilder<_ResolvedCategoryIcon>(
-      future: _resolveCategoryIcon(path),
+    return FutureBuilder<ResolvedCategoryIcon>(
+      future: resolveCategoryIcon(path),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(width: 16, height: 16);
@@ -206,58 +204,6 @@ class _FavoritesCategoryIcon extends StatelessWidget {
   }
 }
 
-class _ResolvedCategoryIcon {
-  const _ResolvedCategoryIcon({this.bytes, this.svg});
-
-  final Uint8List? bytes;
-  final String? svg;
-}
-
-final Map<String, Future<_ResolvedCategoryIcon>> _iconCache =
-    <String, Future<_ResolvedCategoryIcon>>{};
-
-Future<_ResolvedCategoryIcon> _resolveCategoryIcon(String assetPath) {
-  return _iconCache.putIfAbsent(assetPath, () async {
-    final bundledFallback = _bundledCategorySvg(assetPath);
-    final svg = await rootBundle
-        .loadString(assetPath, cache: false)
-        // ignore: invalid_return_type_for_catch_error
-        .catchError((_) => bundledFallback);
-
-    final match = RegExp(
-      r'data:image\/png;base64,([^"]+)',
-      caseSensitive: false,
-    ).firstMatch(svg);
-    final encoded = match?.group(1);
-    if (encoded != null) {
-      return _ResolvedCategoryIcon(bytes: base64Decode(encoded));
-    }
-
-    return _ResolvedCategoryIcon(svg: svg);
-  });
-}
-
-String? _bundledCategorySvg(String assetPath) {
-  return switch (assetPath) {
-    'assets/icons/stroll.svg' => _strollSvg,
-    'assets/icons/arts.svg' => _artsSvg,
-    _ => null,
-  };
-}
-
-const String _strollSvg =
-    '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">'
-    '<path d="M9 2.25C10.6569 2.25 12 3.59315 12 5.25C12 6.12868 11.622 6.91907 11.0198 7.46845C12.7107 8.2726 13.875 9.99615 13.875 12C13.875 12.4142 13.5392 12.75 13.125 12.75H10.125V15C10.125 15.4142 9.78921 15.75 9.375 15.75H8.625C8.21079 15.75 7.875 15.4142 7.875 15V12.75H4.875C4.46079 12.75 4.125 12.4142 4.125 12C4.125 9.99615 5.28932 8.2726 6.98016 7.46845C6.37805 6.91907 6 6.12868 6 5.25C6 3.59315 7.34315 2.25 9 2.25Z" fill="#7A746D"/>'
-    '</svg>';
-
-const String _artsSvg =
-    '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">'
-    '<path d="M9 2.25C5.27208 2.25 2.25 5.27208 2.25 9C2.25 12.7279 5.27208 15.75 9 15.75C10.1739 15.75 11.125 14.7989 11.125 13.625C11.125 13.1891 10.9937 12.7838 10.7686 12.4465C10.6024 12.1972 10.5 11.8977 10.5 11.5732C10.5 10.7099 11.1997 10.0103 12.063 10.0103H13.125C14.7819 10.0103 15.75 8.73481 15.75 7.3125C15.75 4.52208 12.7279 2.25 9 2.25Z" fill="#7A746D"/>'
-    '<circle cx="5.625" cy="8.25" r="1.125" fill="#7A746D"/>'
-    '<circle cx="8.625" cy="5.625" r="1.125" fill="#7A746D"/>'
-    '<circle cx="11.625" cy="7.125" r="1.125" fill="#7A746D"/>'
-    '</svg>';
-
 String? _categoryFilterAsset(LocationCategory category) {
   return switch (category) {
     LocationCategory.food => 'assets/icons/munch.svg',
@@ -267,35 +213,4 @@ String? _categoryFilterAsset(LocationCategory category) {
     LocationCategory.arts => 'assets/icons/arts.svg',
     LocationCategory.activities => 'assets/icons/fun.svg',
   };
-}
-
-class FavoritesSearchField extends StatelessWidget {
-  const FavoritesSearchField({
-    super.key,
-    required this.initialValue,
-    required this.onChanged,
-  });
-
-  final String initialValue;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      key: ValueKey(initialValue),
-      initialValue: initialValue,
-      onChanged: onChanged,
-      textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
-        hintText: 'Search saved spots',
-        prefixIcon: const Icon(Icons.search_rounded),
-        suffixIcon: initialValue.isEmpty
-            ? null
-            : IconButton(
-                onPressed: () => onChanged(''),
-                icon: const Icon(Icons.close_rounded),
-              ),
-      ),
-    );
-  }
 }

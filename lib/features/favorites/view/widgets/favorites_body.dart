@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +6,7 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/features/favorites/view/widgets/favorite_list_item.dart';
 import 'package:sponti/features/favorites/view/widgets/favorites_filter.dart';
+import 'package:sponti/features/favorites/view/widgets/favorites_search_field.dart';
 import 'package:sponti/features/locations/model/location.dart';
 
 class FavoritesBody extends StatelessWidget {
@@ -85,11 +85,12 @@ class FavoritesBody extends StatelessWidget {
           SliverToBoxAdapter(
             child: _EmptyStateSection(
               child: AppEmptyState(
-                emoji: '\u{1F4CD}',
-                title: 'No saved places yet',
+                emoji: '🦗',
+                title: 'your list is crickets',
                 subtitle:
-                    'Tap the save icon on a spot to keep it here for your next spontaneous trip.',
-                actionLabel: 'Explore spots',
+                    "those bookmark icons aren't just decorative. "
+                    'go poke some spots and start a collection.',
+                actionLabel: 'find something good',
                 onAction: () => context.go(RouteName.location),
               ),
             ),
