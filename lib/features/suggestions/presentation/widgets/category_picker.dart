@@ -4,12 +4,12 @@ const _selectedBorderColor = Color(0xFF111111);
 const _unselectedBorderColor = Color(0xFFE5E5E5);
 
 enum SpotCategory {
-  cafes('cafes', '☕'),
-  munch('munch', '🌮'),
-  bars('bars', '🍹'),
-  fun('fun', '🎯'),
-  stroll('stroll', '🌿'),
-  arts('arts', '🎨');
+  food('food', '🌮'),
+  coffee('coffee', '☕'),
+  nature('nature', '🌿'),
+  nightlife('nightlife', '🍹'),
+  arts('arts', '🎨'),
+  activities('activities', '🎯');
 
   const SpotCategory(this.label, this.emoji);
   final String label;

@@ -38,21 +38,14 @@ class _SuggestSpotScreenState extends ConsumerState<SuggestSpotScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<void>>(submitSuggestionProvider, (previous, next) {
-      final justFinished = (previous?.isLoading ?? false) && !next.isLoading;
-      if (!justFinished) return;
-
-      if (next.hasError) {
-        final message = next.error?.toString() ?? 'failed to send suggestion';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message.replaceFirst('Exception: ', ''))),
-        );
-        return;
-      }
-
-      _showSuccessSheet();
-      _clearForm();
-      ref.read(submitSuggestionProvider.notifier).reset();
+    ref.listen<AsyncValue<void>>(submitSuggestionProvider, (_, next) {
+      next.whenOrNull(
+        data: (_) {
+          _showSuccessSheet();
+          _clearForm();
+        },
+        error: (e, __) => _showErrorSnackbar(e.toString()),
+      );
     });
 
     final submitState = ref.watch(submitSuggestionProvider);
@@ -159,6 +152,15 @@ class _SuggestSpotScreenState extends ConsumerState<SuggestSpotScreen> {
     );
   }
 
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFE24B4A),
+      ),
+    );
+  }
+
   void _clearForm() {
     _formKey.currentState?.reset();
     _nameController.clear();
@@ -242,8 +244,7 @@ class _SuggestionForm extends StatelessWidget {
                 return 'address is required';
               }
               return null;
-            }, //validator
-            dashedBorder: true,
+            },
           ),
           const SizedBox(height: 16),
           const _FieldLabel('map pin (optional)'),

@@ -31,11 +31,8 @@ class FavoriteListItem extends ConsumerWidget {
             key: ValueKey(location.id),
             location: location,
             variant: LocationCardVariant.fullWidth,
-            isSaved: true,
             onTap: () =>
                 context.push(RouteName.locationDetailPath(location.id)),
-            onSaveToggle: () =>
-                ref.read(favoriteIdsProvider.notifier).remove(location.id),
           ),
           Container(
             width: double.infinity,

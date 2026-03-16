@@ -9,6 +9,8 @@ class SuggestionModel {
     this.description,
     this.latitude,
     this.longitude,
+    this.reason,
+    this.status = 'pending',
   });
 
   final String id;
@@ -19,6 +21,8 @@ class SuggestionModel {
   final String address;
   final double? latitude;
   final double? longitude;
+  final String? reason;
+  final String status;
   final DateTime createdAt;
 
   factory SuggestionModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +35,8 @@ class SuggestionModel {
       address: json['address'] as String? ?? '',
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
+      reason: json['reason'] as String?,
+      status: json['status'] as String? ?? 'pending',
       createdAt:
           DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
@@ -47,6 +53,8 @@ class SuggestionModel {
       'address': address,
       'latitude': latitude,
       'longitude': longitude,
+      'reason': reason,
+      'status': status,
       'created_at': createdAt.toUtc().toIso8601String(),
     };
   }
@@ -60,10 +68,13 @@ class SuggestionModel {
     String? address,
     double? latitude,
     double? longitude,
+    String? reason,
+    String? status,
     DateTime? createdAt,
     bool clearDescription = false,
     bool clearLatitude = false,
     bool clearLongitude = false,
+    bool clearReason = false,
   }) {
     return SuggestionModel(
       id: id ?? this.id,
@@ -74,6 +85,8 @@ class SuggestionModel {
       address: address ?? this.address,
       latitude: clearLatitude ? null : (latitude ?? this.latitude),
       longitude: clearLongitude ? null : (longitude ?? this.longitude),
+      reason: clearReason ? null : (reason ?? this.reason),
+      status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
     );
   }
