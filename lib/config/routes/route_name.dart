@@ -13,6 +13,7 @@ abstract final class RouteName {
   static const String editProfile = '/edit-profile';
   static const String search = '/search';
   static const String suggest = '/suggest';
+  static const String suggestSpot = '/suggest-spot';
   static const String surprise = '/surprise';
 
   static String locationDetailPath(String id) => '/locations/$id';
