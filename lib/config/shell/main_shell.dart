@@ -111,11 +111,7 @@ class _SpontiBottomBar extends StatelessWidget {
               isActive: _isMapActive,
               onTap: onTapMap,
             ),
-            Expanded(
-              child: _CenterSurpriseButton(
-                onTap: onTapSurprise,
-              ),
-            ),
+            Expanded(child: _CenterSurpriseButton(onTap: onTapSurprise)),
             _TabIcon(
               icon: Icons.local_offer_outlined,
               activeIcon: Icons.local_offer_rounded,

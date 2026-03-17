@@ -82,6 +82,11 @@ final appRouter = GoRouter(
       path: RouteName.surprise,
       builder: (context, state) => const SurpriseScreen(),
     ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.explore,
+      builder: (context, state) => const ExploreScreen(),
+    ),
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) => MainShell(child: child),
@@ -95,11 +100,6 @@ final appRouter = GoRouter(
           path: RouteName.discovery,
           pageBuilder: (context, state) =>
               const NoTransitionPage(child: MapScreen()),
-        ),
-        GoRoute(
-          path: RouteName.explore,
-          pageBuilder: (context, state) =>
-              const NoTransitionPage(child: ExploreScreen()),
         ),
         GoRoute(
           path: RouteName.favorites,
