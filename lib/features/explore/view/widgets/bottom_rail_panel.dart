@@ -1,12 +1,16 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/category.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
 
-class BottomRailPanel extends StatefulWidget {
+class BottomRailPanel extends ConsumerStatefulWidget {
   const BottomRailPanel({
     super.key,
     required this.locations,
@@ -33,10 +37,10 @@ class BottomRailPanel extends StatefulWidget {
   final ValueChanged<Location> onTapFavorite;
 
   @override
-  State<BottomRailPanel> createState() => _BottomRailPanelState();
+  ConsumerState<BottomRailPanel> createState() => _BottomRailPanelState();
 }
 
-class _BottomRailPanelState extends State<BottomRailPanel> {
+class _BottomRailPanelState extends ConsumerState<BottomRailPanel> {
   final _scrollController = ScrollController();
 
   @override
@@ -138,9 +142,11 @@ class _BottomRailPanelState extends State<BottomRailPanel> {
                             color: SpontiColors.primary,
                             isSelected: widget.selectedCategory == null,
                             onTap: () {
-                              if (widget.selectedCategory != null) {
-                                widget.onTapCategory(widget.selectedCategory!);
-                              }
+                              ref
+                                  .read(exploreFilterProvider.notifier)
+                                  .setCategory(null);
+                              ref.read(exploreProvider.notifier).onFilterChanged();
+                              context.push(RouteName.explore);
                             },
                           ),
                           const SizedBox(width: 8),
@@ -150,7 +156,15 @@ class _BottomRailPanelState extends State<BottomRailPanel> {
                               icon: category.icon,
                               color: Color(category.colorValue),
                               isSelected: widget.selectedCategory == category,
-                              onTap: () => widget.onTapCategory(category),
+                              onTap: () {
+                                ref
+                                    .read(exploreFilterProvider.notifier)
+                                    .setCategory(category);
+                                ref
+                                    .read(exploreProvider.notifier)
+                                    .onFilterChanged();
+                                context.push(RouteName.explore);
+                              },
                             ),
                             const SizedBox(width: 8),
                           ],
