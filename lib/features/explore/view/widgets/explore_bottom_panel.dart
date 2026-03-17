@@ -8,368 +8,418 @@ import 'package:sponti/core/widgets/app_shimmer.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
 
-class ExploreBottomPanel extends StatelessWidget {
+class ExploreBottomPanel extends StatefulWidget {
   const ExploreBottomPanel({
     super.key,
     required this.locationsAsync,
     required this.locations,
-    required this.useListView,
     required this.selectedIndex,
-    required this.isExpanded,
     required this.bottomInset,
-    required this.pageController,
     required this.favoriteIds,
     required this.onExpandChanged,
-    required this.onPageChanged,
     required this.onTapLocation,
     required this.onSaveToggle,
+    this.onSheetProgressChanged,
+    this.onClose,
+    this.edgeToEdge = false,
+    this.isExpanded = false,
   });
 
   final AsyncValue<List<Location>> locationsAsync;
   final List<Location> locations;
-  final bool useListView;
   final int selectedIndex;
   final bool isExpanded;
   final double bottomInset;
-  final PageController pageController;
   final Set<String> favoriteIds;
   final ValueChanged<bool> onExpandChanged;
-  final ValueChanged<int> onPageChanged;
   final ValueChanged<Location> onTapLocation;
   final Future<void> Function(Location location) onSaveToggle;
+  final ValueChanged<double>? onSheetProgressChanged;
+  final VoidCallback? onClose;
+  final bool edgeToEdge;
+
+  @override
+  State<ExploreBottomPanel> createState() => _ExploreBottomPanelState();
+}
+
+class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
+  static const _minSize = 0.16;
+  static const _maxSize = 0.62;
+  static const _expandThreshold = 0.34;
+  static const _bottomBarReserve = 86.0;
+  static const _dismissEpsilon = 0.006;
+
+  late final DraggableScrollableController _sheetController;
+  double _chromeProgress = 0.0;
+  bool _wasAboveMin = false;
+  bool _isDismissing = false;
+  int? _lastSelectedIndex;
+  final _itemKeys = <String, GlobalKey>{};
+  bool _scrollScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sheetController = DraggableScrollableController();
+    _sheetController.addListener(_handleSheetControllerChanged);
+    _scheduleScrollSelectedIntoView();
+  }
+
+  @override
+  void didUpdateWidget(covariant ExploreBottomPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isExpanded != widget.isExpanded) {
+      _animateToExpanded(widget.isExpanded);
+    }
+
+    if (oldWidget.selectedIndex != widget.selectedIndex ||
+        oldWidget.locations.length != widget.locations.length) {
+      _scheduleScrollSelectedIntoView();
+    }
+  }
+
+  @override
+  void dispose() {
+    _sheetController.removeListener(_handleSheetControllerChanged);
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  void _handleSheetControllerChanged() {
+    final close = widget.onClose;
+    if (close == null) return;
+    if (!_sheetController.isAttached) return;
+    if (!mounted) return;
+
+    final size = _sheetController.size;
+    final aboveMinNow = size > (_minSize + 0.02);
+    if (aboveMinNow) _wasAboveMin = true;
+
+    // If the user drags the sheet down to its collapsed snap point,
+    // dismiss the sheet entirely instead of leaving it minimized.
+    final atMin = size <= (_minSize + _dismissEpsilon);
+    if (_wasAboveMin && atMin && !_isDismissing) {
+      _isDismissing = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        close();
+      });
+    }
+  }
+
+  void _scheduleScrollSelectedIntoView() {
+    if (_scrollScheduled) return;
+    _scrollScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollScheduled = false;
+      _scrollSelectedIntoView();
+    });
+  }
+
+  void _scrollSelectedIntoView() {
+    if (!mounted) return;
+    if (widget.locations.isEmpty) return;
+    final index = widget.selectedIndex.clamp(0, widget.locations.length - 1);
+    if (_lastSelectedIndex == index) return;
+    _lastSelectedIndex = index;
+
+    final locationId = widget.locations[index].id;
+    final key = _itemKeys[locationId];
+    final ctx = key?.currentContext;
+    if (ctx == null) {
+      // Key/context may not exist yet (first build). Try again next frame.
+      _scheduleScrollSelectedIntoView();
+      return;
+    }
+
+    Scrollable.ensureVisible(
+      ctx,
+      alignment: 0.18,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Future<void> _animateToExpanded(bool expanded) async {
+    if (!_sheetController.isAttached) return;
+    final target = expanded ? _maxSize : _minSize;
+    try {
+      await _sheetController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+      );
+    } catch (_) {
+      // No-op: controller can throw if detached mid-animation.
+    }
+  }
+
+  void _handleNotification(DraggableScrollableNotification notification) {
+    final progress = ((notification.extent - _minSize) / (_maxSize - _minSize))
+        .clamp(0.0, 1.0);
+    widget.onSheetProgressChanged?.call(progress);
+
+    if ((progress - _chromeProgress).abs() > 0.02) {
+      setState(() => _chromeProgress = progress);
+    } else {
+      _chromeProgress = progress;
+    }
+
+    final expandedNow = notification.extent >= _expandThreshold;
+    if (expandedNow != widget.isExpanded) {
+      widget.onExpandChanged(expandedNow);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final expandedHeight = MediaQuery.sizeOf(context).height * 0.55;
-    final panelHeight = isExpanded ? expandedHeight : 118.0;
+    // Reset dismiss guards if the sheet is shown again.
+    if (_isDismissing) {
+      _isDismissing = false;
+      _wasAboveMin = false;
+    }
 
-    return Positioned(
-      left: 12,
-      right: 12,
-      bottom: bottomInset + 12,
-      child: GestureDetector(
-        onVerticalDragEnd: (details) {
-          if (details.velocity.pixelsPerSecond.dy > 100) {
-            onExpandChanged(false);
-          } else if (details.velocity.pixelsPerSecond.dy < -100) {
-            onExpandChanged(true);
-          }
+    // When rendered edge-to-edge, avoid any transient bottom padding that can
+    // appear before the first drag notification updates [_chromeProgress].
+    final chrome = (widget.edgeToEdge ? 1.0 : _chromeProgress).clamp(0.0, 1.0);
+    final bottomPadding = (widget.edgeToEdge ? 0.0 : (widget.bottomInset + 12)) +
+        (_bottomBarReserve * (1.0 - chrome));
+    final horizontalPadding = widget.edgeToEdge ? 0.0 : 12.0;
+    final borderRadius = widget.edgeToEdge
+        ? const BorderRadius.vertical(top: Radius.circular(24))
+        : BorderRadius.circular(24);
+
+    return Positioned.fill(
+      child: NotificationListener<DraggableScrollableNotification>(
+        onNotification: (notification) {
+          _handleNotification(notification);
+          return false;
         },
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          alignment: Alignment.bottomCenter,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                height: panelHeight,
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                decoration: BoxDecoration(
-                  color: SpontiColors.surface.withValues(alpha: 0.68),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: SpontiColors.outline.withValues(alpha: 0.72),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 24,
-                      offset: const Offset(0, -6),
-                    ),
-                  ],
+        child: DraggableScrollableSheet(
+          controller: _sheetController,
+          minChildSize: _minSize,
+          maxChildSize: _maxSize,
+          initialChildSize: widget.isExpanded ? _maxSize : _minSize,
+          snap: true,
+          snapSizes: const [_minSize, _maxSize],
+          builder: (context, scrollController) {
+            return Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  0,
+                  horizontalPadding,
+                  bottomPadding,
                 ),
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => onExpandChanged(!isExpanded),
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Container(
-                          width: 38,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: SpontiColors.textMuted.withValues(alpha: 0.32),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
+                child: ClipRRect(
+                  borderRadius: borderRadius,
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: SpontiColors.surface.withValues(alpha: 0.68),
+                        borderRadius: borderRadius,
+                        border: Border.all(
+                          color: SpontiColors.outline.withValues(alpha: 0.72),
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 24,
+                            offset: const Offset(0, -6),
+                          ),
+                        ],
+                      ),
+                      child: ListView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                        children: [
+                          _SheetHeader(
+                            showCount: widget.isExpanded,
+                            countText: '${widget.locations.length} spots found',
+                            onClose: widget.onClose,
+                          ),
+                          _buildBody(context),
+                        ],
                       ),
                     ),
-                    if (isExpanded)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            '${locations.length} spots found',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SpontiColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    Expanded(child: _buildBody(context)),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
   Widget _buildBody(BuildContext context) {
-    if (locationsAsync.isLoading) {
-      return _LoadingCards(isExpanded: isExpanded);
+    if (widget.locationsAsync.isLoading) {
+      return const _LoadingList();
     }
 
-    if (locations.isEmpty) {
-      return AppEmptyState(
-        emoji: '🔭',
-        title: 'Nothing found',
-        subtitle: 'Try a different filter combo',
+    if (widget.locations.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: AppEmptyState(
+          emoji: '🔭',
+          title: 'Nothing found',
+          subtitle: 'Try a different filter combo',
+        ),
       );
     }
 
-    if (isExpanded) {
-      if (useListView) {
-        return ListView.separated(
-          padding: const EdgeInsets.only(top: 4, bottom: 4),
-          itemCount: locations.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final location = locations[index];
-            final isSelected = index == selectedIndex;
-
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: isSelected
-                      ? Color(location.category.colorValue)
-                      : Colors.transparent,
-                  width: 2,
-                ),
-              ),
-              child: LocationCard(
-                location: location,
-                variant: LocationCardVariant.fullWidth,
-                isSaved: favoriteIds.contains(location.id),
-                onTap: () => onTapLocation(location),
-                onSaveToggle: () => onSaveToggle(location),
-              ),
-            );
-          },
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(top: 8),
+      itemCount: widget.locations.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final location = widget.locations[index];
+        final isSelected = index == widget.selectedIndex;
+        final key = _itemKeys.putIfAbsent(
+          location.id,
+          () => GlobalKey(debugLabel: 'explore_item_${location.id}'),
         );
-      }
 
-      return Column(
+        return KeyedSubtree(
+          key: key,
+          child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color:
+                  isSelected ? Color(location.category.colorValue) : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: LocationCard(
+            location: location,
+            variant: LocationCardVariant.fullWidth,
+            isSaved: widget.favoriteIds.contains(location.id),
+            onTap: () => widget.onTapLocation(location),
+            onSaveToggle: () => widget.onSaveToggle(location),
+          ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SheetHeader extends StatelessWidget {
+  const _SheetHeader({
+    required this.showCount,
+    required this.countText,
+    required this.onClose,
+  });
+
+  final bool showCount;
+  final String countText;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final close = onClose;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+      child: Column(
         children: [
           SizedBox(
-            height: 206,
-            child: PageView.builder(
-              controller: pageController,
-              itemCount: locations.length,
-              onPageChanged: onPageChanged,
-              itemBuilder: (context, index) {
-                final location = locations[index];
-                final isSelected = index == selectedIndex;
-
-                return Align(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    width: 310,
-                    margin: const EdgeInsets.symmetric(horizontal: 6),
+            height: 24,
+            child: Stack(
+              children: [
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isSelected
-                            ? Color(location.category.colorValue)
-                            : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: LocationCard(
-                      location: location,
-                      width: 310,
-                      variant: LocationCardVariant.compact,
-                      isSaved: favoriteIds.contains(location.id),
-                      onTap: () => onTapLocation(location),
-                      onSaveToggle: () => onSaveToggle(location),
+                      color: SpontiColors.textMuted.withValues(alpha: 0.32),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                );
-              },
+                ),
+                if (close != null)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: close,
+                        borderRadius: BorderRadius.circular(999),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 18,
+                            color: SpontiColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          _PageDots(
-            itemCount: locations.length,
-            selectedIndex: selectedIndex,
-          ),
+          if (showCount) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                countText,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SpontiColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+          ],
         ],
-      );
-    }
-
-    final selectedLocation = locations[selectedIndex.clamp(0, locations.length - 1)];
-
-    return ClipRect(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onExpandChanged(true),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: SizedBox(
-            height: 200,
-            width: 310,
-            child: LocationCard(
-              location: selectedLocation,
-              width: 310,
-              variant: LocationCardVariant.compact,
-              isSaved: favoriteIds.contains(selectedLocation.id),
-              onTap: () => onExpandChanged(true),
-              onSaveToggle: () => onSaveToggle(selectedLocation),
-            ),
-          ),
-        ),
       ),
     );
   }
 }
 
-class _LoadingCards extends StatelessWidget {
-  const _LoadingCards({required this.isExpanded});
-
-  final bool isExpanded;
+class _LoadingList extends StatelessWidget {
+  const _LoadingList();
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return ListView.builder(
+      shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      child: Row(
-        children: [
-          for (var index = 0; index < 2; index++) ...[
-            _LoadingCard(isExpanded: isExpanded),
-            if (index == 0) const SizedBox(width: 12),
-          ],
-        ],
+      padding: const EdgeInsets.only(top: 8),
+      itemCount: 4,
+      itemBuilder: (context, index) => const Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: _LoadingCard(),
       ),
     );
   }
 }
 
 class _LoadingCard extends StatelessWidget {
-  const _LoadingCard({required this.isExpanded});
-
-  final bool isExpanded;
+  const _LoadingCard();
 
   @override
   Widget build(BuildContext context) {
     return ClipRect(
-      child: SizedBox(
-        width: 310,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppShimmer(
-              height: isExpanded ? 120 : 84,
-              width: 310,
-              borderRadius: 18,
-            ),
-            if (isExpanded) ...[
-              const SizedBox(height: 10),
-              const AppShimmer(height: 14, width: 180, borderRadius: 8),
-              const SizedBox(height: 8),
-              const AppShimmer(height: 12, width: 220, borderRadius: 8),
-              const SizedBox(height: 8),
-              const AppShimmer(height: 12, width: 96, borderRadius: 8),
-            ],
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppShimmer(height: 120, width: double.infinity, borderRadius: 18),
+          const SizedBox(height: 10),
+          const AppShimmer(height: 14, width: 180, borderRadius: 8),
+          const SizedBox(height: 8),
+          const AppShimmer(height: 12, width: 220, borderRadius: 8),
+          const SizedBox(height: 8),
+          const AppShimmer(height: 12, width: 96, borderRadius: 8),
+        ],
       ),
     );
-  }
-}
-
-class _PageDots extends StatelessWidget {
-  const _PageDots({
-    required this.itemCount,
-    required this.selectedIndex,
-  });
-
-  final int itemCount;
-  final int selectedIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = _buildItems();
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (final item in items) ...[
-          if (item == null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: Text(
-                '…',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: SpontiColors.textMuted,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            )
-          else
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: item == selectedIndex ? 18 : 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: item == selectedIndex
-                    ? SpontiColors.primary
-                    : SpontiColors.outline,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-        ],
-      ],
-    );
-  }
-
-  List<int?> _buildItems() {
-    if (itemCount <= 10) {
-      return List<int?>.generate(itemCount, (index) => index);
-    }
-
-    final start = (selectedIndex - 3).clamp(0, itemCount - 8);
-    final end = (start + 8).clamp(0, itemCount);
-    final items = <int?>[];
-
-    if (start > 0) {
-      items
-        ..add(0)
-        ..add(null);
-    }
-
-    for (var index = start; index < end; index++) {
-      if (index != 0 && index != itemCount - 1) {
-        items.add(index);
-      }
-    }
-
-    if (end < itemCount) {
-      items
-        ..add(null)
-        ..add(itemCount - 1);
-    }
-
-    return items.take(10).toList(growable: false);
   }
 }

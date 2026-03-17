@@ -16,6 +16,7 @@ class MainShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final route = GoRouterState.of(context).matchedLocation;
     final activeIndex = _resolveActiveIndex(route);
+    final chromeProgress = ref.watch(shellChromeProgressProvider).clamp(0.0, 1.0);
 
     if (activeIndex != null) {
       final tabState = ref.watch(activeTabProvider);
@@ -33,14 +34,33 @@ class MainShell extends ConsumerWidget {
     return Scaffold(
       extendBody: true,
       body: child,
-      bottomNavigationBar: _SpontiBottomBar(
-        activeRoute: route,
-        avatarUrl: avatarUrl,
-        onTapExplore: () => context.go(RouteName.location),
-        onTapMap: () => context.go(RouteName.discovery),
-        onTapSurprise: () => context.push(RouteName.surprise),
-        onTapSaved: () => context.go(RouteName.favorites),
-        onTapProfile: () => context.go(RouteName.profile),
+      bottomNavigationBar: IgnorePointer(
+        ignoring: chromeProgress > 0.92,
+        child: ClipRect(
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            heightFactor: 1.0 - chromeProgress,
+            child: Opacity(
+              opacity: 1.0 - chromeProgress,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Transform.translate(
+                    offset: Offset(-constraints.maxWidth * 0.22 * chromeProgress, 0),
+                    child: _SpontiBottomBar(
+                      activeRoute: route,
+                      avatarUrl: avatarUrl,
+                      onTapExplore: () => context.go(RouteName.location),
+                      onTapMap: () => context.go(RouteName.discovery),
+                      onTapSurprise: () => context.push(RouteName.surprise),
+                      onTapSaved: () => context.go(RouteName.favorites),
+                      onTapProfile: () => context.go(RouteName.profile),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

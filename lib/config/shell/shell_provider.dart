@@ -25,3 +25,7 @@ enum ShellTab {
 /// Tracks which bottom nav tab is currently active.
 /// Updated by [MainShell] on every tab tap.
 final activeTabProvider = StateProvider<int>((ref) => 0);
+
+/// Controls global shell chrome visibility for immersive screens (e.g. map sheets).
+/// 0.0 = fully visible, 1.0 = fully hidden.
+final shellChromeProgressProvider = StateProvider<double>((ref) => 0.0);

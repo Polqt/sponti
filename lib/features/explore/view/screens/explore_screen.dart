@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sponti/config/routes/route_name.dart';
+import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/constants/app_constants.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
@@ -24,7 +25,7 @@ class ExploreScreen extends ConsumerStatefulWidget {
 
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   final _mapController = MapController();
-  final _pageController = PageController(viewportFraction: 0.84);
+  final ValueNotifier<double> _sheetProgress = ValueNotifier<double>(0.0);
 
   String? _selectedLocationId;
   bool _isPanelExpanded = false;
@@ -32,7 +33,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _sheetProgress.dispose();
+    ref.read(shellChromeProgressProvider.notifier).state = 0.0;
     super.dispose();
   }
 
@@ -64,9 +66,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   }
 
   void _jumpToLocation(String locationId, List<Location> locations) {
-    final index = locations.indexWhere((location) => location.id == locationId);
-    if (index < 0 || !_pageController.hasClients) return;
-    _pageController.jumpToPage(index);
+    // No-op: bottom sheet list no longer uses a paged horizontal carousel.
+    // Selection is still synced for map pins and list highlight.
+    return;
   }
 
   void _focusLocation(
@@ -85,17 +87,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     _mapController.move(
       LatLng(location.coordinates.latitude, location.coordinates.longitude),
       14.5,
-    );
-
-    if (!animatePage || !_pageController.hasClients) return;
-
-    final index = locations.indexWhere((item) => item.id == location.id);
-    if (index < 0) return;
-
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOut,
     );
   }
 
@@ -125,6 +116,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final favoriteIds = ref.watch(favoriteIdSetProvider);
     final locations = locationsAsync.valueOrNull ?? const <Location>[];
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final panelMaxHeight = MediaQuery.sizeOf(context).height * 0.62;
     final selectedId = locations.any((location) => location.id == _selectedLocationId)
         ? _selectedLocationId
         : (locations.isNotEmpty ? locations.first.id : null);
@@ -189,16 +181,29 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             ),
           ),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: ExploreFilterChips(
-                filter: filter,
-                onTapRanking: () =>
-                    showRankingFilterSheet(context, ref, filter),
-                onTapPrice: () => showPriceFilterSheet(context, ref, filter),
-                onTapCategory: () =>
-                    showCategoryFilterSheet(context, ref, filter),
-                onToggleNowOpen: _toggleNowOpen,
+            child: ValueListenableBuilder<double>(
+              valueListenable: _sheetProgress,
+              builder: (context, progress, child) {
+                final clamped = progress.clamp(0.0, 1.0);
+                return Opacity(
+                  opacity: 1.0 - clamped,
+                  child: Transform.translate(
+                    offset: Offset(-18 * clamped, 0),
+                    child: child,
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: ExploreFilterChips(
+                  filter: filter,
+                  onTapRanking: () =>
+                      showRankingFilterSheet(context, ref, filter),
+                  onTapPrice: () => showPriceFilterSheet(context, ref, filter),
+                  onTapCategory: () =>
+                      showCategoryFilterSheet(context, ref, filter),
+                  onToggleNowOpen: _toggleNowOpen,
+                ),
               ),
             ),
           ),
@@ -208,7 +213,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               right: 16,
               bottom: bottomInset +
                   (_isPanelExpanded
-                      ? MediaQuery.sizeOf(context).height * 0.55 + 36
+                      ? panelMaxHeight + 28
                       : 152),
               child: GestureDetector(
                 onTap: () => ref.read(exploreProvider.notifier).refresh(),
@@ -222,16 +227,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           ExploreBottomPanel(
             locationsAsync: locationsAsync,
             locations: locations,
-            useListView: filter.categoryFilter != null,
             selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
             isExpanded: _isPanelExpanded,
             bottomInset: bottomInset,
-            pageController: _pageController,
             favoriteIds: favoriteIds,
             onExpandChanged: _setPanelExpanded,
-            onPageChanged: (index) {
-              if (index < 0 || index >= locations.length) return;
-              _focusLocation(locations[index], locations);
+            onSheetProgressChanged: (progress) {
+              _sheetProgress.value = progress;
+              ref.read(shellChromeProgressProvider.notifier).state = progress;
             },
             onTapLocation: (location) {
               context.push(RouteName.locationDetailPath(location.id));
