@@ -60,8 +60,7 @@ class _TagChip extends StatelessWidget {
   );
 }
 
-// Multiple tags selector with add/remove functionality
-// Used on create/edit location screen
+
 class TagsSelector extends StatefulWidget {
   const TagsSelector({
     super.key,
@@ -247,7 +246,6 @@ class _TagsSelectorState extends State<TagsSelector> {
               ),
           ],
         ),
-
         if (_selected.isNotEmpty) ...[
           const SizedBox(height: 10),
           Wrap(

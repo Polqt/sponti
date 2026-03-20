@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/constants/app_constants.dart';
 import 'package:sponti/core/theme/app_colors.dart';
@@ -14,6 +12,7 @@ import 'package:sponti/features/explore/view/widgets/explore_filter_sheets.dart'
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
@@ -29,17 +28,24 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
   String? _selectedLocationId;
   bool _isPanelExpanded = false;
-  bool _didAutoExpandForFilter = false;
+  LocationCategory? _lastAutoExpandedCategory;
+  bool _isLocationDetailOpen = false;
+
+  void _setShellHidden(bool hidden) {
+    ref.read(shellBarHiddenProvider.notifier).state = hidden;
+  }
 
   @override
   void dispose() {
     _sheetProgress.dispose();
+    _setShellHidden(false);
     ref.read(shellChromeProgressProvider.notifier).state = 0.0;
     super.dispose();
   }
 
   void _setPanelExpanded(bool expanded) {
     setState(() => _isPanelExpanded = expanded);
+    _setShellHidden(expanded);
   }
 
   void _syncSelection(List<Location> locations) {
@@ -52,7 +58,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       return;
     }
 
-    final selectedId = locations.any((location) => location.id == _selectedLocationId)
+    final selectedId = locations.any((l) => l.id == _selectedLocationId)
         ? _selectedLocationId
         : locations.first.id;
 
@@ -61,33 +67,31 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setState(() => _selectedLocationId = selectedId);
-      _jumpToLocation(selectedId!, locations);
     });
   }
 
-  void _jumpToLocation(String locationId, List<Location> locations) {
-    // No-op: bottom sheet list no longer uses a paged horizontal carousel.
-    // Selection is still synced for map pins and list highlight.
-    return;
-  }
-
-  void _focusLocation(
-    Location location,
-    List<Location> locations, {
-    bool expandPanel = false,
-    bool animatePage = false,
-  }) {
-    setState(() {
-      _selectedLocationId = location.id;
-      if (expandPanel) {
-        _isPanelExpanded = true;
-      }
-    });
-
+  void _selectLocation(Location location) {
+    setState(() => _selectedLocationId = location.id);
     _mapController.move(
       LatLng(location.coordinates.latitude, location.coordinates.longitude),
       14.5,
     );
+  }
+
+  Future<void> _showLocationDetails(Location location) async {
+    if (_isLocationDetailOpen) return;
+
+    _selectLocation(location);
+    _setPanelExpanded(false);
+    _setShellHidden(true);
+    _isLocationDetailOpen = true;
+
+    try {
+      await showLocationDetailSheet(context, location: location);
+    } finally {
+      _isLocationDetailOpen = false;
+      _setShellHidden(_isPanelExpanded);
+    }
   }
 
   Future<void> _toggleNowOpen() async {
@@ -95,17 +99,22 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     await ref.read(exploreProvider.notifier).onFilterChanged();
   }
 
+  Future<void> _onCategoryChanged(LocationCategory? category) async {
+    ref.read(exploreFilterProvider.notifier).setCategory(category);
+    _setPanelExpanded(true);
+    await ref.read(exploreProvider.notifier).onFilterChanged();
+  }
+
   void _syncPanelState(ExploreFilter filter) {
-    if (_didAutoExpandForFilter || filter.categoryFilter == null) {
+    if (filter.categoryFilter == null) {
+      _lastAutoExpandedCategory = null;
       return;
     }
-
+    if (_lastAutoExpandedCategory == filter.categoryFilter) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      setState(() {
-        _isPanelExpanded = true;
-        _didAutoExpandForFilter = true;
-      });
+      _lastAutoExpandedCategory = filter.categoryFilter;
+      _setPanelExpanded(true);
     });
   }
 
@@ -116,13 +125,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final favoriteIds = ref.watch(favoriteIdSetProvider);
     final locations = locationsAsync.valueOrNull ?? const <Location>[];
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final panelMaxHeight = MediaQuery.sizeOf(context).height * 0.62;
-    final selectedId = locations.any((location) => location.id == _selectedLocationId)
+
+    final selectedId = locations.any((l) => l.id == _selectedLocationId)
         ? _selectedLocationId
         : (locations.isNotEmpty ? locations.first.id : null);
     final selectedIndex = selectedId == null
         ? 0
-        : locations.indexWhere((location) => location.id == selectedId);
+        : locations.indexWhere((l) => l.id == selectedId);
 
     _syncSelection(locations);
     _syncPanelState(filter);
@@ -142,7 +151,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 initialZoom: 12.8,
                 minZoom: 10,
                 maxZoom: 18,
-                onTap: (_, _) => setState(() => _isPanelExpanded = false),
+                onTap: (_, _) => _setPanelExpanded(false),
               ),
               children: [
                 TileLayer(
@@ -162,14 +171,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         width: 62,
                         height: 62,
                         child: GestureDetector(
-                          onTap: () => _focusLocation(
-                            location,
-                            locations,
-                            expandPanel: true,
-                            animatePage: true,
-                          ),
+                          onTap: () => _showLocationDetails(location),
                           child: MapPin(
-                            icon: location.category.icon,
+                            category: location.category,
                             color: Color(location.category.colorValue),
                             isSelected: location.id == selectedId,
                           ),
@@ -203,6 +207,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   onTapCategory: () =>
                       showCategoryFilterSheet(context, ref, filter),
                   onToggleNowOpen: _toggleNowOpen,
+                  showCategoryChip: false,
                 ),
               ),
             ),
@@ -211,10 +216,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             Positioned(
               left: 16,
               right: 16,
-              bottom: bottomInset +
-                  (_isPanelExpanded
-                      ? panelMaxHeight + 28
-                      : 152),
+              bottom: bottomInset + (_isPanelExpanded ? 340 : 160),
               child: GestureDetector(
                 onTap: () => ref.read(exploreProvider.notifier).refresh(),
                 child: const FloatingMessage(
@@ -232,13 +234,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             bottomInset: bottomInset,
             favoriteIds: favoriteIds,
             onExpandChanged: _setPanelExpanded,
+            selectedCategory: filter.categoryFilter,
+            onCategoryChanged: _onCategoryChanged,
             onSheetProgressChanged: (progress) {
               _sheetProgress.value = progress;
               ref.read(shellChromeProgressProvider.notifier).state = progress;
             },
-            onTapLocation: (location) {
-              context.push(RouteName.locationDetailPath(location.id));
-            },
+            // Card tap → highlight map pin only (no navigation)
+            onSelectLocation: _selectLocation,
             onSaveToggle: (location) =>
                 ref.read(favoriteIdsProvider.notifier).toggle(location.id),
           ),

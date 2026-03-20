@@ -42,10 +42,6 @@ class ProfileScreen extends ConsumerWidget {
                 backgroundColor: SpontiColors.surface,
                 elevation: 0,
                 pinned: true,
-                title: Text(
-                  'Profile',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
               ),
               SliverToBoxAdapter(
                 child: Padding(
@@ -80,22 +76,6 @@ class ProfileScreen extends ConsumerWidget {
                           _MenuItem(
                             icon: Icons.add_location_alt_rounded,
                             label: 'Suggested Spots',
-                            onTap: () {},
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      _MenuSection(
-                        title: 'Preferences',
-                        items: [
-                          _MenuItem(
-                            icon: Icons.notifications_outlined,
-                            label: 'Notifications',
-                            onTap: () {},
-                          ),
-                          _MenuItem(
-                            icon: Icons.lock_outline_rounded,
-                            label: 'Privacy',
                             onTap: () {},
                           ),
                         ],

@@ -7,7 +7,6 @@ import 'package:sponti/features/discovery/view/screens/map_screen.dart';
 import 'package:sponti/features/discovery/view/screens/surprise_screen.dart';
 import 'package:sponti/features/explore/view/screens/explore_screen.dart';
 import 'package:sponti/features/favorites/view/screens/favorites_screen.dart';
-import 'package:sponti/features/locations/view/screens/location_detail_screen.dart';
 import 'package:sponti/features/locations/view/screens/location_screen.dart';
 import 'package:sponti/features/onboarding/repository/onboarding_local_data_source.dart';
 import 'package:sponti/features/onboarding/view/screens/video_onboarding_screen.dart';
@@ -15,45 +14,34 @@ import 'package:sponti/features/profile/view/screens/edit_profile_screen.dart';
 import 'package:sponti/features/profile/view/screens/profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-abstract final class Routes {
-  static const String videoOnboarding = '/video-onboarding';
-  static const String signIn = '/signin';
-  static const String location = '/location';
-
-  static const String profile = '/profile';
-  static const String discovery = '/discovery';
-  static const String explore = '/explore';
-  static const String favorites = '/favorites';
-
-  static const String spotDetail = '/spot/:id';
-  static const String surprise = '/surprise';
-}
-
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: Routes.videoOnboarding,
+  initialLocation: RouteName.location,
   debugLogDiagnostics: true,
   redirect: (context, state) async {
     final session = Supabase.instance.client.auth.currentSession;
     final isAuth = session != null;
-    final isOnVideoOnboarding = state.matchedLocation == Routes.videoOnboarding;
-    final isOnAuthRoute =
-        state.matchedLocation == Routes.signIn ||
-        state.matchedLocation == Routes.videoOnboarding;
+    final currentPath = state.matchedLocation;
+    final isOnVideoOnboarding = currentPath == RouteName.videoOnboarding;
+    final isOnSignIn = currentPath == RouteName.signin;
+    final isOnAuthRoute = isOnSignIn || isOnVideoOnboarding;
 
     final dataSource = OnboardingLocalDataSourceImpl();
     final hasCompletedOnboarding = await dataSource.hasCompletedOnboarding();
 
     if (!hasCompletedOnboarding && !isOnVideoOnboarding) {
-      return Routes.videoOnboarding;
+      return RouteName.videoOnboarding;
     }
 
-    if (isOnVideoOnboarding) return null;
-    if (!isAuth && !isOnAuthRoute) return Routes.signIn;
-    if (isAuth && isOnAuthRoute) return Routes.location;
+    if (hasCompletedOnboarding && isOnVideoOnboarding) {
+      return isAuth ? RouteName.location : RouteName.signin;
+    }
+
+    if (!isAuth && !isOnAuthRoute) return RouteName.signin;
+    if (isAuth && isOnAuthRoute) return RouteName.location;
 
     return null;
   },
@@ -65,12 +53,6 @@ final appRouter = GoRouter(
     GoRoute(
       path: RouteName.signin,
       builder: (context, state) => const SignInScreen(),
-    ),
-    GoRoute(
-      parentNavigatorKey: _rootNavigatorKey,
-      path: RouteName.locationDetail,
-      builder: (context, state) =>
-          LocationDetailScreen(id: state.pathParameters['id']!),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

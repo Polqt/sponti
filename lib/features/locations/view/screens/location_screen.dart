@@ -1,9 +1,9 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
@@ -11,6 +11,8 @@ import 'package:sponti/core/widgets/glass_container.dart';
 import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
 import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
+import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
@@ -26,43 +28,85 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   final _mapController = MapController();
   final ValueNotifier<double> _sheetProgress = ValueNotifier<double>(0.0);
+
   String? _selectedLocationId;
   bool _didAutoCenter = false;
   bool _isExplorePanelVisible = false;
   bool _isExplorePanelExpanded = false;
+  bool _isLocationDetailOpen = false;
 
-  void _onTapCategory(LocationCategory category) {
-    ref.read(locationFilterProvider.notifier).toggleCategory(category);
+  void _setShellHidden(bool hidden) {
+    ref.read(shellBarHiddenProvider.notifier).state = hidden;
+  }
+
+  Future<void> _onCategoryChanged(LocationCategory? category) async {
+    ref.read(locationFilterProvider.notifier).setCategory(category);
     ref.read(locationsProvider.notifier).onFilterChanged();
+    _openPanel();
+  }
+
+  void _openPanel() {
     setState(() {
       _isExplorePanelVisible = true;
       _isExplorePanelExpanded = true;
     });
     _sheetProgress.value = 1.0;
     ref.read(shellChromeProgressProvider.notifier).state = 1.0;
+    _setShellHidden(true);
   }
 
   void _selectLocation(Location location) {
-    setState(() {
-      _selectedLocationId = location.id;
-      _isExplorePanelVisible = true;
-      _isExplorePanelExpanded = true;
-    });
-    _sheetProgress.value = 1.0;
-    ref.read(shellChromeProgressProvider.notifier).state = 1.0;
+    setState(() => _selectedLocationId = location.id);
+    _openPanel();
     _mapController.move(
       LatLng(location.coordinates.latitude, location.coordinates.longitude),
       14.5,
     );
   }
 
-  void _setExplorePanelExpanded(bool expanded) {
+  Future<void> _showLocationDetails(Location location) async {
+    if (_isLocationDetailOpen) return;
+
+    setState(() {
+      _selectedLocationId = location.id;
+      _isExplorePanelVisible = false;
+      _isExplorePanelExpanded = false;
+    });
+    _mapController.move(
+      LatLng(location.coordinates.latitude, location.coordinates.longitude),
+      14.5,
+    );
+    _sheetProgress.value = 0.0;
+    ref.read(shellChromeProgressProvider.notifier).state = 0.0;
+    _setShellHidden(true);
+    _isLocationDetailOpen = true;
+
+    try {
+      await showLocationDetailSheet(context, location: location);
+    } finally {
+      _isLocationDetailOpen = false;
+      _setShellHidden(false);
+    }
+  }
+
+  void _setPanelExpanded(bool expanded) {
     setState(() => _isExplorePanelExpanded = expanded);
+  }
+
+  void _hidePanel() {
+    setState(() {
+      _isExplorePanelVisible = false;
+      _isExplorePanelExpanded = false;
+    });
+    _sheetProgress.value = 0.0;
+    ref.read(shellChromeProgressProvider.notifier).state = 0.0;
+    _setShellHidden(false);
   }
 
   @override
   void dispose() {
     _sheetProgress.dispose();
+    _setShellHidden(false);
     ref.read(shellChromeProgressProvider.notifier).state = 0.0;
     super.dispose();
   }
@@ -110,13 +154,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 initialZoom: 12.8,
                 minZoom: 10,
                 maxZoom: 18,
-                onTap: (_, _) => setState(() {
-                  _selectedLocationId = null;
-                  _isExplorePanelExpanded = false;
-                  _isExplorePanelVisible = false;
-                  _sheetProgress.value = 0.0;
-                  ref.read(shellChromeProgressProvider.notifier).state = 0.0;
-                }),
+                onTap: (_, _) => _hidePanel(),
               ),
               children: [
                 TileLayer(
@@ -136,9 +174,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                         width: 62,
                         height: 62,
                         child: GestureDetector(
-                          onTap: () => _selectLocation(location),
+                          onTap: () => _showLocationDetails(location),
                           child: MapPin(
-                            icon: location.category.icon,
+                            category: location.category,
                             color: Color(location.category.colorValue),
                             isSelected: location.id == selectedId,
                           ),
@@ -224,38 +262,19 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 color: SpontiColors.error,
               ),
             ),
-          Positioned(
-            left: 12,
-            right: 12,
-            bottom: bottomInset + 78 + 10,
-            child: ValueListenableBuilder<double>(
-              valueListenable: _sheetProgress,
-              builder: (context, progress, child) {
-                final clamped = progress.clamp(0.0, 1.0);
-                return Opacity(
-                  opacity: 1.0 - clamped,
-                  child: Transform.translate(
-                    offset: Offset(-18 * clamped, 0),
-                    child: child,
-                  ),
-                );
-              },
-              child: _CategoryIconRail(
-                selectedCategory: filter.selectedCategory,
-                onTapAll: () {
-                  ref.read(locationFilterProvider.notifier).clearAll();
-                  ref.read(locationsProvider.notifier).onFilterChanged();
-                  setState(() {
-                    _isExplorePanelVisible = true;
-                    _isExplorePanelExpanded = true;
-                  });
-                  _sheetProgress.value = 1.0;
-                  ref.read(shellChromeProgressProvider.notifier).state = 1.0;
-                },
-                onTapCategory: _onTapCategory,
+          if (!_isExplorePanelVisible)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: bottomInset,
+              child: SafeArea(
+                top: false,
+                child: _FloatingCategoryRow(
+                  selectedCategory: filter.selectedCategory,
+                  onChanged: _onCategoryChanged,
+                ),
               ),
             ),
-          ),
           if (_isExplorePanelVisible)
             ExploreBottomPanel(
               locationsAsync: locationsAsync,
@@ -264,128 +283,19 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               isExpanded: _isExplorePanelExpanded,
               bottomInset: bottomInset,
               favoriteIds: favoriteIds,
-              onExpandChanged: _setExplorePanelExpanded,
+              selectedCategory: filter.selectedCategory,
+              onCategoryChanged: _onCategoryChanged,
+              onExpandChanged: _setPanelExpanded,
               edgeToEdge: true,
               onSheetProgressChanged: (progress) {
                 _sheetProgress.value = progress;
                 ref.read(shellChromeProgressProvider.notifier).state = progress;
               },
-              onClose: () {
-                setState(() {
-                  _isExplorePanelVisible = false;
-                  _isExplorePanelExpanded = false;
-                });
-                _sheetProgress.value = 0.0;
-                ref.read(shellChromeProgressProvider.notifier).state = 0.0;
-              },
-              onTapLocation: (location) {
-                context.push(RouteName.locationDetailPath(location.id));
-              },
+              onSelectLocation: _selectLocation,
               onSaveToggle: (location) =>
                   ref.read(favoriteIdsProvider.notifier).toggle(location.id),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _CategoryIconRail extends StatelessWidget {
-  const _CategoryIconRail({
-    required this.selectedCategory,
-    required this.onTapAll,
-    required this.onTapCategory,
-  });
-
-  final LocationCategory? selectedCategory;
-  final VoidCallback onTapAll;
-  final ValueChanged<LocationCategory> onTapCategory;
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassContainer(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _CategoryIconChip(
-                label: 'All',
-                icon: Icons.grid_view_rounded,
-                color: SpontiColors.primary,
-                isSelected: selectedCategory == null,
-                onTap: onTapAll,
-              ),
-              const SizedBox(width: 10),
-              for (final category in LocationCategory.values) ...[
-                _CategoryIconChip(
-                  label: category.label,
-                  icon: category.icon,
-                  color: Color(category.colorValue),
-                  isSelected: selectedCategory == category,
-                  onTap: () => onTapCategory(category),
-                ),
-                const SizedBox(width: 10),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryIconChip extends StatelessWidget {
-  const _CategoryIconChip({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color color;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final foreground = isSelected ? color : SpontiColors.textSecondary;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? color.withValues(alpha: 0.14)
-                : SpontiColors.surfaceVariant.withValues(alpha: 0.85),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: isSelected ? color : SpontiColors.outline,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: foreground),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: foreground,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -423,6 +333,33 @@ class _GlassSearchBar extends StatelessWidget {
             color: SpontiColors.textSecondary.withValues(alpha: 0.9),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FloatingCategoryRow extends StatelessWidget {
+  const _FloatingCategoryRow({
+    required this.selectedCategory,
+    required this.onChanged,
+  });
+
+  final LocationCategory? selectedCategory;
+  final ValueChanged<LocationCategory?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          child: LocationCategoryRow(
+            selectedCategory: selectedCategory,
+            onChanged: onChanged,
+          ),
+        ),
       ),
     );
   }

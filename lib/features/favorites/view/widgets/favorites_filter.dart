@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/locations/model/location.dart';
-import 'package:sponti/core/utils/icon_helpers.dart';
+import 'package:sponti/features/locations/view/widgets/category.dart';
 
 List<Location> filterLocations(
   List<Location> locations,
@@ -45,30 +44,41 @@ class FavoritesCategoryFilters extends StatelessWidget {
   final LocationCategory? selectedCategory;
   final ValueChanged<LocationCategory?> onChanged;
 
+  Iterable<_FavoritesCategoryOption> get _options sync* {
+    yield const _FavoritesCategoryOption(
+      label: 'All',
+      color: SpontiColors.primary,
+      fallbackIcon: Icons.grid_view_rounded,
+    );
+
+    for (final category in LocationCategory.values) {
+      yield _FavoritesCategoryOption(
+        label: category.label,
+        category: category,
+        color: Color(category.colorValue),
+        fallbackIcon: category.icon,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final options = _options.toList(growable: false);
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _FavoritesCategoryChip(
-            label: 'All',
-            iconAssetPath: null,
-            fallbackIcon: Icons.grid_view_rounded,
-            isSelected: selectedCategory == null,
-            color: SpontiColors.primary,
-            onTap: () => onChanged(null),
-          ),
-          for (final category in LocationCategory.values) ...[
-            const SizedBox(width: 10),
+          for (var index = 0; index < options.length; index++) ...[
+            if (index > 0) const SizedBox(width: 10),
             _FavoritesCategoryChip(
-              label: category.label,
-              iconAssetPath: _categoryFilterAsset(category),
-              fallbackIcon: _categoryFilterIcon(category),
-              isSelected: selectedCategory == category,
-              color: Color(category.colorValue),
-              onTap: () =>
-                  onChanged(selectedCategory == category ? null : category),
+              option: options[index],
+              isSelected: selectedCategory == options[index].category,
+              onTap: () => onChanged(
+                selectedCategory == options[index].category
+                    ? null
+                    : options[index].category,
+              ),
             ),
           ],
         ],
@@ -77,26 +87,36 @@ class FavoritesCategoryFilters extends StatelessWidget {
   }
 }
 
-class _FavoritesCategoryChip extends StatelessWidget {
-  const _FavoritesCategoryChip({
+class _FavoritesCategoryOption {
+  const _FavoritesCategoryOption({
     required this.label,
-    required this.iconAssetPath,
-    required this.fallbackIcon,
-    required this.isSelected,
     required this.color,
-    required this.onTap,
+    required this.fallbackIcon,
+    this.category,
   });
 
   final String label;
-  final String? iconAssetPath;
-  final IconData fallbackIcon;
-  final bool isSelected;
+  final LocationCategory? category;
   final Color color;
+  final IconData fallbackIcon;
+}
+
+class _FavoritesCategoryChip extends StatelessWidget {
+  const _FavoritesCategoryChip({
+    required this.option,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final _FavoritesCategoryOption option;
+  final bool isSelected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final foregroundColor = isSelected ? color : SpontiColors.textSecondary;
+    final foregroundColor = isSelected
+        ? option.color
+        : SpontiColors.textSecondary;
 
     return Material(
       color: Colors.transparent,
@@ -105,27 +125,28 @@ class _FavoritesCategoryChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: isSelected
-                ? color.withValues(alpha: 0.14)
+                ? option.color.withValues(alpha: 0.14)
                 : SpontiColors.surfaceVariant.withValues(alpha: 0.82),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: isSelected ? color : SpontiColors.outline,
+              color: isSelected ? option.color : SpontiColors.outline,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _FavoritesCategoryIcon(
-                assetPath: iconAssetPath,
-                fallbackIcon: fallbackIcon,
-                foregroundColor: foregroundColor,
+              LocationCategoryIcon(
+                category: option.category,
+                fallbackIcon: option.fallbackIcon,
+                color: foregroundColor,
+                size: 16,
               ),
               const SizedBox(width: 8),
               Text(
-                label,
+                option.label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: foregroundColor,
                   fontWeight: FontWeight.w700,
@@ -137,80 +158,4 @@ class _FavoritesCategoryChip extends StatelessWidget {
       ),
     );
   }
-}
-
-IconData _categoryFilterIcon(LocationCategory category) {
-  return switch (category) {
-    LocationCategory.food => Icons.restaurant_rounded,
-    LocationCategory.coffee => Icons.local_cafe_rounded,
-    LocationCategory.nature => Icons.park_rounded,
-    LocationCategory.nightlife => Icons.nightlife_rounded,
-    LocationCategory.arts => Icons.palette_rounded,
-    LocationCategory.activities => Icons.sports_esports_rounded,
-  };
-}
-
-class _FavoritesCategoryIcon extends StatelessWidget {
-  const _FavoritesCategoryIcon({
-    required this.assetPath,
-    required this.fallbackIcon,
-    required this.foregroundColor,
-  });
-
-  final String? assetPath;
-  final IconData fallbackIcon;
-  final Color foregroundColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final path = assetPath;
-    if (path == null) {
-      return Icon(fallbackIcon, size: 16, color: foregroundColor);
-    }
-
-    return FutureBuilder<ResolvedCategoryIcon>(
-      future: resolveCategoryIcon(path),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(width: 16, height: 16);
-        }
-
-        final resolved = snapshot.data;
-        if (resolved == null) {
-          return Icon(fallbackIcon, size: 16, color: foregroundColor);
-        }
-
-        if (resolved.bytes != null) {
-          return Image.memory(
-            resolved.bytes!,
-            width: 16,
-            height: 16,
-            fit: BoxFit.contain,
-          );
-        }
-
-        if (resolved.svg != null) {
-          return SvgPicture.string(
-            resolved.svg!,
-            width: 16,
-            height: 16,
-            colorFilter: ColorFilter.mode(foregroundColor, BlendMode.srcIn),
-          );
-        }
-
-        return Icon(fallbackIcon, size: 16, color: foregroundColor);
-      },
-    );
-  }
-}
-
-String? _categoryFilterAsset(LocationCategory category) {
-  return switch (category) {
-    LocationCategory.food => 'assets/icons/munch.svg',
-    LocationCategory.coffee => 'assets/icons/coffee.svg',
-    LocationCategory.nature => 'assets/icons/stroll.svg',
-    LocationCategory.nightlife => 'assets/icons/nightlife.svg',
-    LocationCategory.arts => 'assets/icons/arts.svg',
-    LocationCategory.activities => 'assets/icons/fun.svg',
-  };
 }

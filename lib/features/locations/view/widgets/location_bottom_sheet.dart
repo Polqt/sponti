@@ -102,7 +102,8 @@ class _LocationBottomSheetState extends State<LocationBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = widget.bottomInset +
+    final bottomPadding =
+        widget.bottomInset +
         12 +
         (_bottomBarReserve * (1.0 - _chromeProgress.clamp(0.0, 1.0)));
 
@@ -125,22 +126,29 @@ class _LocationBottomSheetState extends State<LocationBottomSheet> {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(12, 0, 12, bottomPadding),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(26),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
-                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                       decoration: BoxDecoration(
-                        color: SpontiColors.surface.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(22),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.92),
+                            SpontiColors.surface.withValues(alpha: 0.84),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(26),
                         border: Border.all(
                           color: SpontiColors.outline.withValues(alpha: 0.55),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 20,
-                            offset: const Offset(0, -4),
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 24,
+                            offset: const Offset(0, -6),
                           ),
                         ],
                       ),
@@ -156,23 +164,46 @@ class _LocationBottomSheetState extends State<LocationBottomSheet> {
                           ),
                           if (widget.isExpanded)
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(2, 10, 2, 8),
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  '${widget.locations.length} spots found',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: SpontiColors.textSecondary,
-                                        fontWeight: FontWeight.w600,
+                              padding: const EdgeInsets.fromLTRB(2, 12, 2, 10),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: SpontiColors.primary.withValues(
+                                        alpha: 0.1,
                                       ),
-                                ),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      '${widget.locations.length} spots found',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: SpontiColors.textSecondary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           if (widget.locations.isEmpty)
-                            const SizedBox.shrink()
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+                              child: Text(
+                                'Pick another category to keep exploring nearby spots.',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: SpontiColors.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                              ),
+                            )
                           else
                             ListView.separated(
                               shrinkWrap: true,
@@ -183,8 +214,8 @@ class _LocationBottomSheetState extends State<LocationBottomSheet> {
                               itemCount: widget.isExpanded
                                   ? widget.locations.length
                                   : 1,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 12),
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 14),
                               itemBuilder: (context, index) {
                                 final location = widget.isExpanded
                                     ? widget.locations[index]
@@ -198,13 +229,24 @@ class _LocationBottomSheetState extends State<LocationBottomSheet> {
                                 return AnimatedContainer(
                                   duration: const Duration(milliseconds: 180),
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(18),
+                                    borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
                                       color: isSelected
                                           ? Color(location.category.colorValue)
                                           : Colors.transparent,
                                       width: 2,
                                     ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: Color(
+                                                location.category.colorValue,
+                                              ).withValues(alpha: 0.14),
+                                              blurRadius: 16,
+                                              offset: const Offset(0, 8),
+                                            ),
+                                          ]
+                                        : null,
                                   ),
                                   child: LocationCard(
                                     location: location,
@@ -285,6 +327,10 @@ class _CategoryRow extends StatelessWidget {
               icon: category.icon,
               color: Color(category.colorValue),
               isSelected: selectedCategory == category,
+              leading: LocationCategoryIcon(
+                category: category,
+                color: Color(category.colorValue),
+              ),
               onTap: () => onTapCategory(category),
             ),
             const SizedBox(width: 8),
@@ -294,4 +340,3 @@ class _CategoryRow extends StatelessWidget {
     );
   }
 }
-

@@ -3,6 +3,7 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/glass_container.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/view/widgets/category.dart';
 
 class ExploreFilterChips extends StatelessWidget {
   const ExploreFilterChips({
@@ -12,6 +13,7 @@ class ExploreFilterChips extends StatelessWidget {
     required this.onTapPrice,
     required this.onTapCategory,
     required this.onToggleNowOpen,
+    this.showCategoryChip = true,
   });
 
   final ExploreFilter filter;
@@ -19,6 +21,7 @@ class ExploreFilterChips extends StatelessWidget {
   final VoidCallback onTapPrice;
   final VoidCallback onTapCategory;
   final VoidCallback onToggleNowOpen;
+  final bool showCategoryChip;
 
   @override
   Widget build(BuildContext context) {
@@ -31,37 +34,42 @@ class ExploreFilterChips extends StatelessWidget {
         child: Row(
           children: [
             _ExploreFilterChip(
-              label: '${_rankingLabel(filter.rankingFilter)} ✓',
+              label: '${_rankingLabel(filter.rankingFilter)} \u2713',
               color: _rankingColor(filter.rankingFilter),
-              icon: Icons.auto_awesome_rounded,
+              leading: const Icon(Icons.auto_awesome_rounded),
               isActive: true,
               onTap: onTapRanking,
             ),
             const SizedBox(width: 10),
             _ExploreFilterChip(
-              label: price == null ? 'Any price' : '${_priceLabel(price)} ✓',
+              label: price == null ? 'Any price' : '${_priceLabel(price)} \u2713',
               color: _priceColor(price),
-              icon: Icons.payments_outlined,
+              leading: const Icon(Icons.payments_outlined),
               isActive: price != null,
               onTap: onTapPrice,
             ),
+            if (showCategoryChip) ...[
+              const SizedBox(width: 10),
+              _ExploreFilterChip(
+                label: category == null ? 'Category' : '${category.label} \u2713',
+                color: category == null
+                    ? SpontiColors.textSecondary
+                    : Color(category.colorValue),
+                leading: category == null
+                    ? const Icon(Icons.grid_view_rounded)
+                    : LocationCategoryIcon(
+                        category: category,
+                        color: Color(category.colorValue),
+                      ),
+                isActive: category != null,
+                onTap: onTapCategory,
+              ),
+            ],
             const SizedBox(width: 10),
             _ExploreFilterChip(
-              label: category == null
-                  ? 'Category'
-                  : '${category.emoji} ${category.label} ✓',
-              color: category == null
-                  ? SpontiColors.textSecondary
-                  : Color(category.colorValue),
-              icon: category?.icon ?? Icons.grid_view_rounded,
-              isActive: category != null,
-              onTap: onTapCategory,
-            ),
-            const SizedBox(width: 10),
-            _ExploreFilterChip(
-              label: filter.nowOpenOnly ? 'Now open ✓' : 'Now open',
+              label: filter.nowOpenOnly ? 'Now open \u2713' : 'Now open',
               color: SpontiColors.success,
-              icon: Icons.schedule_rounded,
+              leading: const Icon(Icons.schedule_rounded),
               isActive: filter.nowOpenOnly,
               onTap: onToggleNowOpen,
             ),
@@ -76,14 +84,14 @@ class _ExploreFilterChip extends StatelessWidget {
   const _ExploreFilterChip({
     required this.label,
     required this.color,
-    required this.icon,
+    required this.leading,
     required this.isActive,
     required this.onTap,
   });
 
   final String label;
   final Color color;
-  final IconData icon;
+  final Widget leading;
   final bool isActive;
   final VoidCallback onTap;
 
@@ -111,7 +119,10 @@ class _ExploreFilterChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16, color: foreground),
+              IconTheme(
+                data: IconThemeData(size: 16, color: foreground),
+                child: leading,
+              ),
               const SizedBox(width: 8),
               Text(
                 label,
@@ -146,10 +157,10 @@ Color _rankingColor(String ranking) {
 
 String _priceLabel(PriceRange price) {
   return switch (price) {
-    PriceRange.free => '✦',
-    PriceRange.budget => '₱',
-    PriceRange.moderate => '₱₱',
-    PriceRange.expensive => '₱₱₱',
+    PriceRange.free => '\u2726',
+    PriceRange.budget => '\u20B1',
+    PriceRange.moderate => '\u20B1\u20B1',
+    PriceRange.expensive => '\u20B1\u20B1\u20B1',
   };
 }
 
