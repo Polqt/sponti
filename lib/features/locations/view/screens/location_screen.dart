@@ -11,6 +11,8 @@ import 'package:sponti/core/widgets/glass_container.dart';
 import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
 import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/view/widgets/category.dart';
+import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
@@ -30,6 +32,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   bool _didAutoCenter = false;
   bool _isExplorePanelVisible = false;
   bool _isExplorePanelExpanded = false;
+  bool _isLocationDetailOpen = false;
 
   void _onTapCategory(LocationCategory category) {
     ref.read(locationFilterProvider.notifier).toggleCategory(category);
@@ -42,18 +45,32 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     ref.read(shellChromeProgressProvider.notifier).state = 1.0;
   }
 
-  void _selectLocation(Location location) {
+  void _selectLocation(Location location, {bool showExplorePanel = true}) {
     setState(() {
       _selectedLocationId = location.id;
-      _isExplorePanelVisible = true;
-      _isExplorePanelExpanded = true;
+      _isExplorePanelVisible = showExplorePanel;
+      _isExplorePanelExpanded = showExplorePanel;
     });
-    _sheetProgress.value = 1.0;
-    ref.read(shellChromeProgressProvider.notifier).state = 1.0;
+    _sheetProgress.value = showExplorePanel ? 1.0 : 0.0;
+    ref.read(shellChromeProgressProvider.notifier).state = showExplorePanel
+        ? 1.0
+        : 0.0;
     _mapController.move(
       LatLng(location.coordinates.latitude, location.coordinates.longitude),
       14.5,
     );
+  }
+
+  Future<void> _showLocationDetails(Location location) async {
+    _selectLocation(location, showExplorePanel: false);
+    if (_isLocationDetailOpen) return;
+
+    _isLocationDetailOpen = true;
+    try {
+      await showLocationDetailSheet(context, location: location);
+    } finally {
+      _isLocationDetailOpen = false;
+    }
   }
 
   void _setExplorePanelExpanded(bool expanded) {
@@ -135,13 +152,11 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                         ),
                         width: 62,
                         height: 62,
-                        child: GestureDetector(
-                          onTap: () => _selectLocation(location),
-                          child: MapPin(
-                            icon: location.category.icon,
-                            color: Color(location.category.colorValue),
-                            isSelected: location.id == selectedId,
-                          ),
+                        child: MapPin(
+                          icon: location.category.icon,
+                          color: Color(location.category.colorValue),
+                          isSelected: location.id == selectedId,
+                          onTap: () => _showLocationDetails(location),
                         ),
                       ),
                   ],
@@ -312,7 +327,7 @@ class _CategoryIconRail extends StatelessWidget {
             children: [
               _CategoryIconChip(
                 label: 'All',
-                icon: Icons.grid_view_rounded,
+                fallbackIcon: Icons.grid_view_rounded,
                 color: SpontiColors.primary,
                 isSelected: selectedCategory == null,
                 onTap: onTapAll,
@@ -320,8 +335,9 @@ class _CategoryIconRail extends StatelessWidget {
               const SizedBox(width: 10),
               for (final category in LocationCategory.values) ...[
                 _CategoryIconChip(
+                  category: category,
                   label: category.label,
-                  icon: category.icon,
+                  fallbackIcon: category.icon,
                   color: Color(category.colorValue),
                   isSelected: selectedCategory == category,
                   onTap: () => onTapCategory(category),
@@ -338,15 +354,17 @@ class _CategoryIconRail extends StatelessWidget {
 
 class _CategoryIconChip extends StatelessWidget {
   const _CategoryIconChip({
+    this.category,
     required this.label,
-    required this.icon,
+    required this.fallbackIcon,
     required this.color,
     required this.isSelected,
     required this.onTap,
   });
 
+  final LocationCategory? category;
   final String label;
-  final IconData icon;
+  final IconData fallbackIcon;
   final Color color;
   final bool isSelected;
   final VoidCallback onTap;
@@ -374,7 +392,12 @@ class _CategoryIconChip extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: foreground),
+              LocationCategoryIcon(
+                category: category,
+                fallbackIcon: fallbackIcon,
+                color: foreground,
+                size: 18,
+              ),
               const SizedBox(height: 4),
               Text(
                 label,

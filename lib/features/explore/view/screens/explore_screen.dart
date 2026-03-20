@@ -14,6 +14,7 @@ import 'package:sponti/features/explore/view/widgets/explore_filter_sheets.dart'
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
@@ -30,6 +31,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   String? _selectedLocationId;
   bool _isPanelExpanded = false;
   bool _didAutoExpandForFilter = false;
+  bool _isLocationDetailOpen = false;
 
   @override
   void dispose() {
@@ -61,22 +63,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setState(() => _selectedLocationId = selectedId);
-      _jumpToLocation(selectedId!, locations);
     });
   }
 
-  void _jumpToLocation(String locationId, List<Location> locations) {
-    // No-op: bottom sheet list no longer uses a paged horizontal carousel.
-    // Selection is still synced for map pins and list highlight.
-    return;
-  }
-
-  void _focusLocation(
-    Location location,
-    List<Location> locations, {
-    bool expandPanel = false,
-    bool animatePage = false,
-  }) {
+  void _focusLocation(Location location, {bool expandPanel = false}) {
     setState(() {
       _selectedLocationId = location.id;
       if (expandPanel) {
@@ -88,6 +78,21 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       LatLng(location.coordinates.latitude, location.coordinates.longitude),
       14.5,
     );
+  }
+
+  Future<void> _showLocationDetails(Location location) async {
+    _focusLocation(location);
+    if (_isPanelExpanded) {
+      setState(() => _isPanelExpanded = false);
+    }
+    if (_isLocationDetailOpen) return;
+
+    _isLocationDetailOpen = true;
+    try {
+      await showLocationDetailSheet(context, location: location);
+    } finally {
+      _isLocationDetailOpen = false;
+    }
   }
 
   Future<void> _toggleNowOpen() async {
@@ -161,18 +166,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         ),
                         width: 62,
                         height: 62,
-                        child: GestureDetector(
-                          onTap: () => _focusLocation(
-                            location,
-                            locations,
-                            expandPanel: true,
-                            animatePage: true,
-                          ),
-                          child: MapPin(
-                            icon: location.category.icon,
-                            color: Color(location.category.colorValue),
-                            isSelected: location.id == selectedId,
-                          ),
+                        child: MapPin(
+                          icon: location.category.icon,
+                          color: Color(location.category.colorValue),
+                          isSelected: location.id == selectedId,
+                          onTap: () => _showLocationDetails(location),
                         ),
                       ),
                   ],

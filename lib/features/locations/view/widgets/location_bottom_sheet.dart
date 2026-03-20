@@ -183,7 +183,7 @@ class _LocationBottomSheetState extends State<LocationBottomSheet> {
                               itemCount: widget.isExpanded
                                   ? widget.locations.length
                                   : 1,
-                              separatorBuilder: (_, __) =>
+                              separatorBuilder: (_, _) =>
                                   const SizedBox(height: 12),
                               itemBuilder: (context, index) {
                                 final location = widget.isExpanded

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
-import 'package:sponti/core/widgets/app_shimmer.dart';
+import 'package:sponti/features/explore/view/widgets/explore_loading.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
 
@@ -182,7 +182,8 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
     // When rendered edge-to-edge, avoid any transient bottom padding that can
     // appear before the first drag notification updates [_chromeProgress].
     final chrome = (widget.edgeToEdge ? 1.0 : _chromeProgress).clamp(0.0, 1.0);
-    final bottomPadding = (widget.edgeToEdge ? 0.0 : (widget.bottomInset + 12)) +
+    final bottomPadding =
+        (widget.edgeToEdge ? 0.0 : (widget.bottomInset + 12)) +
         (_bottomBarReserve * (1.0 - chrome));
     final horizontalPadding = widget.edgeToEdge ? 0.0 : 12.0;
     final borderRadius = widget.edgeToEdge
@@ -218,10 +219,10 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
                     filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: SpontiColors.surface.withValues(alpha: 0.68),
+                        color: SpontiColors.surface.withValues(alpha: 0.7),
                         borderRadius: borderRadius,
                         border: Border.all(
-                          color: SpontiColors.outline.withValues(alpha: 0.72),
+                          color: SpontiColors.outline.withValues(alpha: 0.7),
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -233,12 +234,11 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
                       ),
                       child: ListView(
                         controller: scrollController,
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
                         children: [
                           _SheetHeader(
                             showCount: widget.isExpanded,
                             countText: '${widget.locations.length} spots found',
-                            onClose: widget.onClose,
                           ),
                           _buildBody(context),
                         ],
@@ -256,12 +256,12 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
 
   Widget _buildBody(BuildContext context) {
     if (widget.locationsAsync.isLoading) {
-      return const _LoadingList();
+      return const LoadingList();
     }
 
     if (widget.locations.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.only(top: 8),
+        padding: EdgeInsets.only(top: 12),
         child: AppEmptyState(
           emoji: '🔭',
           title: 'Nothing found',
@@ -273,9 +273,9 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.only(top: 6),
       itemCount: widget.locations.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final location = widget.locations[index];
         final isSelected = index == widget.selectedIndex;
@@ -287,22 +287,23 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
         return KeyedSubtree(
           key: key,
           child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color:
-                  isSelected ? Color(location.category.colorValue) : Colors.transparent,
-              width: 2,
+            duration: const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isSelected
+                    ? Color(location.category.colorValue)
+                    : Colors.transparent,
+                width: 2,
+              ),
             ),
-          ),
-          child: LocationCard(
-            location: location,
-            variant: LocationCardVariant.fullWidth,
-            isSaved: widget.favoriteIds.contains(location.id),
-            onTap: () => widget.onTapLocation(location),
-            onSaveToggle: () => widget.onSaveToggle(location),
-          ),
+            child: LocationCard(
+              location: location,
+              variant: LocationCardVariant.fullWidth,
+              isSaved: widget.favoriteIds.contains(location.id),
+              onTap: () => widget.onTapLocation(location),
+              onSaveToggle: () => widget.onSaveToggle(location),
+            ),
           ),
         );
       },
@@ -311,26 +312,19 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
 }
 
 class _SheetHeader extends StatelessWidget {
-  const _SheetHeader({
-    required this.showCount,
-    required this.countText,
-    required this.onClose,
-  });
+  const _SheetHeader({required this.showCount, required this.countText});
 
   final bool showCount;
   final String countText;
-  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
-    final close = onClose;
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
       child: Column(
         children: [
           SizedBox(
-            height: 24,
+            height: 20,
             child: Stack(
               children: [
                 Center(
@@ -343,81 +337,22 @@ class _SheetHeader extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (close != null)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: close,
-                        borderRadius: BorderRadius.circular(999),
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 18,
-                            color: SpontiColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
           if (showCount) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 countText,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SpontiColors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: SpontiColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _LoadingList extends StatelessWidget {
-  const _LoadingList();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(top: 8),
-      itemCount: 4,
-      itemBuilder: (context, index) => const Padding(
-        padding: EdgeInsets.only(bottom: 12),
-        child: _LoadingCard(),
-      ),
-    );
-  }
-}
-
-class _LoadingCard extends StatelessWidget {
-  const _LoadingCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRect(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppShimmer(height: 120, width: double.infinity, borderRadius: 18),
-          const SizedBox(height: 10),
-          const AppShimmer(height: 14, width: 180, borderRadius: 8),
-          const SizedBox(height: 8),
-          const AppShimmer(height: 12, width: 220, borderRadius: 8),
-          const SizedBox(height: 8),
-          const AppShimmer(height: 12, width: 96, borderRadius: 8),
         ],
       ),
     );

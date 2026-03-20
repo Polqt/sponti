@@ -123,30 +123,6 @@ class _LocationHero extends StatelessWidget {
                   category: location.category,
                   emojiFontSize: 56,
                 ),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.14),
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.6),
-                      ],
-                      stops: const [0.0, 0.45, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 14,
-                right: 14,
-                child: _SheetActionButton(
-                  icon: Icons.close_rounded,
-                  onTap: () => Navigator.of(context).pop(),
-                ),
-              ),
               Positioned(
                 left: 14,
                 right: 14,
@@ -203,29 +179,6 @@ class _LocationHero extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SheetActionButton extends StatelessWidget {
-  const _SheetActionButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.black.withValues(alpha: 0.36),
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(9),
-          child: Icon(icon, size: 18, color: Colors.white),
         ),
       ),
     );

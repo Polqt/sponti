@@ -7,7 +7,6 @@ import 'package:sponti/features/discovery/view/screens/map_screen.dart';
 import 'package:sponti/features/discovery/view/screens/surprise_screen.dart';
 import 'package:sponti/features/explore/view/screens/explore_screen.dart';
 import 'package:sponti/features/favorites/view/screens/favorites_screen.dart';
-import 'package:sponti/features/locations/view/screens/location_detail_screen.dart';
 import 'package:sponti/features/locations/view/screens/location_screen.dart';
 import 'package:sponti/features/onboarding/repository/onboarding_local_data_source.dart';
 import 'package:sponti/features/onboarding/view/screens/video_onboarding_screen.dart';
@@ -54,12 +53,6 @@ final appRouter = GoRouter(
     GoRoute(
       path: RouteName.signin,
       builder: (context, state) => const SignInScreen(),
-    ),
-    GoRoute(
-      parentNavigatorKey: _rootNavigatorKey,
-      path: RouteName.locationDetail,
-      builder: (context, state) =>
-          LocationDetailScreen(id: state.pathParameters['id']!),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

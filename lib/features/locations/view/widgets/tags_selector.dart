@@ -247,7 +247,6 @@ class _TagsSelectorState extends State<TagsSelector> {
               ),
           ],
         ),
-
         if (_selected.isNotEmpty) ...[
           const SizedBox(height: 10),
           Wrap(
