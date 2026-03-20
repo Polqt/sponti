@@ -5,6 +5,7 @@ import 'package:sponti/features/locations/repository/location_remote_data_source
 import 'package:sponti/features/locations/repository/location_repository.dart';
 import 'package:sponti/features/locations/repository/location_repository_impl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:math';
 
 final locationLocalDataSourceProvider = Provider<LocationLocalDataSource>((
   ref,
@@ -295,4 +296,36 @@ class DeleteLocationViewModel extends AutoDisposeAsyncNotifier<bool> {
 final deleteLocationProvider =
     AsyncNotifierProvider.autoDispose<DeleteLocationViewModel, bool>(
       DeleteLocationViewModel.new,
+    );
+
+class SurpriseMeNotifier extends AsyncNotifier<Location?> {
+  @override
+  Future<Location?> build() async => null;
+
+  Future<void> pickRandom(List<String> categories) async {
+    state = const AsyncLoading();
+    final repo = ref.read(locationRepositoryProvider);
+    final result = categories.isEmpty
+        ? await repo.getAllLocations()
+        : await repo.fetchByCategories(categories);
+    state = result.fold(
+      (failure) => AsyncError(failure.message, StackTrace.current),
+      (locations) {
+        if (locations.isEmpty) {
+          return AsyncError('no spots found for those categories', StackTrace.current);
+        }
+        final random = Random();
+        return AsyncData(locations[random.nextInt(locations.length)]);
+      },
+    );
+  }
+
+  void reset() {
+    state = const AsyncData(null);
+  }
+}
+
+final surpriseMeProvider =
+    AsyncNotifierProvider<SurpriseMeNotifier, Location?>(
+      SurpriseMeNotifier.new,
     );

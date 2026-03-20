@@ -13,6 +13,7 @@ abstract interface class LocationRemoteDataSource {
     double radiusKm,
   });
   Future<List<LocationModel>> filterByCategory(LocationCategory category);
+  Future<List<LocationModel>> fetchByCategories(List<String> categories);
   Future<List<LocationModel>> searchLocations(String query);
   Future<LocationModel> createLocation(LocationModel model);
   Future<LocationModel> updateLocation(LocationModel model);
@@ -128,6 +129,31 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
           .select(_columns)
           .eq('category', category.name)
           .order('rating', ascending: false);
+
+      return (response as List<dynamic>)
+          .map(
+            (e) => LocationModel.fromJson(
+              _resolvePhotoUrls(e as Map<String, dynamic>),
+            ),
+          )
+          .toList();
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<List<LocationModel>> fetchByCategories(
+    List<String> categories,
+  ) async {
+    try {
+      final response = await _client
+          .from(ApiConstants.locationsTable)
+          .select(_columns)
+          .inFilter('category', categories)
+          .order('created_at', ascending: false);
 
       return (response as List<dynamic>)
           .map(

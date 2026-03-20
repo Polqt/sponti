@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:sponti/features/suggestions/domain/suggestion_model.dart';
+import 'package:sponti/features/suggestions/presentation/map_picker_screen.dart';
 import 'package:sponti/features/suggestions/presentation/widgets/category_picker.dart';
 import 'package:sponti/features/suggestions/presentation/widgets/map_pin_row.dart';
 import 'package:sponti/features/suggestions/presentation/widgets/success_sheet.dart';
@@ -134,10 +136,21 @@ class _SuggestSpotScreenState extends ConsumerState<SuggestSpotScreen> {
     await ref.read(submitSuggestionProvider.notifier).submit(suggestion);
   }
 
-  void _openMapPicker() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('map picker will be connected soon')),
+  Future<void> _openMapPicker() async {
+    final result = await Navigator.push<LatLng>(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const MapPickerScreen(),
+      ),
     );
+
+    if (result != null) {
+      setState(() {
+        _latitude = result.latitude;
+        _longitude = result.longitude;
+      });
+    }
   }
 
   Future<void> _showSuccessSheet() {

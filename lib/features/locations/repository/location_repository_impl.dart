@@ -99,6 +99,11 @@ class LocationRepositoryImpl implements LocationRepository {
   ) => _guard(() => _remote.filterByCategory(category));
 
   @override
+  Future<Either<Failure, List<Location>>> fetchByCategories(
+    List<String> categories,
+  ) => _guard(() => _remote.fetchByCategories(categories));
+
+  @override
   Future<Either<Failure, List<Location>>> searchLocations(String query) =>
       _guard(() => _remote.searchLocations(query));
 
