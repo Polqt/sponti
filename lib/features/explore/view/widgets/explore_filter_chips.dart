@@ -13,6 +13,7 @@ class ExploreFilterChips extends StatelessWidget {
     required this.onTapPrice,
     required this.onTapCategory,
     required this.onToggleNowOpen,
+    this.showCategoryChip = true,
   });
 
   final ExploreFilter filter;
@@ -20,6 +21,7 @@ class ExploreFilterChips extends StatelessWidget {
   final VoidCallback onTapPrice;
   final VoidCallback onTapCategory;
   final VoidCallback onToggleNowOpen;
+  final bool showCategoryChip;
 
   @override
   Widget build(BuildContext context) {
@@ -46,21 +48,23 @@ class ExploreFilterChips extends StatelessWidget {
               isActive: price != null,
               onTap: onTapPrice,
             ),
-            const SizedBox(width: 10),
-            _ExploreFilterChip(
-              label: category == null ? 'Category' : '${category.label} \u2713',
-              color: category == null
-                  ? SpontiColors.textSecondary
-                  : Color(category.colorValue),
-              leading: category == null
-                  ? const Icon(Icons.grid_view_rounded)
-                  : LocationCategoryIcon(
-                      category: category,
-                      color: Color(category.colorValue),
-                    ),
-              isActive: category != null,
-              onTap: onTapCategory,
-            ),
+            if (showCategoryChip) ...[
+              const SizedBox(width: 10),
+              _ExploreFilterChip(
+                label: category == null ? 'Category' : '${category.label} \u2713',
+                color: category == null
+                    ? SpontiColors.textSecondary
+                    : Color(category.colorValue),
+                leading: category == null
+                    ? const Icon(Icons.grid_view_rounded)
+                    : LocationCategoryIcon(
+                        category: category,
+                        color: Color(category.colorValue),
+                      ),
+                isActive: category != null,
+                onTap: onTapCategory,
+              ),
+            ],
             const SizedBox(width: 10),
             _ExploreFilterChip(
               label: filter.nowOpenOnly ? 'Now open \u2713' : 'Now open',

@@ -13,6 +13,7 @@ class CategoryChip extends StatelessWidget {
     required this.color,
     required this.isSelected,
     required this.onTap,
+    this.leading,
   });
 
   final String label;
@@ -20,33 +21,55 @@ class CategoryChip extends StatelessWidget {
   final Color color;
   final bool isSelected;
   final VoidCallback onTap;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
+    final foreground = isSelected ? color : SpontiColors.textSecondary;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
             color: isSelected
-                ? color.withValues(alpha: 0.14)
-                : SpontiColors.surfaceVariant.withValues(alpha: 0.78),
-            borderRadius: BorderRadius.circular(18),
+                ? color.withValues(alpha: 0.16)
+                : SpontiColors.surfaceVariant.withValues(alpha: 0.82),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected ? color : SpontiColors.outline,
             ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.14),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? color : SpontiColors.textSecondary,
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? color.withValues(alpha: 0.14)
+                      : Colors.white.withValues(alpha: 0.72),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: IconTheme(
+                  data: IconThemeData(size: 14, color: foreground),
+                  child: leading ?? Icon(icon, size: 14, color: foreground),
+                ),
               ),
               const SizedBox(width: 6),
               Text(
@@ -54,7 +77,7 @@ class CategoryChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: isSelected ? color : SpontiColors.textSecondary,
+                  color: foreground,
                 ),
               ),
             ],

@@ -7,6 +7,7 @@ import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/features/explore/view/widgets/explore_loading.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
+import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
 
 class ExploreBottomPanel extends StatefulWidget {
   const ExploreBottomPanel({
@@ -17,10 +18,11 @@ class ExploreBottomPanel extends StatefulWidget {
     required this.bottomInset,
     required this.favoriteIds,
     required this.onExpandChanged,
-    required this.onTapLocation,
+    required this.onSelectLocation,
     required this.onSaveToggle,
+    required this.selectedCategory,
+    required this.onCategoryChanged,
     this.onSheetProgressChanged,
-    this.onClose,
     this.edgeToEdge = false,
     this.isExpanded = false,
   });
@@ -32,36 +34,34 @@ class ExploreBottomPanel extends StatefulWidget {
   final double bottomInset;
   final Set<String> favoriteIds;
   final ValueChanged<bool> onExpandChanged;
-  final ValueChanged<Location> onTapLocation;
-  final Future<void> Function(Location location) onSaveToggle;
+  final ValueChanged<Location> onSelectLocation;
+  final Future<void> Function(Location) onSaveToggle;
+  final LocationCategory? selectedCategory;
+  final ValueChanged<LocationCategory?> onCategoryChanged;
   final ValueChanged<double>? onSheetProgressChanged;
-  final VoidCallback? onClose;
   final bool edgeToEdge;
+
+  /// When `true` the sheet stretches edge-to-edge (used inside [LocationScreen]).
 
   @override
   State<ExploreBottomPanel> createState() => _ExploreBottomPanelState();
 }
 
 class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
-  static const _minSize = 0.16;
-  static const _maxSize = 0.62;
-  static const _expandThreshold = 0.34;
-  static const _bottomBarReserve = 86.0;
-  static const _dismissEpsilon = 0.006;
-
+  static const double _minSize = 0.24;
+  static const double _maxSize = 0.40;
+  static const double _expandThreshold = 0.30;
+  static const double _bottomBarReserve = 86.0;
   late final DraggableScrollableController _sheetController;
   double _chromeProgress = 0.0;
-  bool _wasAboveMin = false;
-  bool _isDismissing = false;
-  int? _lastSelectedIndex;
   final _itemKeys = <String, GlobalKey>{};
+  int? _lastScrolledIndex;
   bool _scrollScheduled = false;
 
   @override
   void initState() {
     super.initState();
     _sheetController = DraggableScrollableController();
-    _sheetController.addListener(_handleSheetControllerChanged);
     _scheduleScrollSelectedIntoView();
   }
 
@@ -69,9 +69,8 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
   void didUpdateWidget(covariant ExploreBottomPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isExpanded != widget.isExpanded) {
-      _animateToExpanded(widget.isExpanded);
+      _animateTo(widget.isExpanded ? _maxSize : _minSize);
     }
-
     if (oldWidget.selectedIndex != widget.selectedIndex ||
         oldWidget.locations.length != widget.locations.length) {
       _scheduleScrollSelectedIntoView();
@@ -80,31 +79,8 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
 
   @override
   void dispose() {
-    _sheetController.removeListener(_handleSheetControllerChanged);
     _sheetController.dispose();
     super.dispose();
-  }
-
-  void _handleSheetControllerChanged() {
-    final close = widget.onClose;
-    if (close == null) return;
-    if (!_sheetController.isAttached) return;
-    if (!mounted) return;
-
-    final size = _sheetController.size;
-    final aboveMinNow = size > (_minSize + 0.02);
-    if (aboveMinNow) _wasAboveMin = true;
-
-    // If the user drags the sheet down to its collapsed snap point,
-    // dismiss the sheet entirely instead of leaving it minimized.
-    final atMin = size <= (_minSize + _dismissEpsilon);
-    if (_wasAboveMin && atMin && !_isDismissing) {
-      _isDismissing = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        close();
-      });
-    }
   }
 
   void _scheduleScrollSelectedIntoView() {
@@ -117,21 +93,16 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
   }
 
   void _scrollSelectedIntoView() {
-    if (!mounted) return;
-    if (widget.locations.isEmpty) return;
+    if (!mounted || widget.locations.isEmpty) return;
     final index = widget.selectedIndex.clamp(0, widget.locations.length - 1);
-    if (_lastSelectedIndex == index) return;
-    _lastSelectedIndex = index;
-
-    final locationId = widget.locations[index].id;
-    final key = _itemKeys[locationId];
+    if (_lastScrolledIndex == index) return;
+    _lastScrolledIndex = index;
+    final key = _itemKeys[widget.locations[index].id];
     final ctx = key?.currentContext;
     if (ctx == null) {
-      // Key/context may not exist yet (first build). Try again next frame.
       _scheduleScrollSelectedIntoView();
       return;
     }
-
     Scrollable.ensureVisible(
       ctx,
       alignment: 0.18,
@@ -140,23 +111,45 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
     );
   }
 
-  Future<void> _animateToExpanded(bool expanded) async {
+  Future<void> _animateTo(double target) async {
     if (!_sheetController.isAttached) return;
-    final target = expanded ? _maxSize : _minSize;
     try {
       await _sheetController.animateTo(
         target,
-        duration: const Duration(milliseconds: 260),
+        duration: const Duration(milliseconds: 280),
         curve: Curves.easeOutCubic,
       );
-    } catch (_) {
-      // No-op: controller can throw if detached mid-animation.
+    } catch (_) {}
+  }
+
+  void _onHeaderDragUpdate(DragUpdateDetails details, double screenHeight) {
+    if (!_sheetController.isAttached) return;
+    final delta = -details.delta.dy / screenHeight;
+    _sheetController.jumpTo(
+      (_sheetController.size + delta).clamp(_minSize, _maxSize),
+    );
+  }
+
+  void _onHeaderDragEnd(DragEndDetails details) {
+    final v = details.primaryVelocity ?? 0;
+    if (v < -300) {
+      _animateTo(_maxSize);
+    } else if (v > 300) {
+      _animateTo(_minSize);
+    } else if (_sheetController.isAttached) {
+      _animateTo(
+        _sheetController.size >= (_minSize + _maxSize) / 2
+            ? _maxSize
+            : _minSize,
+      );
     }
   }
 
-  void _handleNotification(DraggableScrollableNotification notification) {
-    final progress = ((notification.extent - _minSize) / (_maxSize - _minSize))
-        .clamp(0.0, 1.0);
+  void _onSheetNotification(DraggableScrollableNotification n) {
+    final progress = ((n.extent - _minSize) / (_maxSize - _minSize)).clamp(
+      0.0,
+      1.0,
+    );
     widget.onSheetProgressChanged?.call(progress);
 
     if ((progress - _chromeProgress).abs() > 0.02) {
@@ -165,7 +158,7 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
       _chromeProgress = progress;
     }
 
-    final expandedNow = notification.extent >= _expandThreshold;
+    final expandedNow = n.extent >= _expandThreshold;
     if (expandedNow != widget.isExpanded) {
       widget.onExpandChanged(expandedNow);
     }
@@ -173,27 +166,20 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
 
   @override
   Widget build(BuildContext context) {
-    // Reset dismiss guards if the sheet is shown again.
-    if (_isDismissing) {
-      _isDismissing = false;
-      _wasAboveMin = false;
-    }
-
-    // When rendered edge-to-edge, avoid any transient bottom padding that can
-    // appear before the first drag notification updates [_chromeProgress].
+    final screenHeight = MediaQuery.sizeOf(context).height;
     final chrome = (widget.edgeToEdge ? 1.0 : _chromeProgress).clamp(0.0, 1.0);
     final bottomPadding =
-        (widget.edgeToEdge ? 0.0 : (widget.bottomInset + 12)) +
-        (_bottomBarReserve * (1.0 - chrome));
-    final horizontalPadding = widget.edgeToEdge ? 0.0 : 12.0;
-    final borderRadius = widget.edgeToEdge
-        ? const BorderRadius.vertical(top: Radius.circular(24))
-        : BorderRadius.circular(24);
+        (widget.edgeToEdge ? 0.0 : widget.bottomInset + 12) +
+        _bottomBarReserve * (1.0 - chrome);
+    final hPad = widget.edgeToEdge ? 0.0 : 12.0;
+    final radius = widget.edgeToEdge
+        ? const BorderRadius.vertical(top: Radius.circular(30))
+        : BorderRadius.circular(28);
 
     return Positioned.fill(
       child: NotificationListener<DraggableScrollableNotification>(
-        onNotification: (notification) {
-          _handleNotification(notification);
+        onNotification: (n) {
+          _onSheetNotification(n);
           return false;
         },
         child: DraggableScrollableSheet(
@@ -201,48 +187,47 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
           minChildSize: _minSize,
           maxChildSize: _maxSize,
           initialChildSize: widget.isExpanded ? _maxSize : _minSize,
-          snap: true,
-          snapSizes: const [_minSize, _maxSize],
+          snap: false,
           builder: (context, scrollController) {
-            return Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  0,
-                  horizontalPadding,
-                  bottomPadding,
-                ),
-                child: ClipRRect(
-                  borderRadius: borderRadius,
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: SpontiColors.surface.withValues(alpha: 0.7),
-                        borderRadius: borderRadius,
-                        border: Border.all(
-                          color: SpontiColors.outline.withValues(alpha: 0.7),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 24,
-                            offset: const Offset(0, -6),
-                          ),
-                        ],
+            return Padding(
+              padding: EdgeInsets.fromLTRB(hPad, 0, hPad, bottomPadding),
+              child: ClipRRect(
+                borderRadius: radius,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F6F1).withValues(alpha: 0.94),
+                      borderRadius: radius,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.72),
                       ),
-                      child: ListView(
-                        controller: scrollController,
-                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-                        children: [
-                          _SheetHeader(
-                            showCount: widget.isExpanded,
+                    ),
+                    child: Column(
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onVerticalDragUpdate: (d) =>
+                              _onHeaderDragUpdate(d, screenHeight),
+                          onVerticalDragEnd: _onHeaderDragEnd,
+                          child: _SheetHeader(
                             countText: '${widget.locations.length} spots found',
                           ),
-                          _buildBody(context),
-                        ],
-                      ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
+                          child: LocationCategoryRow(
+                            selectedCategory: widget.selectedCategory,
+                            onChanged: widget.onCategoryChanged,
+                          ),
+                        ),
+                        const Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: Color(0x14A68F7B),
+                        ),
+                        Expanded(child: _buildList(context, scrollController)),
+                      ],
                     ),
                   ),
                 ),
@@ -254,28 +239,35 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
     );
   }
 
-  Widget _buildBody(BuildContext context) {
+  Widget _buildList(BuildContext context, ScrollController scrollController) {
+    // Loading skeleton
     if (widget.locationsAsync.isLoading) {
-      return const LoadingList();
+      return ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        children: const [LoadingList()],
+      );
     }
 
     if (widget.locations.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 12),
-        child: AppEmptyState(
-          emoji: '🔭',
-          title: 'Nothing found',
-          subtitle: 'Try a different filter combo',
-        ),
+      return ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 22),
+        children: const [
+          AppEmptyState(
+            emoji: '🔭',
+            title: 'Nothing found',
+            subtitle: 'Try a different filter combo',
+          ),
+        ],
       );
     }
 
     return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(top: 6),
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
       itemCount: widget.locations.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final location = widget.locations[index];
         final isSelected = index == widget.selectedIndex;
@@ -283,25 +275,25 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
           location.id,
           () => GlobalKey(debugLabel: 'explore_item_${location.id}'),
         );
-
         return KeyedSubtree(
           key: key,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(22),
               border: Border.all(
                 color: isSelected
                     ? Color(location.category.colorValue)
-                    : Colors.transparent,
-                width: 2,
+                    : const Color(0x14A68F7B),
+                width: isSelected ? 1.5 : 1,
               ),
             ),
             child: LocationCard(
               location: location,
               variant: LocationCardVariant.fullWidth,
               isSaved: widget.favoriteIds.contains(location.id),
-              onTap: () => widget.onTapLocation(location),
+              showShadow: false,
+              onTap: () => widget.onSelectLocation(location),
               onSaveToggle: () => widget.onSaveToggle(location),
             ),
           ),
@@ -312,47 +304,85 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
 }
 
 class _SheetHeader extends StatelessWidget {
-  const _SheetHeader({required this.showCount, required this.countText});
+  const _SheetHeader({required this.countText});
 
-  final bool showCount;
   final String countText;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+      padding: const EdgeInsets.fromLTRB(22, 12, 22, 10),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            height: 20,
-            child: Stack(
-              children: [
-                Center(
-                  child: Container(
-                    width: 38,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: SpontiColors.textMuted.withValues(alpha: 0.32),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (showCount) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                countText,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SpontiColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
+          Center(
+            child: Container(
+              width: 42,
+              height: 5,
+              decoration: BoxDecoration(
+                color: SpontiColors.textMuted.withValues(alpha: 0.26),
+                borderRadius: BorderRadius.circular(999),
               ),
             ),
-          ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0x14F97316),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.explore_rounded,
+                  color: Color(0xFFF97316),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nearby picks',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: SpontiColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      countText,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SpontiColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0x14F97316),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'Swipe up',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: const Color(0xFFF97316),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
