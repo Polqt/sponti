@@ -18,6 +18,7 @@ class LocationCard extends StatelessWidget {
     this.onSaveToggle,
     this.savedIcon = Icons.favorite_border_rounded,
     this.savedActiveIcon = Icons.favorite_rounded,
+    this.showShadow = true,
   });
 
   final Location location;
@@ -28,6 +29,7 @@ class LocationCard extends StatelessWidget {
   final VoidCallback? onSaveToggle;
   final IconData savedIcon;
   final IconData savedActiveIcon;
+  final bool showShadow;
 
   bool get _isFullWidth => variant == LocationCardVariant.fullWidth;
 
@@ -42,13 +44,15 @@ class LocationCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: SpontiColors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: SpontiColors.shadow.withValues(alpha: 0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            boxShadow: showShadow
+                ? [
+                    BoxShadow(
+                      color: SpontiColors.shadow.withValues(alpha: 0.06),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -297,7 +297,7 @@ class _LocationDetailSections extends StatelessWidget {
                 InfoRow(
                   icon: Icons.camera_alt_outlined,
                   label: 'Instagram',
-                  value: '@${location.instagramHandle}',
+                  value: '${location.instagramHandle}',
                 ),
               ],
             ],
