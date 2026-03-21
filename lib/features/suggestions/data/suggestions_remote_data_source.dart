@@ -1,0 +1,86 @@
+import 'package:sponti/core/constants/api_constants.dart';
+import 'package:sponti/features/suggestions/domain/suggestion_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+abstract interface class SuggestionsRemoteDataSource {
+  Future<List<SuggestionModel>> fetchMySuggestions();
+  Future<SuggestionModel> fetchSuggestionById(String id);
+  Future<void> insertSuggestion(SuggestionModel suggestion);
+  Future<void> updateSuggestion(SuggestionModel suggestion);
+  Future<void> deleteSuggestion(String id);
+}
+
+class SuggestionsRemoteDataSourceImpl implements SuggestionsRemoteDataSource {
+  const SuggestionsRemoteDataSourceImpl(this._client);
+
+  final SupabaseClient _client;
+
+  String get _currentUserId {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('user not authenticated');
+    return userId;
+  }
+
+  @override
+  Future<List<SuggestionModel>> fetchMySuggestions() async {
+    final response = await _client
+        .from(ApiConstants.suggestionsTable)
+        .select()
+        .eq('user_id', _currentUserId)
+        .order('created_at', ascending: false);
+
+    return (response as List<dynamic>)
+        .map((json) => SuggestionModel.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<SuggestionModel> fetchSuggestionById(String id) async {
+    final response = await _client
+        .from(ApiConstants.suggestionsTable)
+        .select()
+        .eq('id', id)
+        .eq('user_id', _currentUserId)
+        .single();
+
+    return SuggestionModel.fromJson(response as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> insertSuggestion(SuggestionModel suggestion) async {
+    await _client.from(ApiConstants.suggestionsTable).insert({
+      'user_id': _currentUserId,
+      'name': suggestion.name,
+      'description': suggestion.description,
+      'category': suggestion.category,
+      'address': suggestion.address,
+      'latitude': suggestion.latitude,
+      'longitude': suggestion.longitude,
+    });
+  }
+
+  @override
+  Future<void> updateSuggestion(SuggestionModel suggestion) async {
+    await _client
+        .from(ApiConstants.suggestionsTable)
+        .update({
+          'name': suggestion.name,
+          'description': suggestion.description,
+          'category': suggestion.category,
+          'address': suggestion.address,
+          'latitude': suggestion.latitude,
+          'longitude': suggestion.longitude,
+        })
+        .eq('id', suggestion.id)
+        .eq('user_id', _currentUserId);
+  }
+
+  @override
+  Future<void> deleteSuggestion(String id) async {
+    await _client
+        .from(ApiConstants.suggestionsTable)
+        .delete()
+        .eq('id', id)
+        .eq('user_id', _currentUserId);
+  }
+}

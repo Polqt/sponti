@@ -20,6 +20,10 @@ abstract interface class LocationRepository {
     LocationCategory category,
   );
 
+  Future<Either<Failure, List<Location>>> fetchByCategories(
+    List<String> categories,
+  );
+
   Future<Either<Failure, List<Location>>> searchLocations(String query);
   Future<Either<Failure, Location>> createLocation(Location location);
   Future<Either<Failure, Location>> updateLocation(Location location);

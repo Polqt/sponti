@@ -76,7 +76,7 @@ class ProfileScreen extends ConsumerWidget {
                           _MenuItem(
                             icon: Icons.add_location_alt_rounded,
                             label: 'Suggested Spots',
-                            onTap: () {},
+                            onTap: () => context.push(RouteName.suggestSpot),
                           ),
                         ],
                       ),
@@ -160,7 +160,6 @@ Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
   ref.invalidate(profileProvider);
   context.go(RouteName.signin);
 }
-
 
 class _MenuSection extends StatelessWidget {
   const _MenuSection({required this.title, required this.items});

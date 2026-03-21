@@ -7,6 +7,7 @@ import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
+import 'package:sponti/features/locations/view/screens/surprise_me_modal.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 
 class MainShell extends ConsumerWidget {
@@ -37,39 +38,22 @@ class MainShell extends ConsumerWidget {
     return Scaffold(
       extendBody: true,
       body: child,
-      bottomNavigationBar: isShellHidden
-          ? null
-          : IgnorePointer(
-              ignoring: chromeProgress > 0.92,
-              child: ClipRect(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  heightFactor: 1.0 - chromeProgress,
-                  child: Opacity(
-                    opacity: 1.0 - chromeProgress,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return Transform.translate(
-                          offset: Offset(
-                            -constraints.maxWidth * 0.22 * chromeProgress,
-                            0,
-                          ),
-                          child: _SpontiBottomBar(
-                            activeRoute: route,
-                            avatarUrl: avatarUrl,
-                            onTapExplore: () => context.go(RouteName.discovery),
-                            onTapMap: () => context.go(RouteName.location),
-                            onTapSurprise: () => context.push(RouteName.surprise),
-                            onTapSaved: () => context.go(RouteName.favorites),
-                            onTapProfile: () => context.go(RouteName.profile),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ),
+      bottomNavigationBar: _SpontiBottomBar(
+        activeRoute: route,
+        avatarUrl: avatarUrl,
+        onTapExplore: () => context.go(RouteName.location),
+        onTapMap: () => context.go(RouteName.discovery),
+        onTapSurprise: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => const SurpriseMeModal(),
+          );
+        },
+        onTapSaved: () => context.go(RouteName.favorites),
+        onTapProfile: () => context.go(RouteName.profile),
+      ),
     );
   }
 
