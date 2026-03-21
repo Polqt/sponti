@@ -5,6 +5,8 @@ import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/features/favorites/view/widgets/favorite_list_item.dart';
+import 'package:sponti/features/favorites/view/widgets/favorites_filter.dart';
+import 'package:sponti/features/favorites/view/widgets/favorites_search_field.dart';
 import 'package:sponti/features/locations/model/location.dart';
 
 class FavoritesBody extends StatelessWidget {
@@ -12,14 +14,18 @@ class FavoritesBody extends StatelessWidget {
     required this.favoriteIdsAsync,
     required this.favoriteLocationsAsync,
     required this.searchQuery,
+    required this.selectedCategory,
     required this.onSearchChanged,
+    required this.onCategoryChanged,
     super.key,
   });
 
   final AsyncValue<List<String>> favoriteIdsAsync;
   final AsyncValue<List<Location>> favoriteLocationsAsync;
   final String searchQuery;
+  final LocationCategory? selectedCategory;
   final ValueChanged<String> onSearchChanged;
+  final ValueChanged<LocationCategory?> onCategoryChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +42,11 @@ class FavoritesBody extends StatelessWidget {
 
     final favoriteLocations =
         favoriteLocationsAsync.valueOrNull ?? const <Location>[];
-    final filteredLocations = _filterLocations(favoriteLocations, searchQuery);
+    final filteredLocations = filterLocations(
+      favoriteLocations,
+      searchQuery,
+      selectedCategory,
+    );
 
     return CustomScrollView(
       slivers: [
@@ -57,15 +67,15 @@ class FavoritesBody extends StatelessWidget {
                   'Keep your next Bacolod plan ready to go.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 18),
-                _SavedSummaryCard(
-                  totalCount: favoriteLocations.length,
-                  filteredCount: filteredLocations.length,
-                ),
                 const SizedBox(height: 16),
-                _FavoritesSearchField(
+                FavoritesSearchField(
                   initialValue: searchQuery,
                   onChanged: onSearchChanged,
+                ),
+                const SizedBox(height: 10),
+                FavoritesCategoryFilters(
+                  selectedCategory: selectedCategory,
+                  onChanged: onCategoryChanged,
                 ),
               ],
             ),
@@ -75,11 +85,12 @@ class FavoritesBody extends StatelessWidget {
           SliverToBoxAdapter(
             child: _EmptyStateSection(
               child: AppEmptyState(
-                emoji: '\u{1F4CD}',
-                title: 'No saved places yet',
+                emoji: '🦗',
+                title: 'your list is crickets',
                 subtitle:
-                    'Tap the save icon on a spot to keep it here for your next spontaneous trip.',
-                actionLabel: 'Explore spots',
+                    "those bookmark icons aren't just decorative. "
+                    'go poke some spots and start a collection.',
+                actionLabel: 'find something good',
                 onAction: () => context.go(RouteName.location),
               ),
             ),
@@ -124,116 +135,5 @@ class _EmptyStateSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewportHeight = MediaQuery.sizeOf(context).height;
     return SizedBox(height: viewportHeight * 0.58, child: child);
-  }
-}
-
-List<Location> _filterLocations(List<Location> locations, String rawQuery) {
-  final query = rawQuery.trim().toLowerCase();
-  if (query.isEmpty) return locations;
-
-  return locations
-      .where((location) {
-        final haystack = [
-          location.name,
-          location.address,
-          location.category.label,
-          ...location.tags,
-        ].join(' ').toLowerCase();
-
-        return haystack.contains(query);
-      })
-      .toList(growable: false);
-}
-
-class _SavedSummaryCard extends StatelessWidget {
-  const _SavedSummaryCard({
-    required this.totalCount,
-    required this.filteredCount,
-  });
-
-  final int totalCount;
-  final int filteredCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFE6D7), Color(0xFFFFF3E8)],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: SpontiColors.outline),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: SpontiColors.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.bookmark_rounded,
-              color: SpontiColors.primary,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$totalCount saved',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  filteredCount == totalCount
-                      ? 'Everything you bookmarked is ready here.'
-                      : '$filteredCount result${filteredCount == 1 ? '' : 's'} from your saved list.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FavoritesSearchField extends StatelessWidget {
-  const _FavoritesSearchField({
-    required this.initialValue,
-    required this.onChanged,
-  });
-
-  final String initialValue;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      key: ValueKey(initialValue),
-      initialValue: initialValue,
-      onChanged: onChanged,
-      textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
-        hintText: 'Search saved spots',
-        prefixIcon: const Icon(Icons.search_rounded),
-        suffixIcon: initialValue.isEmpty
-            ? null
-            : IconButton(
-                onPressed: () => onChanged(''),
-                icon: const Icon(Icons.close_rounded),
-              ),
-      ),
-    );
   }
 }

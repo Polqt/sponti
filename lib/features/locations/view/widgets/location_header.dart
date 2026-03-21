@@ -94,7 +94,7 @@ class LocationNameSection extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '${location.priceRange.symbol}  ${location.priceRange.label}',
+                ' ${location.priceRange.label}',
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,

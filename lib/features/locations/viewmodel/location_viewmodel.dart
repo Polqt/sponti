@@ -80,7 +80,7 @@ class LocationFilterViewModel extends Notifier<LocationFilter> {
     selectedCategory: state.selectedCategory == cat ? null : cat,
   );
 
-  void setCategory(LocationCategory cat) =>
+  void setCategory(LocationCategory? cat) =>
       state = state.copyWith(selectedCategory: cat);
 
   void toggleOpenNow() =>

@@ -122,3 +122,6 @@ final favoriteLocationsProvider = FutureProvider<List<Location>>((ref) async {
 });
 
 final favoritesSearchQueryProvider = StateProvider<String>((ref) => '');
+final favoritesCategoryFilterProvider = StateProvider<LocationCategory?>(
+  (ref) => null,
+);

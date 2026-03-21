@@ -14,12 +14,22 @@ class LocationCard extends StatelessWidget {
     this.variant = LocationCardVariant.compact,
     this.width = 220,
     this.onTap,
+    this.isSaved = false,
+    this.onSaveToggle,
+    this.savedIcon = Icons.favorite_border_rounded,
+    this.savedActiveIcon = Icons.favorite_rounded,
+    this.showShadow = true,
   });
 
   final Location location;
   final LocationCardVariant variant;
   final double width;
   final VoidCallback? onTap;
+  final bool isSaved;
+  final VoidCallback? onSaveToggle;
+  final IconData savedIcon;
+  final IconData savedActiveIcon;
+  final bool showShadow;
 
   bool get _isFullWidth => variant == LocationCardVariant.fullWidth;
 
@@ -34,19 +44,27 @@ class LocationCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: SpontiColors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: SpontiColors.shadow.withValues(alpha: 0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            boxShadow: showShadow
+                ? [
+                    BoxShadow(
+                      color: SpontiColors.shadow.withValues(alpha: 0.06),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _CardImage(location: location),
+              _CardImage(
+                location: location,
+                isSaved: isSaved,
+                onSaveToggle: onSaveToggle,
+                savedIcon: savedIcon,
+                savedActiveIcon: savedActiveIcon,
+              ),
               _CardBody(location: location),
             ],
           ),
@@ -57,9 +75,19 @@ class LocationCard extends StatelessWidget {
 }
 
 class _CardImage extends StatelessWidget {
-  const _CardImage({required this.location});
+  const _CardImage({
+    required this.location,
+    required this.isSaved,
+    required this.onSaveToggle,
+    required this.savedIcon,
+    required this.savedActiveIcon,
+  });
 
   final Location location;
+  final bool isSaved;
+  final VoidCallback? onSaveToggle;
+  final IconData savedIcon;
+  final IconData savedActiveIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +165,7 @@ class _CardImage extends StatelessWidget {
           if (location.isHiddenGem)
             Positioned(
               top: 8,
-              right: 8,
+              right: onSaveToggle == null ? 8 : 48,
               child: Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
@@ -148,6 +176,30 @@ class _CardImage extends StatelessWidget {
                   Icons.auto_awesome_rounded,
                   size: 12,
                   color: SpontiColors.accent,
+                ),
+              ),
+            ),
+
+          if (onSaveToggle != null)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.white.withValues(alpha: 0.92),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onSaveToggle,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Icon(
+                      isSaved ? savedActiveIcon : savedIcon,
+                      size: 16,
+                      color: isSaved
+                          ? SpontiColors.primary
+                          : SpontiColors.textSecondary,
+                    ),
+                  ),
                 ),
               ),
             ),

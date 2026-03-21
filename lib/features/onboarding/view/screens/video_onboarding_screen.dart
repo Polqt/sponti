@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sponti/config/routes/app_router.dart';
+import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/features/onboarding/viewmodel/onboarding_viewmodel.dart';
 import 'package:video_player/video_player.dart';
 
@@ -55,7 +55,7 @@ class _VideoOnboardingScreenState extends ConsumerState<VideoOnboardingScreen> {
     await ref.read(onboardingViewModelProvider.notifier).markCompleted();
 
     if (mounted) {
-      context.go(Routes.signIn);
+      context.go(RouteName.signin);
     }
   }
 

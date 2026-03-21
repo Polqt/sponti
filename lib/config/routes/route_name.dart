@@ -18,3 +18,5 @@ abstract final class RouteName {
 
   static String locationDetailPath(String id) => '/locations/$id';
 }
+
+

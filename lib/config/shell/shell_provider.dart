@@ -3,8 +3,8 @@ import 'package:sponti/config/routes/route_name.dart';
 
 /// The shell tabs in order, index must match the bottom nav order.
 enum ShellTab {
-  location(0, RouteName.location),
-  discovery(1, RouteName.discovery),
+  location(0, RouteName.discovery),
+  discovery(1, RouteName.location),
   favorites(2, RouteName.favorites),
   profile(3, RouteName.profile);
 
@@ -25,3 +25,10 @@ enum ShellTab {
 /// Tracks which bottom nav tab is currently active.
 /// Updated by [MainShell] on every tab tap.
 final activeTabProvider = StateProvider<int>((ref) => 0);
+
+/// Controls global shell chrome visibility for immersive screens (e.g. map sheets).
+/// 0.0 = fully visible, 1.0 = fully hidden.
+final shellChromeProgressProvider = StateProvider<double>((ref) => 0.0);
+
+/// Hides the shell bar entirely for temporary full-focus surfaces.
+final shellBarHiddenProvider = StateProvider<bool>((ref) => false);

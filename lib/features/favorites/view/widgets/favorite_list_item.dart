@@ -34,40 +34,8 @@ class FavoriteListItem extends ConsumerWidget {
             onTap: () =>
                 context.push(RouteName.locationDetailPath(location.id)),
           ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-            decoration: const BoxDecoration(
-              color: SpontiColors.white,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Saved for a quick plan later',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SpontiColors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: () => ref
-                      .read(favoriteIdsProvider.notifier)
-                      .remove(location.id),
-                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                  label: const Text('Remove'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: SpontiColors.error,
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          
+       ],
       ),
     );
   }
