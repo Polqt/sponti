@@ -21,19 +21,16 @@ class Review extends Equatable {
 
   bool get hasPhotos => photos.isNotEmpty;
 
-  Review copyWith({
-    int? rating,
-    String? comment,
-    List<String>? photos,
-  }) => Review(
-    id: id,
-    locationId: locationId,
-    userId: userId,
-    rating: rating ?? this.rating,
-    comment: comment ?? this.comment,
-    photos: photos ?? this.photos,
-    createdAt: createdAt,
-  );
+  Review copyWith({int? rating, String? comment, List<String>? photos}) =>
+      Review(
+        id: id,
+        locationId: locationId,
+        userId: userId,
+        rating: rating ?? this.rating,
+        comment: comment ?? this.comment,
+        photos: photos ?? this.photos,
+        createdAt: createdAt,
+      );
 
   @override
   List<Object?> get props => [

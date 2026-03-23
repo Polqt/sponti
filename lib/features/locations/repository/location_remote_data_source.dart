@@ -18,6 +18,7 @@ abstract interface class LocationRemoteDataSource {
   Future<LocationModel> createLocation(LocationModel model);
   Future<LocationModel> updateLocation(LocationModel model);
   Future<void> deleteLocation(String id);
+  Map<String, dynamic> resolvePhotoUrls(Map<String, dynamic> json);
 }
 
 const _columns = '''
@@ -35,7 +36,8 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   final SupabaseClient _client;
 
   /// Converts storage paths in [photos] JSONB to full public URLs.
-  Map<String, dynamic> _resolvePhotoUrls(Map<String, dynamic> json) {
+  @override
+  Map<String, dynamic> resolvePhotoUrls(Map<String, dynamic> json) {
     final rawPhotos = json['photos'] as List<dynamic>? ?? [];
     if (rawPhotos.isEmpty) return json;
 
@@ -64,7 +66,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
       return (response as List<dynamic>)
           .map(
             (e) => LocationModel.fromJson(
-              _resolvePhotoUrls(e as Map<String, dynamic>),
+              resolvePhotoUrls(e as Map<String, dynamic>),
             ),
           )
           .toList();
@@ -84,7 +86,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
           .eq('id', id)
           .single();
 
-      return LocationModel.fromJson(_resolvePhotoUrls(response));
+      return LocationModel.fromJson(resolvePhotoUrls(response));
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') throw const NotFoundException();
       throw ServerException(e.message);
@@ -108,7 +110,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
       return (response as List<dynamic>)
           .map(
             (e) => LocationModel.fromJson(
-              _resolvePhotoUrls(e as Map<String, dynamic>),
+              resolvePhotoUrls(e as Map<String, dynamic>),
             ),
           )
           .toList();
@@ -133,7 +135,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
       return (response as List<dynamic>)
           .map(
             (e) => LocationModel.fromJson(
-              _resolvePhotoUrls(e as Map<String, dynamic>),
+              resolvePhotoUrls(e as Map<String, dynamic>),
             ),
           )
           .toList();
@@ -158,7 +160,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
       return (response as List<dynamic>)
           .map(
             (e) => LocationModel.fromJson(
-              _resolvePhotoUrls(e as Map<String, dynamic>),
+              resolvePhotoUrls(e as Map<String, dynamic>),
             ),
           )
           .toList();
@@ -180,7 +182,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
       return (response as List<dynamic>)
           .map(
             (e) => LocationModel.fromJson(
-              _resolvePhotoUrls(e as Map<String, dynamic>),
+              resolvePhotoUrls(e as Map<String, dynamic>),
             ),
           )
           .toList();
@@ -200,7 +202,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
           .select(_columns)
           .single();
 
-      return LocationModel.fromJson(_resolvePhotoUrls(response));
+      return LocationModel.fromJson(resolvePhotoUrls(response));
     } on PostgrestException catch (e) {
       throw ServerException(e.message);
     } catch (e) {
@@ -220,7 +222,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
           .select(_columns)
           .single();
 
-      return LocationModel.fromJson(_resolvePhotoUrls(response));
+      return LocationModel.fromJson(resolvePhotoUrls(response));
     } on PostgrestException catch (e) {
       throw ServerException(e.message);
     } catch (e) {

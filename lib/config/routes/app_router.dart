@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/main_shell.dart';
 import 'package:sponti/features/auth/view/screens/sign_in_screen.dart';
+import 'package:sponti/features/check_in/view/screens/check_in_page.dart';
 import 'package:sponti/features/discovery/view/screens/map_screen.dart';
 import 'package:sponti/features/discovery/view/screens/surprise_screen.dart';
 import 'package:sponti/features/favorites/view/screens/favorites_screen.dart';
@@ -68,6 +69,18 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       path: RouteName.suggestSpot,
       builder: (context, state) => const SuggestSpotScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.checkIn,
+      builder: (context, state) {
+        final locationId = state.uri.queryParameters['locationId'] ?? '';
+        final locationName = state.uri.queryParameters['locationName'] ?? '';
+        return CheckInPage(
+          locationId: locationId,
+          locationName: Uri.decodeComponent(locationName),
+        );
+      },
     ),
     ShellRoute(
       navigatorKey: _shellNavigatorKey,

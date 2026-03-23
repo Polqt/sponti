@@ -1,13 +1,16 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/core/utils/formatters.dart';
+import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/category.dart';
-import 'package:sponti/features/locations/view/widgets/detail_info.dart';
 import 'package:sponti/features/locations/view/widgets/location_badges.dart';
-import 'package:sponti/features/locations/view/widgets/location_header.dart';
 import 'package:sponti/features/locations/view/widgets/location_hours_dropdown_card.dart';
-import 'package:sponti/features/locations/view/widgets/tags_selector.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
 Future<void> showLocationDetailSheet(
   BuildContext context, {
@@ -55,8 +58,6 @@ class _LocationDetailSheetState extends State<_LocationDetailSheet> {
     if (!_controller.isAttached) return;
     final size = _controller.size;
 
-    // Fast swipe down OR dragged well below midpoint → let modal dismiss itself.
-    // We animate to 0 which triggers shouldCloseOnMinExtent to close the modal.
     final shouldDismiss = velocity > 500 || size < _midSize * 0.65;
 
     if (shouldDismiss) {
@@ -68,7 +69,6 @@ class _LocationDetailSheetState extends State<_LocationDetailSheet> {
       return;
     }
 
-    // Fast swipe up → max
     if (velocity < -500) {
       _controller.animateTo(
         _maxSize,
@@ -78,7 +78,6 @@ class _LocationDetailSheetState extends State<_LocationDetailSheet> {
       return;
     }
 
-    // Snap to nearest of mid / max
     final target = (size - _midSize).abs() <= (size - _maxSize).abs()
         ? _midSize
         : _maxSize;
@@ -114,8 +113,7 @@ class _LocationDetailSheetState extends State<_LocationDetailSheet> {
             ),
             child: Column(
               children: [
-                // ── Handle ──────────────────────────────────────────────────
-                // Dragging here moves the sheet via _controller.jumpTo().
+                // ── Handle ────────────────────────────────────────────────
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onVerticalDragUpdate: (d) {
@@ -139,7 +137,7 @@ class _LocationDetailSheetState extends State<_LocationDetailSheet> {
                         ),
                       ),
                       NotificationListener<ScrollNotification>(
-                        onNotification: (_) => true, // absorb, don't bubble
+                        onNotification: (_) => true,
                         child: CustomScrollView(
                           controller: _scrollController,
                           primary: false,
@@ -152,13 +150,13 @@ class _LocationDetailSheetState extends State<_LocationDetailSheet> {
                             ),
                             SliverPadding(
                               padding: EdgeInsets.fromLTRB(
-                                20,
-                                20,
-                                20,
+                                0,
+                                0,
+                                0,
                                 bottomPadding + 28,
                               ),
                               sliver: SliverToBoxAdapter(
-                                child: _LocationDetailSections(
+                                child: _LocationDetailBody(
                                   location: widget.location,
                                 ),
                               ),
@@ -177,6 +175,8 @@ class _LocationDetailSheetState extends State<_LocationDetailSheet> {
     );
   }
 }
+
+// ── Handle ─────────────────────────────────────────────────────────────────────
 
 class _SheetHandle extends StatelessWidget {
   const _SheetHandle();
@@ -199,6 +199,8 @@ class _SheetHandle extends StatelessWidget {
   }
 }
 
+// ── Hero image ─────────────────────────────────────────────────────────────────
+
 class _LocationHero extends StatelessWidget {
   const _LocationHero({required this.location});
 
@@ -209,11 +211,11 @@ class _LocationHero extends StatelessWidget {
     final categoryColor = Color(location.category.colorValue);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         child: SizedBox(
-          height: 220,
+          height: 210,
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -232,56 +234,47 @@ class _LocationHero extends StatelessWidget {
                   category: location.category,
                   emojiFontSize: 56,
                 ),
+              // Bottom gradient scrim
               Positioned(
-                left: 14,
-                right: 14,
-                bottom: 14,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 80,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.55),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 12,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
                       child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                        spacing: 6,
+                        runSpacing: 6,
                         children: [
                           _CategoryPill(
                             location: location,
                             categoryColor: categoryColor,
                           ),
                           if (location.isHiddenGem)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.92),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.auto_awesome_rounded,
-                                    size: 14,
-                                    color: SpontiColors.accent,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Hidden gem',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      color: SpontiColors.accent,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            _HiddenGemPill(),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     OpenStatusPill(isOpen: location.isOpenNow),
                   ],
                 ),
@@ -303,7 +296,7 @@ class _CategoryPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: categoryColor,
         borderRadius: BorderRadius.circular(999),
@@ -311,8 +304,8 @@ class _CategoryPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(location.category.emoji, style: const TextStyle(fontSize: 14)),
-          const SizedBox(width: 6),
+          Text(location.category.emoji, style: const TextStyle(fontSize: 13)),
+          const SizedBox(width: 5),
           Text(
             location.category.label,
             style: const TextStyle(
@@ -327,17 +320,48 @@ class _CategoryPill extends StatelessWidget {
   }
 }
 
-class _LocationDetailSections extends StatelessWidget {
-  const _LocationDetailSections({required this.location});
+class _HiddenGemPill extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_awesome_rounded, size: 13, color: SpontiColors.accent),
+          const SizedBox(width: 4),
+          Text(
+            'Hidden gem',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: SpontiColors.accent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Body ───────────────────────────────────────────────────────────────────────
+
+class _LocationDetailBody extends ConsumerWidget {
+  const _LocationDetailBody({required this.location});
 
   final Location location;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(BuildContext context, WidgetRef ref) {
     final categoryColor = Color(location.category.colorValue);
-    final hasQuickInfo =
-        location.hasWifi ||
+    final checkInState = ref.watch(checkInProvider(location.id)).valueOrNull;
+    final isCheckedIn = checkInState?.isCheckedIn ?? false;
+
+    final hasQuickInfo = location.hasWifi ||
         location.isPetFriendly ||
         location.hasParking ||
         location.distanceKm != null;
@@ -345,84 +369,361 @@ class _LocationDetailSections extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LocationNameSection(location: location, categoryColor: categoryColor),
+        // ── Name + meta ──────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+          child: _NameSection(location: location),
+        ),
+
+        // ── Stats ────────────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+          child: _StatsStrip(location: location),
+        ),
+
+        // ── Check-in CTA ─────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: _CheckInButton(
+            location: location,
+            isCheckedIn: isCheckedIn,
+          ),
+        ),
+
+        // ── Quick amenity badges ─────────────────────────────────────────
         if (hasQuickInfo) ...[
-          const SizedBox(height: 16),
-          QuickInfoRow(location: location),
-        ],
-        const SizedBox(height: 16),
-        StatsRow(location: location),
-        if (location.photoUrls.length > 1) ...[
           const SizedBox(height: 20),
-          _LocationPhotoGallery(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: QuickInfoRow(location: location),
+          ),
+        ],
+
+        // ── Photo gallery ────────────────────────────────────────────────
+        if (location.photoUrls.length > 1) ...[
+          const SizedBox(height: 24),
+          _PhotoGallery(
             photoUrls: location.photoUrls.skip(1).toList(growable: false),
             category: location.category,
             categoryColor: categoryColor,
           ),
         ],
+
+        // ── Divider ──────────────────────────────────────────────────────
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 24, 20, 0),
+          child: Divider(color: SpontiColors.outline, height: 1),
+        ),
+
+        // ── About ─────────────────────────────────────────────────────────
         if (location.description.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          SectionCard(
-            title: 'About',
-            icon: Icons.info_outline_rounded,
-            children: [
-              Text(
-                location.description,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: SpontiColors.textSecondary,
-                  height: 1.6,
-                ),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: _AboutSection(description: location.description),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Divider(color: SpontiColors.outline, height: 1),
           ),
         ],
+
+        // ── Hours ─────────────────────────────────────────────────────────
         if (location.operatingHours != null) ...[
-          const SizedBox(height: 16),
-          LocationHoursDropdownCard(hours: location.operatingHours!),
-        ],
-        const SizedBox(height: 16),
-        if (location.hasContact) ...[
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Contact',
-            icon: Icons.call_outlined,
-            children: [
-              if (location.contactNumber != null)
-                InfoRow(
-                  icon: Icons.phone_outlined,
-                  label: 'Phone',
-                  value: location.contactNumber!,
-                ),
-              if (location.websiteUrl != null) ...[
-                if (location.contactNumber != null) const SizedBox(height: 14),
-                InfoRow(
-                  icon: Icons.language_rounded,
-                  label: 'Website',
-                  value: location.websiteUrl!,
-                ),
-              ],
-              if (location.instagramHandle != null) ...[
-                const SizedBox(height: 14),
-                InfoRow(
-                  icon: Icons.camera_alt_outlined,
-                  label: 'Instagram',
-                  value: '${location.instagramHandle}',
-                ),
-              ],
-            ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: LocationHoursDropdownCard(hours: location.operatingHours!),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Divider(color: SpontiColors.outline, height: 1),
           ),
         ],
+
+        // ── Contact ───────────────────────────────────────────────────────
+        if (location.hasContact) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: _ContactSection(location: location),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Divider(color: SpontiColors.outline, height: 1),
+          ),
+        ],
+
+        // ── Tags ──────────────────────────────────────────────────────────
         if (location.tags.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          TagsDisplay(tags: location.tags),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: _TagsSection(tags: location.tags),
+          ),
         ],
       ],
     );
   }
 }
 
-class _LocationPhotoGallery extends StatelessWidget {
-  const _LocationPhotoGallery({
+// ── Name section ──────────────────────────────────────────────────────────────
+
+class _NameSection extends StatelessWidget {
+  const _NameSection({required this.location});
+  final Location location;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                location.name,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: SpontiColors.textPrimary,
+                  height: 1.2,
+                ),
+              ),
+            ),
+            if (location.isVerified) ...[
+              const SizedBox(width: 8),
+              const Padding(
+                padding: EdgeInsets.only(top: 3),
+                child: Icon(
+                  Icons.verified_rounded,
+                  size: 20,
+                  color: SpontiColors.info,
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            const Icon(Icons.star_rounded, size: 14, color: SpontiColors.accent),
+            const SizedBox(width: 3),
+            Text(
+              SpontiFormatter.rating(location.rating),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: SpontiColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '(${SpontiFormatter.reviewCount(location.reviewCount)})',
+              style: const TextStyle(
+                fontSize: 13,
+                color: SpontiColors.textMuted,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 3,
+              height: 3,
+              decoration: const BoxDecoration(
+                color: SpontiColors.textMuted,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              location.priceRange.label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: SpontiColors.textMuted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.location_on_outlined,
+              size: 14,
+              color: SpontiColors.textMuted,
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                location.address,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: SpontiColors.textSecondary,
+                  height: 1.4,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ── Stats strip ───────────────────────────────────────────────────────────────
+
+class _StatsStrip extends ConsumerWidget {
+  const _StatsStrip({required this.location});
+  final Location location;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Live stream — falls back to the initial location value while connecting.
+    final live = ref.watch(locationStreamProvider(location.id)).valueOrNull;
+    final src = live ?? location;
+
+    return Row(
+      children: [
+        _StatItem(
+          value: SpontiFormatter.compactNumber(src.reviewCount),
+          label: 'Reviews',
+          icon: Icons.reviews_outlined,
+          color: SpontiColors.primary,
+        ),
+        const _StatDivider(),
+        _StatItem(
+          value: SpontiFormatter.compactNumber(src.checkInCount),
+          label: 'Check-ins',
+          icon: Icons.pin_drop_outlined,
+          color: SpontiColors.secondary,
+        ),
+        const _StatDivider(),
+        _StatItem(
+          value: SpontiFormatter.rating(src.rating),
+          label: 'Rating',
+          icon: Icons.star_outline_rounded,
+          color: SpontiColors.accent,
+        ),
+      ],
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  const _StatItem({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  final String value;
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: SpontiColors.textMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  const _StatDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 32,
+      color: SpontiColors.outline,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+    );
+  }
+}
+
+// ── Check-in button ───────────────────────────────────────────────────────────
+
+class _CheckInButton extends StatelessWidget {
+  const _CheckInButton({
+    required this.location,
+    required this.isCheckedIn,
+  });
+
+  final Location location;
+  final bool isCheckedIn;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push(
+        RouteName.checkInPath(
+          locationId: location.id,
+          locationName: location.name,
+        ),
+      ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        height: 50,
+        decoration: BoxDecoration(
+          color: isCheckedIn
+              ? SpontiColors.secondary.withValues(alpha: 0.1)
+              : SpontiColors.secondary,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isCheckedIn
+                  ? Icons.check_circle_rounded
+                  : Icons.check_circle_outline_rounded,
+              size: 18,
+              color: isCheckedIn ? SpontiColors.secondary : Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              isCheckedIn ? 'Visited' : 'Check in',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: isCheckedIn ? SpontiColors.secondary : Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Photo gallery ─────────────────────────────────────────────────────────────
+
+class _PhotoGallery extends StatelessWidget {
+  const _PhotoGallery({
     required this.photoUrls,
     required this.category,
     required this.categoryColor,
@@ -437,54 +738,43 @@ class _LocationPhotoGallery extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: categoryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.photo_library_rounded,
-                size: 16,
-                color: categoryColor,
-              ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'Photos',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: SpontiColors.textSecondary,
+              letterSpacing: 0.3,
             ),
-            const SizedBox(width: 8),
-            Text(
-              'More photos',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: SpontiColors.textPrimary,
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         SizedBox(
-          height: 132,
+          height: 130,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             itemCount: photoUrls.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               return ClipRRect(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
                 child: CachedNetworkImage(
                   imageUrl: photoUrls[index],
-                  width: 176,
-                  height: 132,
+                  width: 172,
+                  height: 130,
                   fit: BoxFit.cover,
                   placeholder: (_, _) => SizedBox(
-                    width: 176,
-                    height: 132,
+                    width: 172,
+                    height: 130,
                     child: CategoryShimmer(color: categoryColor),
                   ),
                   errorWidget: (_, _, _) => SizedBox(
-                    width: 176,
-                    height: 132,
+                    width: 172,
+                    height: 130,
                     child: CategoryGradient(category: category),
                   ),
                 ),
@@ -493,6 +783,166 @@ class _LocationPhotoGallery extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── About ─────────────────────────────────────────────────────────────────────
+
+class _AboutSection extends StatelessWidget {
+  const _AboutSection({required this.description});
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'About',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: SpontiColors.textSecondary,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          description,
+          style: const TextStyle(
+            fontSize: 14,
+            color: SpontiColors.textSecondary,
+            height: 1.6,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Contact ───────────────────────────────────────────────────────────────────
+
+class _ContactSection extends StatelessWidget {
+  const _ContactSection({required this.location});
+  final Location location;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Contact',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: SpontiColors.textSecondary,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (location.contactNumber != null)
+          _ContactRow(
+            icon: Icons.phone_outlined,
+            value: location.contactNumber!,
+          ),
+        if (location.websiteUrl != null) ...[
+          if (location.contactNumber != null) const SizedBox(height: 12),
+          _ContactRow(
+            icon: Icons.language_rounded,
+            value: location.websiteUrl!,
+          ),
+        ],
+        if (location.instagramHandle != null) ...[
+          const SizedBox(height: 12),
+          _ContactRow(
+            icon: Icons.camera_alt_outlined,
+            value: '@${location.instagramHandle}',
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ContactRow extends StatelessWidget {
+  const _ContactRow({required this.icon, required this.value});
+  final IconData icon;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: SpontiColors.textMuted),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              color: SpontiColors.textPrimary,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Tags ──────────────────────────────────────────────────────────────────────
+
+class _TagsSection extends StatelessWidget {
+  const _TagsSection({required this.tags});
+  final List<String> tags;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Tags',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: SpontiColors.textSecondary,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: tags.map((tag) => _TagChip(tag: tag)).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  const _TagChip({required this.tag});
+  final String tag;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: SpontiColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        tag,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: SpontiColors.textSecondary,
+        ),
+      ),
     );
   }
 }
