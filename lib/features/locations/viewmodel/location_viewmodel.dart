@@ -1,11 +1,14 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sponti/core/constants/api_constants.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/model/location_model.dart';
 import 'package:sponti/features/locations/repository/location_local_data_source.dart';
 import 'package:sponti/features/locations/repository/location_remote_data_source.dart';
 import 'package:sponti/features/locations/repository/location_repository.dart';
 import 'package:sponti/features/locations/repository/location_repository_impl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:math';
 
 final locationLocalDataSourceProvider = Provider<LocationLocalDataSource>((
   ref,
@@ -329,3 +332,22 @@ final surpriseMeProvider =
     AsyncNotifierProvider<SurpriseMeNotifier, Location?>(
       SurpriseMeNotifier.new,
     );
+
+/// Streams a single location row from Supabase Realtime.
+/// NOT autoDispose — keeps the WebSocket alive during navigation (e.g. when
+/// the check-in page is pushed on top of the detail sheet) so the count
+/// updates are received and reflected immediately on return.
+final locationStreamProvider =
+    StreamProvider.family<Location, String>((ref, locationId) {
+  final client = Supabase.instance.client;
+  final remote = ref.read(locationRemoteDataSourceProvider);
+
+  return client
+      .from(ApiConstants.locationsTable)
+      .stream(primaryKey: ['id'])
+      .eq('id', locationId)
+      .map((rows) {
+        if (rows.isEmpty) throw Exception('Location not found');
+        return LocationModel.fromJson(remote.resolvePhotoUrls(rows.first));
+      });
+});
