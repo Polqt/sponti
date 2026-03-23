@@ -43,7 +43,7 @@ class SuggestionsRemoteDataSourceImpl implements SuggestionsRemoteDataSource {
         .eq('user_id', _currentUserId)
         .single();
 
-    return SuggestionModel.fromJson(response as Map<String, dynamic>);
+    return SuggestionModel.fromJson(response);
   }
 
   @override

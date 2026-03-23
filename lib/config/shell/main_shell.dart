@@ -19,8 +19,8 @@ class MainShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final route = GoRouterState.of(context).matchedLocation;
     final activeIndex = _resolveActiveIndex(route);
-    final chromeProgress = ref.watch(shellChromeProgressProvider).clamp(0.0, 1.0);
-    final isShellHidden = ref.watch(shellBarHiddenProvider);
+    ref.watch(shellChromeProgressProvider).clamp(0.0, 1.0);
+    final isBarHidden = ref.watch(shellBarHiddenProvider);
 
     if (activeIndex != null) {
       final tabState = ref.watch(activeTabProvider);
@@ -38,21 +38,30 @@ class MainShell extends ConsumerWidget {
     return Scaffold(
       extendBody: true,
       body: child,
-      bottomNavigationBar: _SpontiBottomBar(
-        activeRoute: route,
-        avatarUrl: avatarUrl,
-        onTapExplore: () => context.go(RouteName.location),
-        onTapMap: () => context.go(RouteName.discovery),
-        onTapSurprise: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) => const SurpriseMeModal(),
-          );
-        },
-        onTapSaved: () => context.go(RouteName.favorites),
-        onTapProfile: () => context.go(RouteName.profile),
+      bottomNavigationBar: AnimatedSlide(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeInOutCubic,
+        offset: isBarHidden ? const Offset(0, 1.5) : Offset.zero,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 220),
+          opacity: isBarHidden ? 0.0 : 1.0,
+          child: _SpontiBottomBar(
+            activeRoute: route,
+            avatarUrl: avatarUrl,
+            onTapExplore: () => context.go(RouteName.location),
+            onTapMap: () => context.go(RouteName.discovery),
+            onTapSurprise: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const SurpriseMeModal(),
+              );
+            },
+            onTapSaved: () => context.go(RouteName.favorites),
+            onTapProfile: () => context.go(RouteName.profile),
+          ),
+        ),
       ),
     );
   }
@@ -105,9 +114,7 @@ class _SpontiBottomBar extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFFF8F6F1).withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(30),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.78),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.78)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.08),

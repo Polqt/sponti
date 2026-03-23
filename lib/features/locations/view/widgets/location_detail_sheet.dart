@@ -21,43 +21,152 @@ Future<void> showLocationDetailSheet(
   );
 }
 
-class _LocationDetailSheet extends StatelessWidget {
+class _LocationDetailSheet extends StatefulWidget {
   const _LocationDetailSheet({required this.location});
 
   final Location location;
 
   @override
+  State<_LocationDetailSheet> createState() => _LocationDetailSheetState();
+}
+
+class _LocationDetailSheetState extends State<_LocationDetailSheet> {
+  static const double _midSize = 0.76;
+  static const double _maxSize = 0.96;
+
+  late final DraggableScrollableController _controller;
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = DraggableScrollableController();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _snapToNearest({double velocity = 0}) {
+    if (!_controller.isAttached) return;
+    final size = _controller.size;
+
+    // Fast swipe down OR dragged well below midpoint → let modal dismiss itself.
+    // We animate to 0 which triggers shouldCloseOnMinExtent to close the modal.
+    final shouldDismiss = velocity > 500 || size < _midSize * 0.65;
+
+    if (shouldDismiss) {
+      _controller.animateTo(
+        0,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeInCubic,
+      );
+      return;
+    }
+
+    // Fast swipe up → max
+    if (velocity < -500) {
+      _controller.animateTo(
+        _maxSize,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+
+    // Snap to nearest of mid / max
+    final target = (size - _midSize).abs() <= (size - _maxSize).abs()
+        ? _midSize
+        : _maxSize;
+    _controller.animateTo(
+      target,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
     final topPadding = MediaQuery.viewPaddingOf(context).top;
+    final bottomPadding = MediaQuery.viewPaddingOf(context).bottom;
 
     return Padding(
       padding: EdgeInsets.only(top: topPadding + 12),
       child: DraggableScrollableSheet(
+        controller: _controller,
         expand: false,
-        initialChildSize: 0.76,
-        minChildSize: 0.52,
-        maxChildSize: 0.96,
-        builder: (context, scrollController) {
+        initialChildSize: _midSize,
+        minChildSize: 0.0,
+        maxChildSize: _maxSize,
+        snap: true,
+        snapSizes: const [_midSize, _maxSize],
+        snapAnimationDuration: const Duration(milliseconds: 300),
+        builder: (context, sheetScrollController) {
           return DecoratedBox(
             decoration: const BoxDecoration(
               color: SpontiColors.surface,
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
             ),
-            child: CustomScrollView(
-              controller: scrollController,
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                const SliverToBoxAdapter(child: _SheetHandle()),
-                SliverToBoxAdapter(child: _LocationHero(location: location)),
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    20,
-                    20,
-                    MediaQuery.viewPaddingOf(context).bottom + 28,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: _LocationDetailSections(location: location),
+            child: Column(
+              children: [
+                // ── Handle ──────────────────────────────────────────────────
+                // Dragging here moves the sheet via _controller.jumpTo().
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: (d) {
+                    if (!_controller.isAttached) return;
+                    final delta = -d.delta.dy / screenHeight;
+                    _controller.jumpTo(
+                      (_controller.size + delta).clamp(0.0, _maxSize),
+                    );
+                  },
+                  onVerticalDragEnd: (d) =>
+                      _snapToNearest(velocity: d.primaryVelocity ?? 0),
+                  child: const _SheetHandle(),
+                ),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      SizedBox.shrink(
+                        child: ListView(
+                          controller: sheetScrollController,
+                          physics: const NeverScrollableScrollPhysics(),
+                        ),
+                      ),
+                      NotificationListener<ScrollNotification>(
+                        onNotification: (_) => true, // absorb, don't bubble
+                        child: CustomScrollView(
+                          controller: _scrollController,
+                          primary: false,
+                          physics: const BouncingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: _LocationHero(location: widget.location),
+                            ),
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(
+                                20,
+                                20,
+                                20,
+                                bottomPadding + 28,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: _LocationDetailSections(
+                                  location: widget.location,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
