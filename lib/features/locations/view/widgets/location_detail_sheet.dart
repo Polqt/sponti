@@ -1,6 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/features/check_in/view/widgets/check_in_sheet.dart';
+import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/category.dart';
 import 'package:sponti/features/locations/view/widgets/detail_info.dart';
@@ -327,13 +330,13 @@ class _CategoryPill extends StatelessWidget {
   }
 }
 
-class _LocationDetailSections extends StatelessWidget {
+class _LocationDetailSections extends ConsumerWidget {
   const _LocationDetailSections({required this.location});
 
   final Location location;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final categoryColor = Color(location.category.colorValue);
     final hasQuickInfo =
@@ -341,6 +344,10 @@ class _LocationDetailSections extends StatelessWidget {
         location.isPetFriendly ||
         location.hasParking ||
         location.distanceKm != null;
+
+    final isCheckedIn =
+        ref.watch(checkInProvider(location.id)).valueOrNull?.isCheckedIn ??
+        false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -352,6 +359,8 @@ class _LocationDetailSections extends StatelessWidget {
         ],
         const SizedBox(height: 16),
         StatsRow(location: location),
+        const SizedBox(height: 16),
+        _LocationActionRow(location: location, isCheckedIn: isCheckedIn),
         if (location.photoUrls.length > 1) ...[
           const SizedBox(height: 20),
           _LocationPhotoGallery(
@@ -493,6 +502,93 @@ class _LocationPhotoGallery extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _LocationActionRow extends StatelessWidget {
+  const _LocationActionRow({
+    required this.location,
+    required this.isCheckedIn,
+  });
+
+  final Location location;
+  final bool isCheckedIn;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ActionButton(
+            icon: isCheckedIn
+                ? Icons.check_circle_rounded
+                : Icons.check_circle_outline_rounded,
+            label: isCheckedIn ? 'visited' : 'check in',
+            isActive: isCheckedIn,
+            activeColor: SpontiColors.secondary,
+            onTap: isCheckedIn
+                ? null
+                : () => showCheckInSheet(
+                      context,
+                      locationId: location.id,
+                      locationName: location.name,
+                    ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.activeColor,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final Color activeColor;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isActive
+        ? activeColor.withValues(alpha: 0.1)
+        : SpontiColors.surfaceVariant;
+    final fg = isActive ? activeColor : SpontiColors.textSecondary;
+    final border = isActive ? activeColor.withValues(alpha: 0.3) : SpontiColors.outline;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: fg),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: fg,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
