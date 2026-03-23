@@ -286,6 +286,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               selectedCategory: filter.selectedCategory,
               onCategoryChanged: _onCategoryChanged,
               onExpandChanged: _setPanelExpanded,
+              onDismissed: _hidePanel,
               edgeToEdge: true,
               onSheetProgressChanged: (progress) {
                 _sheetProgress.value = progress;
