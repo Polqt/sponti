@@ -726,3 +726,10 @@ VALUES
     'Fare is ~P13–15 per ride. Bata–Libertad and Mandalagan–Libertad routes cover the main Lacson strip.',
     NULL, NULL
   );
+
+UPDATE public.locations
+SET
+  is_seeded = true,
+  seeded_at = COALESCE(seeded_at, created_at)
+WHERE submitted_by IS NULL
+  AND (is_seeded = false OR seeded_at IS NULL);

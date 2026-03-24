@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import 'package:sponti/features/suggestions/data/suggestions_remote_data_source.dart';
-import 'package:sponti/features/suggestions/domain/suggestion_model.dart';
+import 'package:sponti/features/suggestions/repository/suggestions_remote_data_source.dart';
+import 'package:sponti/features/suggestions/model/suggestion_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 // --- Failures ---

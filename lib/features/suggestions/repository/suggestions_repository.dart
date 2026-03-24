@@ -1,6 +1,6 @@
 import 'package:sponti/core/constants/api_constants.dart';
 import 'package:sponti/core/errors/exceptions.dart';
-import 'package:sponti/features/suggestions/domain/suggestion_model.dart';
+import 'package:sponti/features/suggestions/model/suggestion_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 class SuggestionsRepository {

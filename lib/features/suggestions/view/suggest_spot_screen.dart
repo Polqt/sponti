@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart' show LatLng;
-import 'package:sponti/features/suggestions/domain/suggestion_model.dart';
-import 'package:sponti/features/suggestions/presentation/map_picker_screen.dart';
-import 'package:sponti/features/suggestions/presentation/widgets/category_picker.dart';
-import 'package:sponti/features/suggestions/presentation/widgets/map_pin_row.dart';
-import 'package:sponti/features/suggestions/presentation/widgets/success_sheet.dart';
-import 'package:sponti/features/suggestions/providers/suggestions_provider.dart';
+import 'package:sponti/features/suggestions/model/suggestion_model.dart';
+import 'package:sponti/features/suggestions/view/map_picker_screen.dart';
+import 'package:sponti/features/suggestions/view/widgets/category_picker.dart';
+import 'package:sponti/features/suggestions/view/widgets/map_pin_row.dart';
+import 'package:sponti/features/suggestions/view/widgets/success_sheet.dart';
+import 'package:sponti/features/suggestions/viewmodel/suggestions_viewmodel.dart';
 
 const _pageBackground = Color(0xFFF5F5F3);
 const _cardBorder = Color(0xFFDDDDDD);
@@ -46,7 +46,7 @@ class _SuggestSpotScreenState extends ConsumerState<SuggestSpotScreen> {
           _showSuccessSheet();
           _clearForm();
         },
-        error: (e, __) => _showErrorSnackbar(e.toString()),
+        error: (e, _) => _showErrorSnackbar(e.toString()),
       );
     });
 
