@@ -13,54 +13,60 @@ class SurpriseMeModal extends ConsumerStatefulWidget {
 }
 
 class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
-  late Set<LocationCategory> _selected;
+  late final ProviderSubscription<AsyncValue<Location?>>
+      _surpriseMeSubscription;
+  late final SurpriseMeNotifier _surpriseMeNotifier;
+  Set<LocationCategory> _selected = <LocationCategory>{};
 
   @override
   void initState() {
     super.initState();
-    _selected = {};
+    _surpriseMeNotifier = ref.read(surpriseMeProvider.notifier);
+    _surpriseMeSubscription = ref.listenManual<AsyncValue<Location?>>(
+      surpriseMeProvider,
+      (_, next) {
+        next.whenOrNull(
+          data: (location) {
+            if (!mounted || location == null) return;
+            final router = GoRouter.of(context);
+            Navigator.of(context).pop();
+            router.push(RouteName.locationDetailPath(location.id));
+          },
+        );
+      },
+    );
   }
 
   @override
   void dispose() {
+    _surpriseMeSubscription.close();
     // Reset the surprise me provider when modal is dismissed
-    ref.read(surpriseMeProvider.notifier).reset();
+    _surpriseMeNotifier.reset();
     super.dispose();
   }
 
   void _toggleCategory(LocationCategory category) {
-    setState(() {
-      if (_selected.contains(category)) {
-        _selected.remove(category);
-      } else {
-        _selected.add(category);
-      }
-    });
+    final updated = Set<LocationCategory>.of(_selected);
+    if (updated.contains(category)) {
+      updated.remove(category);
+    } else {
+      updated.add(category);
+    }
+    setState(() => _selected = updated);
   }
 
   void _onSurpriseMe() {
     final categories = _selected.map((c) => c.name).toList();
-    ref.read(surpriseMeProvider.notifier).pickRandom(categories);
+    _surpriseMeNotifier.pickRandom(categories);
   }
 
   void _onAnyCategory() {
-    ref.read(surpriseMeProvider.notifier).pickRandom([]);
+    _surpriseMeNotifier.pickRandom([]);
   }
 
   @override
   Widget build(BuildContext context) {
     final surpriseMeState = ref.watch(surpriseMeProvider);
-
-    ref.listen<AsyncValue<Location?>>(surpriseMeProvider, (_, next) {
-      next.whenOrNull(
-        data: (location) {
-          if (location != null) {
-            Navigator.pop(context);
-            context.push(RouteName.locationDetailPath(location.id));
-          }
-        },
-      );
-    });
 
     return Scaffold(
       backgroundColor: const Color(0xFF111113),
@@ -134,21 +140,26 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
                 const SizedBox(height: 28),
 
                 // Category grid
-                GridView.count(
-                  crossAxisCount: 3,
+                GridView.builder(
+                  itemCount: LocationCategory.values.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.85,
+                  ),
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 0.85,
-                  children: LocationCategory.values.map((category) {
+                  itemBuilder: (context, index) {
+                    final category = LocationCategory.values[index];
                     final isSelected = _selected.contains(category);
                     return CategoryChip(
+                      key: ValueKey(category.name),
                       category: category,
                       isSelected: isSelected,
                       onTap: () => _toggleCategory(category),
                     );
-                  }).toList(),
+                  },
                 ),
                 const SizedBox(height: 32),
 

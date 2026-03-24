@@ -5,21 +5,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/features/explore/view/widgets/explore_loading.dart';
+import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
 import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
 
-class ExploreBottomPanel extends StatefulWidget {
+class ExploreBottomPanel extends ConsumerStatefulWidget {
   const ExploreBottomPanel({
     super.key,
     required this.locationsAsync,
     required this.locations,
     required this.selectedIndex,
     required this.bottomInset,
-    required this.favoriteIds,
     required this.onExpandChanged,
     required this.onSelectLocation,
-    required this.onSaveToggle,
     required this.selectedCategory,
     required this.onCategoryChanged,
     this.onSheetProgressChanged,
@@ -33,10 +32,8 @@ class ExploreBottomPanel extends StatefulWidget {
   final int selectedIndex;
   final bool isExpanded;
   final double bottomInset;
-  final Set<String> favoriteIds;
   final ValueChanged<bool> onExpandChanged;
   final ValueChanged<Location> onSelectLocation;
-  final Future<void> Function(Location) onSaveToggle;
   final LocationCategory? selectedCategory;
   final ValueChanged<LocationCategory?> onCategoryChanged;
   final ValueChanged<double>? onSheetProgressChanged;
@@ -48,10 +45,10 @@ class ExploreBottomPanel extends StatefulWidget {
   final bool edgeToEdge;
 
   @override
-  State<ExploreBottomPanel> createState() => _ExploreBottomPanelState();
+  ConsumerState<ExploreBottomPanel> createState() => _ExploreBottomPanelState();
 }
 
-class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
+class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
   static const double _minSize = 0.25;
   static const double _midSize = 0.50;
   static const double _maxSize = 0.92;
@@ -75,6 +72,7 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
   @override
   void didUpdateWidget(covariant ExploreBottomPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _pruneItemKeys();
     if (oldWidget.isExpanded != widget.isExpanded) {
       _animateTo(widget.isExpanded ? _midSize : _minSize);
     }
@@ -82,6 +80,13 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
         oldWidget.locations.length != widget.locations.length) {
       _scheduleScrollSelectedIntoView();
     }
+  }
+
+  void _pruneItemKeys() {
+    final activeIds = widget.locations
+        .map((location) => location.id)
+        .toSet();
+    _itemKeys.removeWhere((id, _) => !activeIds.contains(id));
   }
 
   @override
@@ -106,7 +111,7 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
     _lastScrolledIndex = index;
     final key = _itemKeys[widget.locations[index].id];
     final ctx = key?.currentContext;
-  if (ctx == null) {
+    if (ctx == null) {
       _scheduleScrollSelectedIntoView();
       return;
     }
@@ -185,6 +190,7 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final favoriteIds = ref.watch(favoriteIdSetProvider);
     final screenHeight = MediaQuery.sizeOf(context).height;
     final hPad = widget.edgeToEdge ? 0.0 : 12.0;
     final radius = widget.edgeToEdge
@@ -247,7 +253,10 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
                             color: Color(0x14A68F7B),
                           ),
                           Expanded(
-                            child: _buildList(context, scrollController),
+                            child: _buildList(
+                              scrollController: scrollController,
+                              favoriteIds: favoriteIds,
+                            ),
                           ),
                         ],
                       ),
@@ -262,7 +271,10 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
     );
   }
 
-  Widget _buildList(BuildContext context, ScrollController scrollController) {
+  Widget _buildList({
+    required ScrollController scrollController,
+    required Set<String> favoriteIds,
+  }) {
     if (widget.locationsAsync.isLoading) {
       return ListView(
         controller: scrollController,
@@ -299,24 +311,28 @@ class _ExploreBottomPanelState extends State<ExploreBottomPanel> {
         );
         return KeyedSubtree(
           key: key,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: isSelected
-                    ? Color(location.category.colorValue)
-                    : const Color(0x14A68F7B),
-                width: isSelected ? 1.5 : 1,
+          child: RepaintBoundary(
+            child: AnimatedContainer(
+              key: ValueKey(location.id),
+              duration: const Duration(milliseconds: 180),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: isSelected
+                      ? Color(location.category.colorValue)
+                      : const Color(0x14A68F7B),
+                  width: isSelected ? 1.5 : 1,
+                ),
               ),
-            ),
-            child: LocationCard(
-              location: location,
-              variant: LocationCardVariant.fullWidth,
-              isSaved: widget.favoriteIds.contains(location.id),
-              showShadow: false,
-              onTap: () => widget.onSelectLocation(location),
-              onSaveToggle: () => widget.onSaveToggle(location),
+              child: LocationCard(
+                location: location,
+                variant: LocationCardVariant.fullWidth,
+                isSaved: favoriteIds.contains(location.id),
+                showShadow: false,
+                onTap: () => widget.onSelectLocation(location),
+                onSaveToggle: () =>
+                    ref.read(favoriteIdsProvider.notifier).toggle(location.id),
+              ),
             ),
           ),
         );

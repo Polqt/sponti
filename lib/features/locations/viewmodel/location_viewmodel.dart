@@ -144,14 +144,17 @@ class LocationsViewModel extends AsyncNotifier<List<Location>> {
     return list;
   }
 
-  Future<void> refresh() async {
+  Future<void> _reload() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(_fetch);
   }
 
-  void onFilterChanged() {
-    state = const AsyncLoading();
-    AsyncValue.guard(_fetch).then((value) => state = value);
+  Future<void> refresh() async {
+    await _reload();
+  }
+
+  Future<void> onFilterChanged() async {
+    await _reload();
   }
 }
 

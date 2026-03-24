@@ -6,17 +6,14 @@ import 'package:sponti/features/check_in/repository/checkins_repository.dart';
 import 'package:sponti/features/check_in/repository/checkins_repository_impl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// ── Providers ─────────────────────────────────────────────────────────────────
-
-final checkinsRemoteDataSourceProvider =
-    Provider<CheckinsRemoteDataSource>((ref) {
+final checkinsRemoteDataSourceProvider = Provider<CheckinsRemoteDataSource>((
+  ref,
+) {
   return CheckinsRemoteDataSourceImpl(Supabase.instance.client);
 });
 
 final checkinsRepositoryProvider = Provider<CheckinsRepository>((ref) {
-  return CheckinsRepositoryImpl(
-    ref.watch(checkinsRemoteDataSourceProvider),
-  );
+  return CheckinsRepositoryImpl(ref.watch(checkinsRemoteDataSourceProvider));
 });
 
 final locationCheckInCountProvider = StreamProvider.family<int, String>((
@@ -31,8 +28,6 @@ final locationCheckInCountProvider = StreamProvider.family<int, String>((
       .eq('location_id', locationId)
       .map((rows) => rows.length);
 });
-
-// ── Per-location check-in state ───────────────────────────────────────────────
 
 /// State for the check-in page tied to one location.
 class CheckInState {
@@ -83,17 +78,16 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
       repo.getCheckInsForLocation(locationId),
     ]);
 
-    final hasCheckedIn =
-        results[0].fold((_) => false, (v) => v as bool);
-    final checkIns =
-        results[1].fold((_) => <CheckIn>[], (v) => v as List<CheckIn>);
+    final hasCheckedIn = results[0].fold((_) => false, (v) => v as bool);
+    final checkIns = results[1].fold(
+      (_) => <CheckIn>[],
+      (v) => v as List<CheckIn>,
+    );
 
     // Find the user's own check-in to get its id for potential deletion.
     String? myCheckInId;
     if (hasCheckedIn) {
-      final mine = checkIns
-          .where((c) => c.userId == userId)
-          .toList();
+      final mine = checkIns.where((c) => c.userId == userId).toList();
       if (mine.isNotEmpty) myCheckInId = mine.first.id;
     }
 
@@ -112,12 +106,14 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
     final current = state.valueOrNull ?? const CheckInState();
     state = AsyncData(current.copyWith(isLoading: true));
 
-    final result = await ref.read(checkinsRepositoryProvider).createCheckIn(
-      locationId: arg,
-      userId: userId,
-      note: note,
-      photoUrl: photoUrl,
-    );
+    final result = await ref
+        .read(checkinsRepositoryProvider)
+        .createCheckIn(
+          locationId: arg,
+          userId: userId,
+          note: note,
+          photoUrl: photoUrl,
+        );
 
     return result.fold(
       (failure) {
@@ -148,8 +144,9 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
 
     state = AsyncData(current.copyWith(isLoading: true));
 
-    final result =
-        await ref.read(checkinsRepositoryProvider).deleteCheckIn(checkInId);
+    final result = await ref
+        .read(checkinsRepositoryProvider)
+        .deleteCheckIn(checkInId);
 
     return result.fold(
       (failure) {
@@ -176,5 +173,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
   }
 }
 
-final checkInProvider = AsyncNotifierProviderFamily<
-    CheckInNotifier, CheckInState, String>(CheckInNotifier.new);
+final checkInProvider =
+    AsyncNotifierProviderFamily<CheckInNotifier, CheckInState, String>(
+      CheckInNotifier.new,
+    );

@@ -10,7 +10,6 @@ import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
 import 'package:sponti/features/explore/view/widgets/explore_filter_chips.dart';
 import 'package:sponti/features/explore/view/widgets/explore_filter_sheets.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
-import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
@@ -25,21 +24,32 @@ class ExploreScreen extends ConsumerStatefulWidget {
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   final _mapController = MapController();
   final ValueNotifier<double> _sheetProgress = ValueNotifier<double>(0.0);
+  late final StateController<bool> _shellBarHiddenController;
+  late final StateController<double> _shellChromeProgressController;
 
   String? _selectedLocationId;
   bool _isPanelExpanded = false;
   LocationCategory? _lastAutoExpandedCategory;
   bool _isLocationDetailOpen = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _shellBarHiddenController = ref.read(shellBarHiddenProvider.notifier);
+    _shellChromeProgressController = ref.read(
+      shellChromeProgressProvider.notifier,
+    );
+  }
+
   void _setShellHidden(bool hidden) {
-    ref.read(shellBarHiddenProvider.notifier).state = hidden;
+    _shellBarHiddenController.state = hidden;
   }
 
   @override
   void dispose() {
     _sheetProgress.dispose();
     _setShellHidden(false);
-    ref.read(shellChromeProgressProvider.notifier).state = 0.0;
+    _shellChromeProgressController.state = 0.0;
     super.dispose();
   }
 
@@ -122,7 +132,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   Widget build(BuildContext context) {
     final locationsAsync = ref.watch(exploreProvider);
     final filter = ref.watch(exploreFilterProvider);
-    final favoriteIds = ref.watch(favoriteIdSetProvider);
     final locations = locationsAsync.valueOrNull ?? const <Location>[];
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
@@ -171,6 +180,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         width: 62,
                         height: 62,
                         child: GestureDetector(
+                          key: ValueKey('explore_marker_${location.id}'),
                           onTap: () => _showLocationDetails(location),
                           child: MapPin(
                             category: location.category,
@@ -232,18 +242,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
             isExpanded: _isPanelExpanded,
             bottomInset: bottomInset,
-            favoriteIds: favoriteIds,
             onExpandChanged: _setPanelExpanded,
             selectedCategory: filter.categoryFilter,
             onCategoryChanged: _onCategoryChanged,
             onSheetProgressChanged: (progress) {
               _sheetProgress.value = progress;
-              ref.read(shellChromeProgressProvider.notifier).state = progress;
+              _shellChromeProgressController.state = progress;
             },
             // Card tap → highlight map pin only (no navigation)
             onSelectLocation: _selectLocation,
-            onSaveToggle: (location) =>
-                ref.read(favoriteIdsProvider.notifier).toggle(location.id),
           ),
         ],
       ),
