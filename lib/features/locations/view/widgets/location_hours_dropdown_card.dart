@@ -118,15 +118,17 @@ class _DayIndicatorRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final today = DateTime.now().weekday;
+    final openDays = daysOpen.toSet();
 
     return Row(
       children: List.generate(7, (index) {
         final weekday = index + 1;
-        final isOpen = daysOpen.contains(weekday);
+        final isOpen = openDays.contains(weekday);
         final isToday = weekday == today;
 
         return Expanded(
           child: Container(
+            key: ValueKey(weekday),
             margin: EdgeInsets.only(left: index == 0 ? 0 : 4),
             height: 30,
             alignment: Alignment.center,

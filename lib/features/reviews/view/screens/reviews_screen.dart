@@ -206,7 +206,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                           data: (review) =>
                               review == null ? 'Write a review' : 'Edit review',
                           loading: () => 'Loading review...',
-                          error: (_, __) => 'Write a review',
+                          error: (_, _) => 'Write a review',
                         ),
                       ),
                       const SizedBox(height: 18),
