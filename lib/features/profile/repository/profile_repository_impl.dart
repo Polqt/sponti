@@ -44,11 +44,13 @@ class ProfileRepositoryImpl implements ProfileRepository {
     required String userId,
     required Uint8List bytes,
     required String extension,
+    required String contentType,
   }) => _guard(
     () => _remote.uploadProfilePhoto(
       userId: userId,
       bytes: bytes,
       extension: extension,
+      contentType: contentType,
     ),
   );
 }

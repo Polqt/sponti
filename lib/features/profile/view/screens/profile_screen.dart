@@ -115,7 +115,18 @@ Future<void> _pickAndUploadPhoto(
         userId: userId,
         bytes: picked.bytes,
         extension: picked.extension,
-      );
+        contentType: picked.contentType,
+      )
+      .then((errorMessage) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errorMessage ?? 'Profile photo updated successfully.',
+            ),
+          ),
+        );
+      });
 }
 
 Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
