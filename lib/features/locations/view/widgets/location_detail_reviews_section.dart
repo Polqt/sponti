@@ -13,7 +13,7 @@ class LocationDetailReviewsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reviewsAsync = ref.watch(reviewsByLocationProvider(locationId));
+    final reviewsAsync = ref.watch(reviewsStreamProvider(locationId));
 
     return LocationDetailSection(
       title: 'Reviews',

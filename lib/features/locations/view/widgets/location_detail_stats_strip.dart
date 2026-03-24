@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/utils/formatters.dart';
-import 'package:sponti/features/locations/model/location.dart';
 
 class LocationDetailStatsStrip extends StatelessWidget {
   const LocationDetailStatsStrip({
     super.key,
-    required this.location,
+    required this.reviewCount,
+    required this.rating,
     required this.checkInCount,
   });
 
-  final Location location;
+  final int reviewCount;
+  final double rating;
   final int checkInCount;
 
   @override
@@ -18,7 +19,7 @@ class LocationDetailStatsStrip extends StatelessWidget {
     return Row(
       children: [
         _LocationDetailStatItem(
-          value: SpontiFormatter.compactNumber(location.reviewCount),
+          value: SpontiFormatter.compactNumber(reviewCount),
           label: 'Reviews',
           color: SpontiColors.primary,
         ),
@@ -30,7 +31,7 @@ class LocationDetailStatsStrip extends StatelessWidget {
         ),
         const _LocationDetailStatDivider(),
         _LocationDetailStatItem(
-          value: SpontiFormatter.rating(location.rating),
+          value: SpontiFormatter.rating(rating),
           label: 'Rating',
           color: SpontiColors.accent,
         ),

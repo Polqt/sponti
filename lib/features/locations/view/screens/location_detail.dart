@@ -17,6 +17,7 @@ import 'package:sponti/features/locations/view/widgets/location_detail_tags_sect
 import 'package:sponti/features/locations/view/widgets/location_hours_dropdown_card.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/reviews/view/widgets/review_action_button.dart';
+import 'package:sponti/features/reviews/viewmodel/reviews_viewmodel.dart';
 import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
 
 class LocationDetailPage extends ConsumerStatefulWidget {
@@ -110,11 +111,24 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
   @override
   Widget build(BuildContext context) {
     final location = widget.location;
-    final liveLocation = ref.watch(locationStreamProvider(location.id)).valueOrNull;
+    final liveLocation = ref
+        .watch(locationStreamProvider(location.id))
+        .valueOrNull;
+    final liveReviews = ref.watch(reviewsStreamProvider(location.id)).valueOrNull;
     final liveCheckInCount = ref
         .watch(locationCheckInCountProvider(location.id))
         .valueOrNull;
     final sourceLocation = liveLocation ?? location;
+    final displayedReviewCount = liveReviews?.length ?? sourceLocation.reviewCount;
+    final displayedRating = switch (liveReviews) {
+      null => sourceLocation.rating,
+      [] => 0.0,
+      final reviews => reviews.fold<double>(
+            0,
+            (sum, review) => sum + review.rating,
+          ) /
+          reviews.length,
+    };
     final displayedCheckInCount =
         _optimisticCheckInCount ??
         liveCheckInCount ??
@@ -163,12 +177,17 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
                 children: [
                   LocationDetailInset(
                     top: 18,
-                    child: LocationDetailNameSection(location: location),
+                    child: LocationDetailNameSection(
+                      location: sourceLocation,
+                      rating: displayedRating,
+                      reviewCount: displayedReviewCount,
+                    ),
                   ),
                   LocationDetailInset(
                     top: 18,
                     child: LocationDetailStatsStrip(
-                      location: sourceLocation,
+                      reviewCount: displayedReviewCount,
+                      rating: displayedRating,
                       checkInCount: displayedCheckInCount,
                     ),
                   ),

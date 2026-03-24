@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/screens/location_detail.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
 Future<void> showLocationDetailSheet(
   BuildContext context, {
@@ -125,10 +127,18 @@ class _LocationDetailSheetState extends State<_LocationDetailSheet> {
                           physics: const NeverScrollableScrollPhysics(),
                         ),
                       ),
-                      LocationDetail(
-                        location: widget.location,
-                        scrollController: _scrollController,
-                        bottomPadding: bottomPadding + 28,
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final liveLocation =
+                              ref.watch(locationDetailProvider(widget.location.id)).valueOrNull ??
+                              widget.location;
+
+                          return LocationDetail(
+                            location: liveLocation,
+                            scrollController: _scrollController,
+                            bottomPadding: bottomPadding + 28,
+                          );
+                        },
                       ),
                     ],
                   ),

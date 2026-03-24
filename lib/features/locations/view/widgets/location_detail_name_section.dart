@@ -7,9 +7,13 @@ class LocationDetailNameSection extends StatelessWidget {
   const LocationDetailNameSection({
     super.key,
     required this.location,
+    required this.rating,
+    required this.reviewCount,
   });
 
   final Location location;
+  final double rating;
+  final int reviewCount;
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +57,7 @@ class LocationDetailNameSection extends StatelessWidget {
             ),
             const SizedBox(width: 3),
             Text(
-              SpontiFormatter.rating(location.rating),
+              SpontiFormatter.rating(rating),
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -62,7 +66,7 @@ class LocationDetailNameSection extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              '(${SpontiFormatter.reviewCount(location.reviewCount)})',
+              '(${SpontiFormatter.reviewCount(reviewCount)})',
               style: const TextStyle(
                 fontSize: 13,
                 color: SpontiColors.textMuted,

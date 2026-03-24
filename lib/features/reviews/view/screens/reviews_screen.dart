@@ -10,6 +10,7 @@ import 'package:sponti/core/utils/image_upload.dart';
 import 'package:sponti/core/widgets/app_button.dart';
 import 'package:sponti/core/widgets/location_feedback_widgets.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/locations/view/widgets/location_feedback_sections.dart';
 import 'package:sponti/features/reviews/model/review.dart';
 import 'package:sponti/features/reviews/viewmodel/reviews_viewmodel.dart';
@@ -212,6 +213,8 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
       (_) async {
         ref.invalidate(myReviewForLocationProvider(widget.locationId));
         ref.invalidate(reviewsByLocationProvider(widget.locationId));
+        ref.invalidate(reviewsStreamProvider(widget.locationId));
+        ref.invalidate(locationDetailProvider(widget.locationId));
         if (uploadResult.failedMessages.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(uploadResult.failedMessages.first)),

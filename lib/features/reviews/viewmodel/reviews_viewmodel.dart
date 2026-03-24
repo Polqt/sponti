@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sponti/config/supabase_options.dart';
 import 'package:sponti/features/reviews/model/review.dart';
+import 'package:sponti/features/reviews/model/review_model.dart';
 import 'package:sponti/features/reviews/repository/reviews_remote_data_source.dart';
 import 'package:sponti/features/reviews/repository/reviews_repository.dart';
 import 'package:sponti/features/reviews/repository/reviews_repository_impl.dart';
@@ -22,6 +24,27 @@ final reviewsByLocationProvider =
       return result.fold((failure) {
         throw StateError(failure.message);
       }, (reviews) => reviews);
+    });
+
+final reviewsStreamProvider =
+    StreamProvider.family<List<Review>, String>((ref, locationId) {
+      final client = Supabase.instance.client;
+
+      return client
+          .from(SupabaseTables.reviews)
+          .stream(primaryKey: const ['id'])
+          .eq('location_id', locationId)
+          .map((rows) {
+            final reviews = rows
+                .map(
+                  (row) =>
+                      ReviewModel.fromJson(Map<String, dynamic>.from(row)),
+                )
+                .toList(growable: true)
+              ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
+
+            return reviews;
+          });
     });
 
 final myReviewsProvider = FutureProvider<List<Review>>((ref) async {
