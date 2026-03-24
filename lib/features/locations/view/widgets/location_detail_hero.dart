@@ -9,9 +9,11 @@ class LocationDetailHero extends StatelessWidget {
   const LocationDetailHero({
     super.key,
     required this.location,
+    this.actionButtons,
   });
 
   final Location location;
+  final Widget? actionButtons;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +42,12 @@ class LocationDetailHero extends StatelessWidget {
                 CategoryGradient(
                   category: location.category,
                   emojiFontSize: 56,
+                ),
+              if (actionButtons != null)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: actionButtons!,
                 ),
               Positioned(
                 left: 0,

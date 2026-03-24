@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sponti/core/utils/image_upload.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 
 class ProfilePhotoPicker {
@@ -20,9 +21,15 @@ class ProfilePhotoPicker {
 }
 
 class PickedPhoto {
-  const PickedPhoto({required this.bytes, required this.extension});
+  const PickedPhoto({
+    required this.bytes,
+    required this.extension,
+    required this.contentType,
+  });
+
   final Uint8List bytes;
   final String extension;
+  final String contentType;
 }
 
 class _PhotoPickerSheet extends StatelessWidget {
@@ -40,13 +47,30 @@ class _PhotoPickerSheet extends StatelessWidget {
     if (file == null) return;
 
     final bytes = await file.readAsBytes();
-    final ext = file.path.split('.').last.toLowerCase();
-    final extension = (ext == 'png') ? 'png' : 'jpg';
+    final contentType = imageContentTypeForPath(file.path);
+    if (contentType == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Use JPG, PNG, or WEBP for your profile photo.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final extension = contentType.split('/').last;
 
     if (context.mounted) {
       Navigator.of(
         context,
-      ).pop(PickedPhoto(bytes: bytes, extension: extension));
+      ).pop(
+        PickedPhoto(
+          bytes: bytes,
+          extension: extension,
+          contentType: contentType,
+        ),
+      );
     }
   }
 
@@ -54,7 +78,7 @@ class _PhotoPickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsetsGeometry.fromLTRB(24, 16, 24, 24),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

@@ -6,11 +6,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract interface class CheckinsRemoteDataSource {
   Future<List<CheckIn>> getCheckInsForLocation(String locationId);
+  Future<List<CheckIn>> getMyCheckIns();
   Future<CheckIn> createCheckIn({
     required String locationId,
     required String userId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
+  });
+  Future<CheckIn> updateCheckIn({
+    required String checkInId,
+    String? note,
+    List<String> photos = const [],
   });
   Future<void> deleteCheckIn(String checkInId);
   Future<bool> hasUserCheckedIn(String locationId, String userId);
@@ -45,7 +51,7 @@ class CheckinsRemoteDataSourceImpl implements CheckinsRemoteDataSource {
     required String locationId,
     required String userId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
   }) async {
     try {
       final payload = CheckInModel(
@@ -53,13 +59,65 @@ class CheckinsRemoteDataSourceImpl implements CheckinsRemoteDataSource {
         locationId: locationId,
         userId: userId,
         note: note,
-        photoUrl: photoUrl,
+        photos: photos,
         createdAt: DateTime.now(),
       ).toInsertJson();
 
       final response = await _client
           .from(SupabaseTables.checkIns)
           .insert(payload)
+          .select()
+          .single();
+
+      return CheckInModel.fromJson(response);
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<List<CheckIn>> getMyCheckIns() async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        return const <CheckIn>[];
+      }
+
+      final response = await _client
+          .from(SupabaseTables.checkIns)
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      return (response as List<dynamic>)
+          .map((e) => CheckInModel.fromJson(e as Map<String, dynamic>))
+          .toList(growable: false);
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<CheckIn> updateCheckIn({
+    required String checkInId,
+    String? note,
+    List<String> photos = const [],
+  }) async {
+    try {
+      final payload = <String, dynamic>{
+        'note': note ?? '',
+        'photos': photos,
+        'photo_url': photos.isEmpty ? null : photos.first,
+      };
+
+      final response = await _client
+          .from(SupabaseTables.checkIns)
+          .update(payload)
+          .eq('id', checkInId)
           .select()
           .single();
 

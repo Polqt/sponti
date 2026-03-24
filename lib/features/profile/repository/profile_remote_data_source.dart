@@ -13,6 +13,7 @@ abstract interface class ProfileRemoteDataSource {
     required String userId,
     required Uint8List bytes,
     required String extension,
+    required String contentType,
   });
 }
 
@@ -135,6 +136,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     required String userId,
     required Uint8List bytes,
     required String extension,
+    required String contentType,
   }) async {
     try {
       final path = '$userId/avatar.$extension';
@@ -143,7 +145,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
         path,
         bytes,
         fileOptions: FileOptions(
-          contentType: 'image/$extension',
+          contentType: contentType,
           upsert: true,
         ),
       );
@@ -153,6 +155,10 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       );
 
       return '$url?t=${DateTime.now().millisecondsSinceEpoch}';
+    } on StorageException catch (e) {
+      throw ServerException(e.message);
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
     } catch (e) {
       throw ServerException(e.toString());
     }

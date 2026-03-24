@@ -42,25 +42,32 @@ class ProfileViewModel extends AsyncNotifier<UserProfile?> {
     );
     return result.fold((_) => false, (updated) {
       state = AsyncData(updated);
+      ref.invalidate(userProfileProvider(updated.id));
       return true;
     });
   }
 
-  Future<bool> uploadPhoto({
+  Future<String?> uploadPhoto({
     required String userId,
     required Uint8List bytes,
     required String extension,
+    required String contentType,
   }) async {
     final urlResult = await ref.read(profileRepositoryProvider).uploadProfilePhoto(
       userId: userId,
       bytes: bytes,
       extension: extension,
+      contentType: contentType,
     );
 
-    return urlResult.fold((_) => false, (url) async {
+    return urlResult.fold((failure) => failure.message, (url) async {
       final current = state.value;
-      if (current == null) return false;
-      return updateProfile(current.copyWith(avatarUrl: url));
+      if (current == null) {
+        return 'Profile is still loading. Please try again.';
+      }
+
+      final didUpdate = await updateProfile(current.copyWith(avatarUrl: url));
+      return didUpdate ? null : 'Failed to update profile photo.';
     });
   }
 

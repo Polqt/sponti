@@ -6,11 +6,17 @@ abstract interface class CheckinsRepository {
   Future<Either<Failure, List<CheckIn>>> getCheckInsForLocation(
     String locationId,
   );
+  Future<Either<Failure, List<CheckIn>>> getMyCheckIns();
   Future<Either<Failure, CheckIn>> createCheckIn({
     required String locationId,
     required String userId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
+  });
+  Future<Either<Failure, CheckIn>> updateCheckIn({
+    required String checkInId,
+    String? note,
+    List<String> photos = const [],
   });
   Future<Either<Failure, void>> deleteCheckIn(String checkInId);
   Future<Either<Failure, bool>> hasUserCheckedIn(

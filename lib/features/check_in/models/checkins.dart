@@ -7,16 +7,16 @@ class CheckIn extends Equatable {
     required this.userId,
     required this.createdAt,
     this.note,
-    this.photoUrl,
+    this.photos = const [],
   });
 
   final String id;
   final String locationId;
   final String userId;
   final String? note;
-  final String? photoUrl;
+  final List<String> photos;
   final DateTime createdAt;
 
   @override
-  List<Object?> get props => [id, locationId, userId, note, photoUrl, createdAt];
+  List<Object?> get props => [id, locationId, userId, note, photos, createdAt];
 }

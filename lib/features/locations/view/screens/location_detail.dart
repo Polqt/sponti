@@ -1,20 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sponti/features/check_in/view/widgets/check_in_action_button.dart';
-import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
+import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_badges.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_about_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_contact_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_hero.dart';
+import 'package:sponti/features/locations/view/widgets/location_detail_hero_actions.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_name_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_photo_gallery_section.dart';
+import 'package:sponti/features/locations/view/widgets/location_detail_reviews_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_stats_strip.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_tags_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_hours_dropdown_card.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/reviews/view/widgets/review_action_button.dart';
+import 'package:sponti/features/reviews/viewmodel/reviews_viewmodel.dart';
+import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
+
+class LocationDetailPage extends ConsumerStatefulWidget {
+  const LocationDetailPage({
+    super.key,
+    required this.locationId,
+  });
+
+  final String locationId;
+
+  @override
+  ConsumerState<LocationDetailPage> createState() => _LocationDetailPageState();
+}
+
+class _LocationDetailPageState extends ConsumerState<LocationDetailPage> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final locationAsync = ref.watch(locationDetailProvider(widget.locationId));
+    final bottomPadding = MediaQuery.viewPaddingOf(context).bottom + 24;
+
+    return Scaffold(
+      backgroundColor: SpontiColors.surface,
+      appBar: AppBar(
+        backgroundColor: SpontiColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('Location'),
+      ),
+      body: locationAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: SpontiColors.primary),
+        ),
+        error: (error, _) => _LocationDetailErrorState(
+          message: error.toString(),
+          onRetry: () =>
+              ref.invalidate(locationDetailProvider(widget.locationId)),
+        ),
+        data: (location) => LocationDetail(
+          location: location,
+          scrollController: _scrollController,
+          bottomPadding: bottomPadding,
+        ),
+      ),
+    );
+  }
+}
 
 class LocationDetail extends ConsumerStatefulWidget {
   const LocationDetail({
@@ -35,8 +98,8 @@ class LocationDetail extends ConsumerStatefulWidget {
 class _LocationDetailState extends ConsumerState<LocationDetail> {
   int? _optimisticCheckInCount;
 
-  void _handleCheckInResult(bool? didCheckIn, int previousCount) {
-    if (!mounted || didCheckIn == null) return;
+  void _handleCheckInResult(bool didCheckIn, int previousCount) {
+    if (!mounted) return;
 
     setState(() {
       _optimisticCheckInCount = didCheckIn
@@ -48,12 +111,24 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
   @override
   Widget build(BuildContext context) {
     final location = widget.location;
-    final checkInState = ref.watch(checkInProvider(location.id)).valueOrNull;
-    final liveLocation = ref.watch(locationStreamProvider(location.id)).valueOrNull;
+    final liveLocation = ref
+        .watch(locationStreamProvider(location.id))
+        .valueOrNull;
+    final liveReviews = ref.watch(reviewsStreamProvider(location.id)).valueOrNull;
     final liveCheckInCount = ref
         .watch(locationCheckInCountProvider(location.id))
         .valueOrNull;
     final sourceLocation = liveLocation ?? location;
+    final displayedReviewCount = liveReviews?.length ?? sourceLocation.reviewCount;
+    final displayedRating = switch (liveReviews) {
+      null => sourceLocation.rating,
+      [] => 0.0,
+      final reviews => reviews.fold<double>(
+            0,
+            (sum, review) => sum + review.rating,
+          ) /
+          reviews.length,
+    };
     final displayedCheckInCount =
         _optimisticCheckInCount ??
         liveCheckInCount ??
@@ -84,7 +159,16 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
           parent: AlwaysScrollableScrollPhysics(),
         ),
         slivers: [
-          SliverToBoxAdapter(child: LocationDetailHero(location: location)),
+          SliverToBoxAdapter(
+            child: LocationDetailHero(
+              location: location,
+              actionButtons: LocationDetailHeroActions(
+                locationId: location.id,
+                checkInCount: displayedCheckInCount,
+                onCheckInResult: _handleCheckInResult,
+              ),
+            ),
+          ),
           SliverPadding(
             padding: EdgeInsets.only(bottom: widget.bottomPadding),
             sliver: SliverToBoxAdapter(
@@ -93,32 +177,28 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
                 children: [
                   LocationDetailInset(
                     top: 18,
-                    child: LocationDetailNameSection(location: location),
+                    child: LocationDetailNameSection(
+                      location: sourceLocation,
+                      rating: displayedRating,
+                      reviewCount: displayedReviewCount,
+                    ),
                   ),
                   LocationDetailInset(
                     top: 18,
                     child: LocationDetailStatsStrip(
-                      location: sourceLocation,
+                      reviewCount: displayedReviewCount,
+                      rating: displayedRating,
                       checkInCount: displayedCheckInCount,
                     ),
                   ),
                   LocationDetailInset(
                     top: 16,
-                    child: CheckInActionButton(
-                      locationId: location.id,
-                      locationName: location.name,
-                      isCheckedIn: checkInState?.isCheckedIn ?? false,
-                      checkInCount: displayedCheckInCount,
-                      onCheckInResult: _handleCheckInResult,
-                    ),
-                  ),
-                  LocationDetailInset(
-                    top: 12,
                     child: ReviewActionButton(
                       locationId: location.id,
                       locationName: location.name,
                     ),
                   ),
+                  LocationDetailReviewsSection(locationId: location.id),
                   if (hasQuickInfo)
                     LocationDetailInset(
                       top: 20,
@@ -153,6 +233,37 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _LocationDetailErrorState extends StatelessWidget {
+  const _LocationDetailErrorState({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: AppErrorState(message: message),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: onRetry,
+              child: const Text('Try again'),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

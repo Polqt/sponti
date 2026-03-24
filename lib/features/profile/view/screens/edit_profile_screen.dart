@@ -88,13 +88,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final picked = await ProfilePhotoPicker.show(context);
     if (picked == null) return;
 
-    await ref
+    final errorMessage = await ref
         .read(profileProvider.notifier)
         .uploadPhoto(
           userId: authUser.id,
           bytes: picked.bytes,
           extension: picked.extension,
+          contentType: picked.contentType,
         );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          errorMessage ?? 'Profile photo updated successfully.',
+        ),
+      ),
+    );
   }
 
   @override

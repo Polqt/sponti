@@ -30,17 +30,34 @@ class CheckinsRepositoryImpl implements CheckinsRepository {
   ) => _guard(() => _remote.getCheckInsForLocation(locationId));
 
   @override
+  Future<Either<Failure, List<CheckIn>>> getMyCheckIns() =>
+      _guard(_remote.getMyCheckIns);
+
+  @override
   Future<Either<Failure, CheckIn>> createCheckIn({
     required String locationId,
     required String userId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
   }) => _guard(
     () => _remote.createCheckIn(
       locationId: locationId,
       userId: userId,
       note: note,
-      photoUrl: photoUrl,
+      photos: photos,
+    ),
+  );
+
+  @override
+  Future<Either<Failure, CheckIn>> updateCheckIn({
+    required String checkInId,
+    String? note,
+    List<String> photos = const [],
+  }) => _guard(
+    () => _remote.updateCheckIn(
+      checkInId: checkInId,
+      note: note,
+      photos: photos,
     ),
   );
 
