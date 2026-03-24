@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/utils/formatters.dart';
+import 'package:sponti/core/widgets/app_button.dart';
 import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/category.dart';
@@ -428,6 +429,11 @@ class _LocationDetailBodyState extends ConsumerState<_LocationDetailBody> {
           ),
         ),
 
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: _ReviewButton(location: location),
+        ),
+
         // ── Quick amenity badges ─────────────────────────────────────────
         if (hasQuickInfo) ...[
           const SizedBox(height: 20),
@@ -760,6 +766,27 @@ class _CheckInButton extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewButton extends StatelessWidget {
+  const _ReviewButton({required this.location});
+
+  final Location location;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppButton.outline(
+      label: 'Review',
+      size: AppButtonSize.medium,
+      prefixIcon: Icons.rate_review_outlined,
+      onPressed: () => context.push(
+        RouteName.reviewsPath(
+          locationId: location.id,
+          locationName: location.name,
         ),
       ),
     );

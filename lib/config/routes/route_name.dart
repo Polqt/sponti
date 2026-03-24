@@ -24,6 +24,13 @@ abstract final class RouteName {
     required String locationName,
   }) =>
       '/check-in?locationId=$locationId&locationName=${Uri.encodeComponent(locationName)}';
+
+  static const String reviews = '/reviews';
+  static String reviewsPath({
+    required String locationId,
+    required String locationName,
+  }) =>
+      '/reviews?locationId=$locationId&locationName=${Uri.encodeComponent(locationName)}';
 }
 
 

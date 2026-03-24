@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_button.dart';
 import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
@@ -135,90 +137,206 @@ class _CheckInPageState extends ConsumerState<CheckInPage> {
         !_justCheckedIn && (checkInState?.isCheckedIn ?? false);
 
     return Scaffold(
-      backgroundColor: SpontiColors.surface,
-      appBar: _buildAppBar(context, isAlreadyCheckedIn, isLoading),
+      backgroundColor: SpontiColors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (isAlreadyCheckedIn) ...[
-                _AlreadyCheckedInBanner(onDelete: isLoading ? null : _deleteCheckIn),
-              ] else ...[
-                _SectionLabel('Add a note'),
-                const SizedBox(height: 10),
-                _NoteField(controller: _noteController),
-                const SizedBox(height: 28),
-                _SectionLabel('Add a photo'),
-                const SizedBox(height: 10),
-                _PhotoPicker(
-                  photo: _pickedPhoto,
-                  onPick: _pickPhoto,
-                  onRemove: _removePhoto,
+              _Header(
+                title: widget.locationName.toUpperCase(),
+                onClose: () => Navigator.of(context).pop(),
+              ),
+              const SizedBox(height: 18),
+              _ModeSwitcher(
+                selected: _ReviewMode.visited,
+                onReviewsTap: () {
+                  context.go(
+                    RouteName.reviewsPath(
+                      locationId: widget.locationId,
+                      locationName: widget.locationName,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 18),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (isAlreadyCheckedIn) ...[
+                        _AlreadyCheckedInBanner(
+                          onDelete: isLoading ? null : _deleteCheckIn,
+                        ),
+                      ] else ...[
+                        _SectionLabel('Add a photo'),
+                        const SizedBox(height: 10),
+                        _PhotoPicker(
+                          photo: _pickedPhoto,
+                          onPick: _pickPhoto,
+                          onRemove: _removePhoto,
+                        ),
+                        const SizedBox(height: 24),
+                        _SectionLabel('Add a note'),
+                        const SizedBox(height: 10),
+                        _NoteField(controller: _noteController),
+                        const SizedBox(height: 24),
+                      ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 36),
-                AppButton(
-                  label: 'Check in',
-                  prefixIcon: Icons.check_circle_outline_rounded,
-                  size: AppButtonSize.large,
-                  isLoading: isLoading,
-                  onPressed: isLoading ? null : _submit,
-                ),
-              ],
+              ),
+              AppButton(
+                label: isLoading ? 'Saving...' : 'Save',
+                prefixIcon: Icons.check_circle_rounded,
+                size: AppButtonSize.large,
+                isLoading: isLoading,
+                onPressed: isLoading ? null : _submit,
+              ),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  PreferredSizeWidget _buildAppBar(
-    BuildContext context,
-    bool isAlreadyCheckedIn,
-    bool isLoading,
-  ) {
-    return AppBar(
-      backgroundColor: SpontiColors.surface,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      leading: CupertinoButton(
-        padding: EdgeInsets.zero,
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Icon(
-          CupertinoIcons.chevron_left,
-          color: SpontiColors.textPrimary,
-          size: 20,
-        ),
-      ),
-      title: Column(
+// ── Sub-widgets ───────────────────────────────────────────────────────────────
+
+enum _ReviewMode { reviews, visited }
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.title,
+    required this.onClose,
+  });
+
+  final String title;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
           Text(
-            isAlreadyCheckedIn ? 'Visited' : 'Check in',
+            title,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
               color: SpontiColors.textPrimary,
             ),
           ),
-          Text(
-            widget.locationName,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: SpontiColors.textMuted,
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              onPressed: onClose,
+              icon: const Icon(Icons.close_rounded),
+              color: SpontiColors.textPrimary,
+              splashRadius: 20,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(
+                width: 36,
+                height: 36,
+              ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
-      centerTitle: true,
     );
   }
 }
 
-// ── Sub-widgets ───────────────────────────────────────────────────────────────
+class _ModeSwitcher extends StatelessWidget {
+  const _ModeSwitcher({
+    required this.selected,
+    required this.onReviewsTap,
+  });
+
+  final _ReviewMode selected;
+  final VoidCallback onReviewsTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 34,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: SpontiColors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: SpontiColors.outline, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _ModeChip(
+              label: 'reviews',
+              selected: selected == _ReviewMode.reviews,
+              onTap: onReviewsTap,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _ModeChip(
+              label: 'visited',
+              selected: selected == _ReviewMode.visited,
+              onTap: () {},
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModeChip extends StatelessWidget {
+  const _ModeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? SpontiColors.dark : Colors.transparent,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: selected ? SpontiColors.white : SpontiColors.textMuted,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
