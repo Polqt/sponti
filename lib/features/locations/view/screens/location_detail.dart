@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/features/check_in/view/widgets/check_in_action_button.dart';
 import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
@@ -15,6 +17,65 @@ import 'package:sponti/features/locations/view/widgets/location_detail_tags_sect
 import 'package:sponti/features/locations/view/widgets/location_hours_dropdown_card.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/reviews/view/widgets/review_action_button.dart';
+
+class LocationDetailPage extends ConsumerStatefulWidget {
+  const LocationDetailPage({
+    super.key,
+    required this.locationId,
+  });
+
+  final String locationId;
+
+  @override
+  ConsumerState<LocationDetailPage> createState() => _LocationDetailPageState();
+}
+
+class _LocationDetailPageState extends ConsumerState<LocationDetailPage> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final locationAsync = ref.watch(locationDetailProvider(widget.locationId));
+    final bottomPadding = MediaQuery.viewPaddingOf(context).bottom + 24;
+
+    return Scaffold(
+      backgroundColor: SpontiColors.surface,
+      appBar: AppBar(
+        backgroundColor: SpontiColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('Location'),
+      ),
+      body: locationAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: SpontiColors.primary),
+        ),
+        error: (error, _) => _LocationDetailErrorState(
+          message: error.toString(),
+          onRetry: () =>
+              ref.invalidate(locationDetailProvider(widget.locationId)),
+        ),
+        data: (location) => LocationDetail(
+          location: location,
+          scrollController: _scrollController,
+          bottomPadding: bottomPadding,
+        ),
+      ),
+    );
+  }
+}
 
 class LocationDetail extends ConsumerStatefulWidget {
   const LocationDetail({
@@ -153,6 +214,37 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _LocationDetailErrorState extends StatelessWidget {
+  const _LocationDetailErrorState({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: AppErrorState(message: message),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: onRetry,
+              child: const Text('Try again'),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

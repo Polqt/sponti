@@ -15,13 +15,11 @@ class SurpriseMeModal extends ConsumerStatefulWidget {
 class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
   late final ProviderSubscription<AsyncValue<Location?>>
       _surpriseMeSubscription;
-  late final SurpriseMeNotifier _surpriseMeNotifier;
   Set<LocationCategory> _selected = <LocationCategory>{};
 
   @override
   void initState() {
     super.initState();
-    _surpriseMeNotifier = ref.read(surpriseMeProvider.notifier);
     _surpriseMeSubscription = ref.listenManual<AsyncValue<Location?>>(
       surpriseMeProvider,
       (_, next) {
@@ -30,7 +28,9 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
             if (!mounted || location == null) return;
             final router = GoRouter.of(context);
             Navigator.of(context).pop();
-            router.push(RouteName.locationDetailPath(location.id));
+            Future<void>(
+              () => router.push(RouteName.locationDetailPath(location.id)),
+            );
           },
         );
       },
@@ -40,8 +40,6 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
   @override
   void dispose() {
     _surpriseMeSubscription.close();
-    // Reset the surprise me provider when modal is dismissed
-    _surpriseMeNotifier.reset();
     super.dispose();
   }
 
@@ -57,11 +55,11 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
 
   void _onSurpriseMe() {
     final categories = _selected.map((c) => c.name).toList();
-    _surpriseMeNotifier.pickRandom(categories);
+    ref.read(surpriseMeProvider.notifier).pickRandom(categories);
   }
 
   void _onAnyCategory() {
-    _surpriseMeNotifier.pickRandom([]);
+    ref.read(surpriseMeProvider.notifier).pickRandom([]);
   }
 
   @override

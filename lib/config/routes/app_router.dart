@@ -7,6 +7,7 @@ import 'package:sponti/features/check_in/view/screens/check_in_page.dart';
 import 'package:sponti/features/discovery/view/screens/map_screen.dart';
 import 'package:sponti/features/discovery/view/screens/surprise_screen.dart';
 import 'package:sponti/features/favorites/view/screens/favorites_screen.dart';
+import 'package:sponti/features/locations/view/screens/location_detail.dart';
 import 'package:sponti/features/locations/view/screens/location_screen.dart';
 import 'package:sponti/features/onboarding/repository/onboarding_local_data_source.dart';
 import 'package:sponti/features/onboarding/view/screens/video_onboarding_screen.dart';
@@ -93,6 +94,14 @@ final appRouter = GoRouter(
           locationId: locationId,
           locationName: Uri.decodeComponent(locationName),
         );
+      },
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.locationDetail,
+      builder: (context, state) {
+        final locationId = state.pathParameters['id'] ?? '';
+        return LocationDetailPage(locationId: locationId);
       },
     ),
     ShellRoute(

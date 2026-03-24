@@ -304,7 +304,7 @@ final deleteLocationProvider =
       DeleteLocationViewModel.new,
     );
 
-class SurpriseMeNotifier extends AsyncNotifier<Location?> {
+class SurpriseMeNotifier extends AutoDisposeAsyncNotifier<Location?> {
   @override
   Future<Location?> build() async => null;
 
@@ -326,13 +326,10 @@ class SurpriseMeNotifier extends AsyncNotifier<Location?> {
     );
   }
 
-  void reset() {
-    state = const AsyncData(null);
-  }
 }
 
 final surpriseMeProvider =
-    AsyncNotifierProvider<SurpriseMeNotifier, Location?>(
+    AsyncNotifierProvider.autoDispose<SurpriseMeNotifier, Location?>(
       SurpriseMeNotifier.new,
     );
 
