@@ -10,12 +10,12 @@ abstract interface class CheckinsRepository {
     required String locationId,
     required String userId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
   });
   Future<Either<Failure, CheckIn>> updateCheckIn({
     required String checkInId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
   });
   Future<Either<Failure, void>> deleteCheckIn(String checkInId);
   Future<Either<Failure, bool>> hasUserCheckedIn(

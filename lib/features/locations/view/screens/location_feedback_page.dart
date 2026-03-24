@@ -98,7 +98,7 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
       _checkInNoteController.text = checkIn.note ?? '';
       _existingVisitedPhotoUrls
         ..clear()
-        ..addAll(checkIn.photoUrls);
+        ..addAll(checkIn.photos);
       _pickedVisitedPhotos.clear();
     });
   }
@@ -115,20 +115,14 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
     });
   }
 
-  Future<void> _pickVisitedPhoto() async {
-    final file = await _picker.pickImage(
-      source: ImageSource.gallery,
+  Future<void> _pickVisitedPhotos() async {
+    final files = await _picker.pickMultiImage(
       imageQuality: 85,
-      maxWidth: 1280,
+      maxWidth: 1600,
     );
-    if (file == null || !mounted) return;
+    if (files.isEmpty || !mounted) return;
 
-    setState(() {
-      _existingVisitedPhotoUrls.clear();
-      _pickedVisitedPhotos
-        ..clear()
-        ..add(file);
-    });
+    setState(() => _pickedVisitedPhotos.addAll(files));
   }
 
   Future<void> _pickReviewPhotos() async {
@@ -190,33 +184,23 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
     }
   }
 
-  Future<String?> _resolveVisitedPhotoUrl() async {
-    if (_pickedVisitedPhotos.isEmpty) {
-      return _existingVisitedPhotoUrls.isEmpty
-          ? null
-          : _existingVisitedPhotoUrls.first;
+  Future<({List<String> uploadedUrls, int failedUploads})> _uploadPhotos({
+    required List<XFile> files,
+    required String folder,
+  }) async {
+    final uploadedUrls = <String>[];
+    var failedUploads = 0;
+
+    for (final file in files) {
+      final url = await _uploadPhoto(file: file, folder: folder);
+      if (url == null) {
+        failedUploads++;
+      } else {
+        uploadedUrls.add(url);
+      }
     }
 
-    final uploadedUrl = await _uploadPhoto(
-      file: _pickedVisitedPhotos.first,
-      folder: 'check_ins',
-    );
-    if (uploadedUrl != null) {
-      return uploadedUrl;
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Photo upload failed. Use JPG, PNG, or WEBP under 5MB.',
-          ),
-        ),
-      );
-    }
-    return _existingVisitedPhotoUrls.isEmpty
-        ? null
-        : _existingVisitedPhotoUrls.first;
+    return (uploadedUrls: uploadedUrls, failedUploads: failedUploads);
   }
 
   Future<void> _saveCheckIn() async {
@@ -224,18 +208,35 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
 
     setState(() => _isSavingCheckIn = true);
     final note = _checkInNoteController.text.trim();
-    final photoUrl = await _resolveVisitedPhotoUrl();
+    final uploadResult = await _uploadPhotos(
+      files: _pickedVisitedPhotos,
+      folder: 'check_ins',
+    );
     if (!mounted) return;
+
+    final checkInPhotos = [
+      ..._existingVisitedPhotoUrls,
+      ...uploadResult.uploadedUrls,
+    ];
 
     final notifier = ref.read(checkInProvider(widget.locationId).notifier);
     final success = await notifier.checkIn(
       note: note.isEmpty ? null : note,
-      photoUrl: photoUrl,
+      photos: checkInPhotos,
     );
 
     if (!mounted) return;
     setState(() => _isSavingCheckIn = false);
 
+    if (uploadResult.failedUploads > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Some photos could not be uploaded. Use JPG, PNG, or WEBP under 5MB.',
+          ),
+        ),
+      );
+    }
     if (!success) return;
     setState(() => _justCheckedIn = true);
     context.pop(true);
@@ -289,16 +290,10 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
 
     setState(() => _isSavingReview = true);
 
-    final uploadedUrls = <String>[];
-    var failedUploads = 0;
-    for (final file in _pickedReviewPhotos) {
-      final url = await _uploadPhoto(file: file, folder: 'reviews');
-      if (url == null) {
-        failedUploads++;
-      } else {
-        uploadedUrls.add(url);
-      }
-    }
+    final uploadResult = await _uploadPhotos(
+      files: _pickedReviewPhotos,
+      folder: 'reviews',
+    );
 
     if (!mounted) return;
 
@@ -308,7 +303,7 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
       userId: user.id,
       rating: _selectedRating,
       comment: _reviewController.text.trim(),
-      photos: [..._existingReviewPhotoUrls, ...uploadedUrls],
+      photos: [..._existingReviewPhotoUrls, ...uploadResult.uploadedUrls],
       createdAt: DateTime.now(),
     );
 
@@ -329,7 +324,7 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
       (_) async {
         ref.invalidate(myReviewForLocationProvider(widget.locationId));
         ref.invalidate(reviewsByLocationProvider(widget.locationId));
-        if (failedUploads > 0) {
+        if (uploadResult.failedUploads > 0) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
@@ -431,7 +426,7 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
                             isCheckedIn: isCheckedIn,
                             existingPhotoUrls: _existingVisitedPhotoUrls,
                             pickedPhotos: _pickedVisitedPhotos,
-                            onAddPhotos: _pickVisitedPhoto,
+                            onAddPhotos: _pickVisitedPhotos,
                             onRemoveExistingPhoto: _removeVisitedExistingPhoto,
                             onRemovePickedPhoto: _removeVisitedPickedPhoto,
                             controller: _checkInNoteController,

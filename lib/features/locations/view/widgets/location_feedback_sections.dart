@@ -122,7 +122,6 @@ class LocationFeedbackVisitedColumn extends StatelessWidget {
           onRemoveExistingPhoto: onRemoveExistingPhoto,
           onRemovePickedPhoto: onRemovePickedPhoto,
           addLabel: 'add photo',
-          maxItems: 1,
         ),
         const SizedBox(height: 24),
         const FeedbackSectionLabel('Add a note'),

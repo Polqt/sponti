@@ -34,13 +34,13 @@ class CheckinsRepositoryImpl implements CheckinsRepository {
     required String locationId,
     required String userId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
   }) => _guard(
     () => _remote.createCheckIn(
       locationId: locationId,
       userId: userId,
       note: note,
-      photoUrl: photoUrl,
+      photos: photos,
     ),
   );
 
@@ -48,12 +48,12 @@ class CheckinsRepositoryImpl implements CheckinsRepository {
   Future<Either<Failure, CheckIn>> updateCheckIn({
     required String checkInId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
   }) => _guard(
     () => _remote.updateCheckIn(
       checkInId: checkInId,
       note: note,
-      photoUrl: photoUrl,
+      photos: photos,
     ),
   );
 

@@ -109,8 +109,8 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
     );
   }
 
-  /// Submit a new check-in with optional note and photo URL.
-  Future<bool> checkIn({String? note, String? photoUrl}) async {
+  /// Submit a new check-in with optional note and photos.
+  Future<bool> checkIn({String? note, List<String> photos = const []}) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return false;
 
@@ -123,12 +123,12 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
             locationId: arg,
             userId: userId,
             note: note,
-            photoUrl: photoUrl,
+            photos: photos,
           )
         : await repository.updateCheckIn(
             checkInId: current.myCheckInId!,
             note: note,
-            photoUrl: photoUrl,
+            photos: photos,
           );
 
     return result.fold(

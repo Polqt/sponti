@@ -10,12 +10,12 @@ abstract interface class CheckinsRemoteDataSource {
     required String locationId,
     required String userId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
   });
   Future<CheckIn> updateCheckIn({
     required String checkInId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
   });
   Future<void> deleteCheckIn(String checkInId);
   Future<bool> hasUserCheckedIn(String locationId, String userId);
@@ -50,7 +50,7 @@ class CheckinsRemoteDataSourceImpl implements CheckinsRemoteDataSource {
     required String locationId,
     required String userId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
   }) async {
     try {
       final payload = CheckInModel(
@@ -58,7 +58,7 @@ class CheckinsRemoteDataSourceImpl implements CheckinsRemoteDataSource {
         locationId: locationId,
         userId: userId,
         note: note,
-        photoUrl: photoUrl,
+        photos: photos,
         createdAt: DateTime.now(),
       ).toInsertJson();
 
@@ -80,12 +80,13 @@ class CheckinsRemoteDataSourceImpl implements CheckinsRemoteDataSource {
   Future<CheckIn> updateCheckIn({
     required String checkInId,
     String? note,
-    String? photoUrl,
+    List<String> photos = const [],
   }) async {
     try {
       final payload = <String, dynamic>{
         'note': note ?? '',
-        'photo_url': photoUrl,
+        'photos': photos,
+        'photo_url': photos.isEmpty ? null : photos.first,
       };
 
       final response = await _client
