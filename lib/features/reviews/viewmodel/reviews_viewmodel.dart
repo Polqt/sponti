@@ -31,3 +31,22 @@ final myReviewsProvider = FutureProvider<List<Review>>((ref) async {
     throw StateError(failure.message);
   }, (reviews) => reviews);
 });
+
+final myReviewForLocationProvider =
+    FutureProvider.family<Review?, String>((ref, locationId) async {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return null;
+
+      final result = await ref
+          .read(reviewsRepositoryProvider)
+          .getReviewsForLocation(locationId);
+
+      return result.fold((failure) {
+        throw StateError(failure.message);
+      }, (reviews) {
+        for (final review in reviews) {
+          if (review.userId == userId) return review;
+        }
+        return null;
+      });
+    });
