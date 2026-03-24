@@ -4,7 +4,6 @@ import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/main_shell.dart';
 import 'package:sponti/features/auth/view/screens/sign_in_screen.dart';
 import 'package:sponti/features/discovery/view/screens/map_screen.dart';
-import 'package:sponti/features/discovery/view/screens/surprise_screen.dart';
 import 'package:sponti/features/explore/view/screens/explore_screen.dart';
 import 'package:sponti/features/favorites/view/screens/favorites_screen.dart';
 import 'package:sponti/features/locations/view/screens/location_screen.dart';
@@ -13,6 +12,7 @@ import 'package:sponti/features/onboarding/view/screens/video_onboarding_screen.
 import 'package:sponti/features/profile/view/screens/edit_profile_screen.dart';
 import 'package:sponti/features/profile/view/screens/profile_screen.dart';
 import 'package:sponti/features/suggestions/presentation/suggest_spot_screen.dart';
+import 'package:sponti/features/surprise_me/presentation/surprise_me_modal.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -63,7 +63,7 @@ final appRouter = GoRouter(
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
       path: RouteName.surprise,
-      builder: (context, state) => const SurpriseScreen(),
+      builder: (context, state) => const SurpriseMeModal(),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
