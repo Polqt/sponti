@@ -351,16 +351,49 @@ class _HiddenGemPill extends StatelessWidget {
 
 // ── Body ───────────────────────────────────────────────────────────────────────
 
-class _LocationDetailBody extends ConsumerWidget {
+class _LocationDetailBody extends ConsumerStatefulWidget {
   const _LocationDetailBody({required this.location});
 
   final Location location;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LocationDetailBody> createState() => _LocationDetailBodyState();
+}
+
+class _LocationDetailBodyState extends ConsumerState<_LocationDetailBody> {
+  int? _optimisticCheckInCount;
+
+  void _handleCheckInResult(bool? didCheckIn, int previousCount) {
+    if (!mounted || didCheckIn == null) return;
+
+    setState(() {
+      _optimisticCheckInCount = didCheckIn
+          ? previousCount + 1
+          : (previousCount > 0 ? previousCount - 1 : 0);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final location = widget.location;
     final categoryColor = Color(location.category.colorValue);
     final checkInState = ref.watch(checkInProvider(location.id)).valueOrNull;
     final isCheckedIn = checkInState?.isCheckedIn ?? false;
+    final liveLocation = ref.watch(locationStreamProvider(location.id)).valueOrNull;
+    final liveCheckInCount =
+        ref.watch(locationCheckInCountProvider(location.id)).valueOrNull;
+    final src = liveLocation ?? location;
+    final displayedCheckInCount =
+        _optimisticCheckInCount ?? liveCheckInCount ?? src.checkInCount;
+
+    if (_optimisticCheckInCount != null &&
+        (liveCheckInCount == _optimisticCheckInCount ||
+            src.checkInCount == _optimisticCheckInCount)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() => _optimisticCheckInCount = null);
+      });
+    }
 
     final hasQuickInfo = location.hasWifi ||
         location.isPetFriendly ||
@@ -379,7 +412,10 @@ class _LocationDetailBody extends ConsumerWidget {
         // ── Stats ────────────────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-          child: _StatsStrip(location: location),
+          child: _StatsStrip(
+            location: src,
+            checkInCount: displayedCheckInCount,
+          ),
         ),
 
         // ── Check-in CTA ─────────────────────────────────────────────────
@@ -388,6 +424,8 @@ class _LocationDetailBody extends ConsumerWidget {
           child: _CheckInButton(
             location: location,
             isCheckedIn: isCheckedIn,
+            checkInCount: displayedCheckInCount,
+            onCheckInResult: _handleCheckInResult,
           ),
         ),
 
@@ -579,34 +617,35 @@ class _NameSection extends StatelessWidget {
 
 // ── Stats strip ───────────────────────────────────────────────────────────────
 
-class _StatsStrip extends ConsumerWidget {
-  const _StatsStrip({required this.location});
+class _StatsStrip extends StatelessWidget {
+  const _StatsStrip({
+    required this.location,
+    required this.checkInCount,
+  });
   final Location location;
+  final int checkInCount;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     // Live stream — falls back to the initial location value while connecting.
-    final live = ref.watch(locationStreamProvider(location.id)).valueOrNull;
-    final src = live ?? location;
-
     return Row(
       children: [
         _StatItem(
-          value: SpontiFormatter.compactNumber(src.reviewCount),
+          value: SpontiFormatter.compactNumber(location.reviewCount),
           label: 'Reviews',
           icon: Icons.reviews_outlined,
           color: SpontiColors.primary,
         ),
         const _StatDivider(),
         _StatItem(
-          value: SpontiFormatter.compactNumber(src.checkInCount),
+          value: SpontiFormatter.compactNumber(checkInCount),
           label: 'Check-ins',
           icon: Icons.pin_drop_outlined,
           color: SpontiColors.secondary,
         ),
         const _StatDivider(),
         _StatItem(
-          value: SpontiFormatter.rating(src.rating),
+          value: SpontiFormatter.rating(location.rating),
           label: 'Rating',
           icon: Icons.star_outline_rounded,
           color: SpontiColors.accent,
@@ -677,20 +716,27 @@ class _CheckInButton extends StatelessWidget {
   const _CheckInButton({
     required this.location,
     required this.isCheckedIn,
+    required this.checkInCount,
+    required this.onCheckInResult,
   });
 
   final Location location;
   final bool isCheckedIn;
+  final int checkInCount;
+  final void Function(bool?, int) onCheckInResult;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.push(
-        RouteName.checkInPath(
-          locationId: location.id,
-          locationName: location.name,
-        ),
-      ),
+      onTap: () async {
+        final result = await context.push<bool>(
+          RouteName.checkInPath(
+            locationId: location.id,
+            locationName: location.name,
+          ),
+        );
+        onCheckInResult(result, checkInCount);
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         height: 50,

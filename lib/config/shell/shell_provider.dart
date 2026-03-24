@@ -3,8 +3,8 @@ import 'package:sponti/config/routes/route_name.dart';
 
 /// The shell tabs in order, index must match the bottom nav order.
 enum ShellTab {
-  location(0, RouteName.discovery),
-  discovery(1, RouteName.location),
+  discovery(0, RouteName.discovery),
+  location(1, RouteName.location),
   favorites(2, RouteName.favorites),
   profile(3, RouteName.profile);
 
@@ -17,7 +17,7 @@ enum ShellTab {
   static ShellTab fromLocation(String location) {
     return ShellTab.values.firstWhere(
       (t) => location.startsWith(t.route),
-      orElse: () => ShellTab.location,
+      orElse: () => ShellTab.discovery,
     );
   }
 }

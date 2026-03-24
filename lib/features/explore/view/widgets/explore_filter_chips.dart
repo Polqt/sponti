@@ -34,7 +34,7 @@ class ExploreFilterChips extends StatelessWidget {
         child: Row(
           children: [
             _ExploreFilterChip(
-              label: '${_rankingLabel(filter.rankingFilter)} \u2713',
+              label: '${filter.rankingFilter.label} \u2713',
               color: _rankingColor(filter.rankingFilter),
               leading: const Icon(Icons.auto_awesome_rounded),
               isActive: true,
@@ -139,19 +139,12 @@ class _ExploreFilterChip extends StatelessWidget {
   }
 }
 
-String _rankingLabel(String ranking) {
+Color _rankingColor(ExploreRanking ranking) {
   return switch (ranking) {
-    'lowkey' => 'Lowkey',
-    'new' => 'New',
-    _ => 'Trending',
-  };
-}
-
-Color _rankingColor(String ranking) {
-  return switch (ranking) {
-    'lowkey' => const Color(0xFF3A7D44),
-    'new' => SpontiColors.accent,
-    _ => SpontiColors.primary,
+    ExploreRanking.popular => const Color(0xFFE07A15),
+    ExploreRanking.lowkey => const Color(0xFF3A7D44),
+    ExploreRanking.newest => SpontiColors.accent,
+    ExploreRanking.trending => SpontiColors.primary,
   };
 }
 

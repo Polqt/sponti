@@ -142,11 +142,13 @@ class _CategorySheetRow extends StatelessWidget {
                 isSelected: selected,
               ),
               const Spacer(),
-              Radio<bool>(
-                value: true,
+              RadioGroup<bool>(
                 groupValue: selected,
                 onChanged: (_) => onTap(),
-                activeColor: option.color,
+                child: Radio<bool>(
+                  value: true,
+                  activeColor: option.color,
+                ),
               ),
             ],
           ),

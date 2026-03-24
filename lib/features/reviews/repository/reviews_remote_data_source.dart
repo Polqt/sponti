@@ -14,6 +14,7 @@ abstract interface class ReviewsRemoteDataSource {
 class ReviewsRemoteDataSourceImpl implements ReviewsRemoteDataSource {
   const ReviewsRemoteDataSourceImpl(this._client);
 
+  // ignore: unused_field
   final SupabaseClient _client;
 
   @override

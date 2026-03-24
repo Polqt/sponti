@@ -1,15 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sponti/features/suggestions/data/suggestions_remote_data_source.dart';
-import 'package:sponti/features/suggestions/data/suggestions_repository_impl.dart';
-import 'package:sponti/features/suggestions/domain/suggestion_model.dart';
+import 'package:sponti/features/suggestions/repository/suggestions_remote_data_source.dart';
+import 'package:sponti/features/suggestions/repository/suggestions_repository_impl.dart';
+import 'package:sponti/features/suggestions/model/suggestion_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // DI chain
 
-final suggestionsDataSourceProvider =
-    Provider<SuggestionsRemoteDataSource>((ref) {
+final suggestionsDataSourceProvider = Provider<SuggestionsRemoteDataSource>((
+  ref,
+) {
   return SuggestionsRemoteDataSourceImpl(Supabase.instance.client);
 });
 
@@ -19,9 +20,12 @@ final suggestionsRepositoryProvider = Provider<SuggestionsRepository>((ref) {
 
 // Read — my suggestions list
 
-final mySuggestionsProvider = FutureProvider<List<SuggestionModel>>((ref) async {
-  final result =
-      await ref.read(suggestionsRepositoryProvider).fetchMySuggestions();
+final mySuggestionsProvider = FutureProvider<List<SuggestionModel>>((
+  ref,
+) async {
+  final result = await ref
+      .read(suggestionsRepositoryProvider)
+      .fetchMySuggestions();
   return result.fold(
     (failure) => throw Exception(failure.message),
     (suggestions) => suggestions,
@@ -30,10 +34,13 @@ final mySuggestionsProvider = FutureProvider<List<SuggestionModel>>((ref) async 
 
 // Read — single suggestion by id
 
-final suggestionByIdProvider =
-    FutureProvider.family<SuggestionModel, String>((ref, id) async {
-  final result =
-      await ref.read(suggestionsRepositoryProvider).fetchSuggestionById(id);
+final suggestionByIdProvider = FutureProvider.family<SuggestionModel, String>((
+  ref,
+  id,
+) async {
+  final result = await ref
+      .read(suggestionsRepositoryProvider)
+      .fetchSuggestionById(id);
   return result.fold(
     (failure) => throw Exception(failure.message),
     (suggestion) => suggestion,
@@ -63,8 +70,8 @@ class SubmitSuggestionNotifier extends AsyncNotifier<void> {
 
 final submitSuggestionProvider =
     AsyncNotifierProvider<SubmitSuggestionNotifier, void>(
-  SubmitSuggestionNotifier.new,
-);
+      SubmitSuggestionNotifier.new,
+    );
 
 // Mutation — update
 
@@ -90,8 +97,8 @@ class UpdateSuggestionNotifier extends AsyncNotifier<void> {
 
 final updateSuggestionProvider =
     AsyncNotifierProvider<UpdateSuggestionNotifier, void>(
-  UpdateSuggestionNotifier.new,
-);
+      UpdateSuggestionNotifier.new,
+    );
 
 // Mutation — delete
 
@@ -101,8 +108,9 @@ class DeleteSuggestionNotifier extends AsyncNotifier<void> {
 
   Future<void> delete(String id) async {
     state = const AsyncLoading();
-    final result =
-        await ref.read(suggestionsRepositoryProvider).deleteSuggestion(id);
+    final result = await ref
+        .read(suggestionsRepositoryProvider)
+        .deleteSuggestion(id);
     state = result.fold(
       (failure) => AsyncError(failure.message, StackTrace.current),
       (_) {
@@ -115,6 +123,5 @@ class DeleteSuggestionNotifier extends AsyncNotifier<void> {
 
 final deleteSuggestionProvider =
     AsyncNotifierProvider<DeleteSuggestionNotifier, void>(
-  DeleteSuggestionNotifier.new,
-);
-
+      DeleteSuggestionNotifier.new,
+    );
