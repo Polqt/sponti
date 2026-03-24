@@ -48,8 +48,8 @@ class MainShell extends ConsumerWidget {
           child: _SpontiBottomBar(
             activeRoute: route,
             avatarUrl: avatarUrl,
-            onTapExplore: () => context.go(RouteName.location),
-            onTapMap: () => context.go(RouteName.discovery),
+            onTapExplore: () => context.go(RouteName.discovery),
+            onTapMap: () => context.go(RouteName.location),
             onTapSurprise: () {
               showModalBottomSheet(
                 context: context,

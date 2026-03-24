@@ -16,27 +16,21 @@ Future<void> showRankingFilterSheet(
   WidgetRef ref,
   ExploreFilter filter,
 ) async {
-  final selected = await _showExploreSheet<String>(
+  final options = ExploreRanking.values
+      .map(
+        (ranking) => _ExploreSheetOption(
+          value: ranking,
+          label: ranking.label,
+          subtitle: ranking.subtitle,
+        ),
+      )
+      .toList(growable: false);
+
+  final selected = await _showExploreSheet<ExploreRanking>(
     context: context,
     title: 'Ranking',
     initialValue: filter.rankingFilter,
-    options: const [
-      _ExploreSheetOption(
-        value: 'trending',
-        label: 'Trending',
-        subtitle: 'Most check-ins this week',
-      ),
-      _ExploreSheetOption(
-        value: 'lowkey',
-        label: 'Lowkey',
-        subtitle: 'Hidden gems, fewer crowds',
-      ),
-      _ExploreSheetOption(
-        value: 'new',
-        label: 'New',
-        subtitle: 'Added in the last 30 days',
-      ),
-    ],
+    options: options,
   );
 
   if (selected == null || selected == filter.rankingFilter) return;
