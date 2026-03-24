@@ -146,11 +146,13 @@ class _ExploreRadioRow<T> extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Radio<T>(
-                value: option.value,
+              RadioGroup<T>(
                 groupValue: selected ? option.value : null,
                 onChanged: (_) => onTap(),
-                activeColor: SpontiColors.primary,
+                child: Radio<T>(
+                  value: option.value,
+                  activeColor: SpontiColors.primary,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(

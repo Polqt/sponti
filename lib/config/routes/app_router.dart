@@ -12,7 +12,7 @@ import 'package:sponti/features/onboarding/repository/onboarding_local_data_sour
 import 'package:sponti/features/onboarding/view/screens/video_onboarding_screen.dart';
 import 'package:sponti/features/profile/view/screens/edit_profile_screen.dart';
 import 'package:sponti/features/profile/view/screens/profile_screen.dart';
-import 'package:sponti/features/suggestions/presentation/suggest_spot_screen.dart';
+import 'package:sponti/features/suggestions/view/suggest_spot_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();

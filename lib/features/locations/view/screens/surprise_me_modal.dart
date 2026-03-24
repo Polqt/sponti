@@ -94,7 +94,7 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -104,7 +104,7 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
                 Text(
                   'feeling spontaneous?',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.45),
+                    color: Colors.white.withValues(alpha: 0.45),
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
                   ),
@@ -126,7 +126,7 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
                 Text(
                   'pick one or more — we\'ll find something great.',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.35),
+                    color: Colors.white.withValues(alpha: 0.35),
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
                   ),
@@ -167,7 +167,7 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
                     child: Text(
                       surpriseMeState.error.toString(),
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
+                        color: Colors.white.withValues(alpha: 0.5),
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                       ),
@@ -191,7 +191,7 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
         onPressed: isLoading ? null : _onSurpriseMe,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF2979FF),
-          disabledBackgroundColor: const Color(0xFF2979FF).withOpacity(0.5),
+          disabledBackgroundColor: const Color(0xFF2979FF).withValues(alpha: 0.5),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
@@ -204,7 +204,7 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.white.withOpacity(0.8),
+                    Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               )
@@ -230,13 +230,13 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),
           side: BorderSide(
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withValues(alpha: 0.15),
             width: 0.5,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
-          disabledForegroundColor: Colors.white.withOpacity(0.5),
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
         ),
         child: const Text(
           'any category',
@@ -253,6 +253,7 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
 
 class CategoryChip extends StatelessWidget {
   const CategoryChip({
+    super.key,
     required this.category,
     required this.isSelected,
     required this.onTap,
@@ -271,7 +272,7 @@ class CategoryChip extends StatelessWidget {
           color: const Color(0xFF1e1e22),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? Colors.white : Colors.white.withOpacity(0.1),
+            color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.1),
             width: isSelected ? 2 : 0.5,
           ),
         ),
