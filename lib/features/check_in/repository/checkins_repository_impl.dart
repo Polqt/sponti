@@ -45,6 +45,19 @@ class CheckinsRepositoryImpl implements CheckinsRepository {
   );
 
   @override
+  Future<Either<Failure, CheckIn>> updateCheckIn({
+    required String checkInId,
+    String? note,
+    String? photoUrl,
+  }) => _guard(
+    () => _remote.updateCheckIn(
+      checkInId: checkInId,
+      note: note,
+      photoUrl: photoUrl,
+    ),
+  );
+
+  @override
   Future<Either<Failure, void>> deleteCheckIn(String checkInId) =>
       _guard(() => _remote.deleteCheckIn(checkInId));
 

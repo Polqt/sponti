@@ -216,42 +216,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                   children: [
                     const _GlassSearchBar(),
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GlassContainer(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Bacolod Spots',
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        color: SpontiColors.textPrimary,
-                                      ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${locations.length} places nearby',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: SpontiColors.textSecondary,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        GlassIconButton(
-                          icon: Icons.refresh_rounded,
-                          onTap: () =>
-                              ref.read(locationsProvider.notifier).refresh(),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),

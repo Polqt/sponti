@@ -37,6 +37,7 @@ class CheckInState {
     this.errorMessage,
     this.checkIns = const [],
     this.myCheckInId,
+    this.myCheckIn,
   });
 
   final bool isCheckedIn;
@@ -46,6 +47,7 @@ class CheckInState {
 
   /// The ID of the current user's check-in row, used for deletion.
   final String? myCheckInId;
+  final CheckIn? myCheckIn;
 
   CheckInState copyWith({
     bool? isCheckedIn,
@@ -53,13 +55,16 @@ class CheckInState {
     String? errorMessage,
     List<CheckIn>? checkIns,
     String? myCheckInId,
+    CheckIn? myCheckIn,
     bool clearMyCheckInId = false,
+    bool clearMyCheckIn = false,
   }) => CheckInState(
     isCheckedIn: isCheckedIn ?? this.isCheckedIn,
     isLoading: isLoading ?? this.isLoading,
     errorMessage: errorMessage,
     checkIns: checkIns ?? this.checkIns,
     myCheckInId: clearMyCheckInId ? null : (myCheckInId ?? this.myCheckInId),
+    myCheckIn: clearMyCheckIn ? null : (myCheckIn ?? this.myCheckIn),
   );
 }
 
@@ -86,15 +91,21 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
 
     // Find the user's own check-in to get its id for potential deletion.
     String? myCheckInId;
+    CheckIn? myCheckIn;
     if (hasCheckedIn) {
       final mine = checkIns.where((c) => c.userId == userId).toList();
-      if (mine.isNotEmpty) myCheckInId = mine.first.id;
+      if (mine.isNotEmpty) {
+        final currentUserCheckIn = mine.first;
+        myCheckIn = currentUserCheckIn;
+        myCheckInId = currentUserCheckIn.id;
+      }
     }
 
     return CheckInState(
       isCheckedIn: hasCheckedIn,
       checkIns: checkIns,
       myCheckInId: myCheckInId,
+      myCheckIn: myCheckIn,
     );
   }
 
@@ -106,14 +117,19 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
     final current = state.valueOrNull ?? const CheckInState();
     state = AsyncData(current.copyWith(isLoading: true));
 
-    final result = await ref
-        .read(checkinsRepositoryProvider)
-        .createCheckIn(
-          locationId: arg,
-          userId: userId,
-          note: note,
-          photoUrl: photoUrl,
-        );
+    final repository = ref.read(checkinsRepositoryProvider);
+    final result = current.myCheckInId == null
+        ? await repository.createCheckIn(
+            locationId: arg,
+            userId: userId,
+            note: note,
+            photoUrl: photoUrl,
+          )
+        : await repository.updateCheckIn(
+            checkInId: current.myCheckInId!,
+            note: note,
+            photoUrl: photoUrl,
+          );
 
     return result.fold(
       (failure) {
@@ -123,12 +139,17 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
         return false;
       },
       (checkIn) {
+        final updatedCheckIns = [
+          checkIn,
+          ...current.checkIns.where((item) => item.id != checkIn.id),
+        ];
         state = AsyncData(
           current.copyWith(
             isLoading: false,
             isCheckedIn: true,
             myCheckInId: checkIn.id,
-            checkIns: [checkIn, ...current.checkIns],
+            myCheckIn: checkIn,
+            checkIns: updatedCheckIns,
           ),
         );
         return true;
@@ -162,6 +183,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
             isLoading: false,
             isCheckedIn: false,
             clearMyCheckInId: true,
+            clearMyCheckIn: true,
             checkIns: current.checkIns
                 .where((c) => c.id != checkInId && c.userId != userId)
                 .toList(),

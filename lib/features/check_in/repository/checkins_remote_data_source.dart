@@ -12,6 +12,11 @@ abstract interface class CheckinsRemoteDataSource {
     String? note,
     String? photoUrl,
   });
+  Future<CheckIn> updateCheckIn({
+    required String checkInId,
+    String? note,
+    String? photoUrl,
+  });
   Future<void> deleteCheckIn(String checkInId);
   Future<bool> hasUserCheckedIn(String locationId, String userId);
 }
@@ -60,6 +65,33 @@ class CheckinsRemoteDataSourceImpl implements CheckinsRemoteDataSource {
       final response = await _client
           .from(SupabaseTables.checkIns)
           .insert(payload)
+          .select()
+          .single();
+
+      return CheckInModel.fromJson(response);
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<CheckIn> updateCheckIn({
+    required String checkInId,
+    String? note,
+    String? photoUrl,
+  }) async {
+    try {
+      final payload = <String, dynamic>{
+        'note': note ?? '',
+        'photo_url': photoUrl,
+      };
+
+      final response = await _client
+          .from(SupabaseTables.checkIns)
+          .update(payload)
+          .eq('id', checkInId)
           .select()
           .single();
 
