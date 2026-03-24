@@ -18,6 +18,11 @@ import 'package:sponti/features/reviews/model/review.dart';
 import 'package:sponti/features/reviews/viewmodel/reviews_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+typedef _PhotoUploadResult = ({
+  List<String> uploadedUrls,
+  List<String> failedMessages,
+});
+
 class LocationFeedbackPage extends ConsumerStatefulWidget {
   const LocationFeedbackPage({
     super.key,
@@ -151,17 +156,27 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
     setState(() => _pickedReviewPhotos.removeAt(index));
   }
 
-  Future<String?> _uploadPhoto({
+  Future<({String? uploadedUrl, String? errorMessage})> _uploadPhoto({
     required XFile file,
     required String folder,
   }) async {
     try {
       final contentType = imageContentTypeForPath(file.path);
-      if (contentType == null) return null;
+      if (contentType == null) {
+        return (
+          uploadedUrl: null,
+          errorMessage: 'Unsupported file type. Use JPG, PNG, or WEBP.',
+        );
+      }
 
       final client = Supabase.instance.client;
       final userId = client.auth.currentUser?.id;
-      if (userId == null) return null;
+      if (userId == null) {
+        return (
+          uploadedUrl: null,
+          errorMessage: 'You must be signed in to upload photos.',
+        );
+      }
 
       final extension = contentType.split('/').last;
       final path =
@@ -176,31 +191,43 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
             ),
           );
 
-      return client.storage
-          .from(SupabaseBuckets.locationPhotos)
-          .getPublicUrl(path);
-    } catch (_) {
-      return null;
+      return (
+        uploadedUrl: client.storage
+            .from(SupabaseBuckets.locationPhotos)
+            .getPublicUrl(path),
+        errorMessage: null,
+      );
+    } on StorageException catch (error) {
+      return (uploadedUrl: null, errorMessage: error.message);
+    } catch (error) {
+      return (uploadedUrl: null, errorMessage: error.toString());
     }
   }
 
-  Future<({List<String> uploadedUrls, int failedUploads})> _uploadPhotos({
+  Future<_PhotoUploadResult> _uploadPhotos({
     required List<XFile> files,
     required String folder,
   }) async {
     final uploadedUrls = <String>[];
-    var failedUploads = 0;
+    final failedMessages = <String>[];
 
     for (final file in files) {
-      final url = await _uploadPhoto(file: file, folder: folder);
+      final result = await _uploadPhoto(file: file, folder: folder);
+      final url = result.uploadedUrl;
       if (url == null) {
-        failedUploads++;
+        final message = result.errorMessage;
+        if (message != null && !failedMessages.contains(message)) {
+          failedMessages.add(message);
+        }
       } else {
         uploadedUrls.add(url);
       }
     }
 
-    return (uploadedUrls: uploadedUrls, failedUploads: failedUploads);
+    return (
+      uploadedUrls: uploadedUrls,
+      failedMessages: failedMessages,
+    );
   }
 
   Future<void> _saveCheckIn() async {
@@ -228,12 +255,10 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
     if (!mounted) return;
     setState(() => _isSavingCheckIn = false);
 
-    if (uploadResult.failedUploads > 0) {
+    if (uploadResult.failedMessages.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Some photos could not be uploaded. Use JPG, PNG, or WEBP under 5MB.',
-          ),
+        SnackBar(
+          content: Text(uploadResult.failedMessages.first),
         ),
       );
     }
@@ -324,12 +349,10 @@ class _LocationFeedbackPageState extends ConsumerState<LocationFeedbackPage> {
       (_) async {
         ref.invalidate(myReviewForLocationProvider(widget.locationId));
         ref.invalidate(reviewsByLocationProvider(widget.locationId));
-        if (uploadResult.failedUploads > 0) {
+        if (uploadResult.failedMessages.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Some photos could not be uploaded. Use JPG, PNG, or WEBP under 5MB.',
-              ),
+            SnackBar(
+              content: Text(uploadResult.failedMessages.first),
             ),
           );
         }

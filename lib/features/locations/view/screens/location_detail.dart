@@ -2,21 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
-import 'package:sponti/features/check_in/view/widgets/check_in_action_button.dart';
-import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_badges.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_about_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_contact_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_hero.dart';
+import 'package:sponti/features/locations/view/widgets/location_detail_hero_actions.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_name_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_photo_gallery_section.dart';
+import 'package:sponti/features/locations/view/widgets/location_detail_reviews_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_stats_strip.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_tags_section.dart';
 import 'package:sponti/features/locations/view/widgets/location_hours_dropdown_card.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/reviews/view/widgets/review_action_button.dart';
+import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
 
 class LocationDetailPage extends ConsumerStatefulWidget {
   const LocationDetailPage({
@@ -96,8 +97,8 @@ class LocationDetail extends ConsumerStatefulWidget {
 class _LocationDetailState extends ConsumerState<LocationDetail> {
   int? _optimisticCheckInCount;
 
-  void _handleCheckInResult(bool? didCheckIn, int previousCount) {
-    if (!mounted || didCheckIn == null) return;
+  void _handleCheckInResult(bool didCheckIn, int previousCount) {
+    if (!mounted) return;
 
     setState(() {
       _optimisticCheckInCount = didCheckIn
@@ -109,7 +110,6 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
   @override
   Widget build(BuildContext context) {
     final location = widget.location;
-    final checkInState = ref.watch(checkInProvider(location.id)).valueOrNull;
     final liveLocation = ref.watch(locationStreamProvider(location.id)).valueOrNull;
     final liveCheckInCount = ref
         .watch(locationCheckInCountProvider(location.id))
@@ -145,7 +145,16 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
           parent: AlwaysScrollableScrollPhysics(),
         ),
         slivers: [
-          SliverToBoxAdapter(child: LocationDetailHero(location: location)),
+          SliverToBoxAdapter(
+            child: LocationDetailHero(
+              location: location,
+              actionButtons: LocationDetailHeroActions(
+                locationId: location.id,
+                checkInCount: displayedCheckInCount,
+                onCheckInResult: _handleCheckInResult,
+              ),
+            ),
+          ),
           SliverPadding(
             padding: EdgeInsets.only(bottom: widget.bottomPadding),
             sliver: SliverToBoxAdapter(
@@ -165,21 +174,12 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
                   ),
                   LocationDetailInset(
                     top: 16,
-                    child: CheckInActionButton(
-                      locationId: location.id,
-                      locationName: location.name,
-                      isCheckedIn: checkInState?.isCheckedIn ?? false,
-                      checkInCount: displayedCheckInCount,
-                      onCheckInResult: _handleCheckInResult,
-                    ),
-                  ),
-                  LocationDetailInset(
-                    top: 12,
                     child: ReviewActionButton(
                       locationId: location.id,
                       locationName: location.name,
                     ),
                   ),
+                  LocationDetailReviewsSection(locationId: location.id),
                   if (hasQuickInfo)
                     LocationDetailInset(
                       top: 20,

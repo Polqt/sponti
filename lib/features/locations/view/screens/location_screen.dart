@@ -25,7 +25,7 @@ class LocationScreen extends ConsumerStatefulWidget {
 class _LocationScreenState extends ConsumerState<LocationScreen> {
   static const _defaultCenter = LatLng(10.6765, 122.9509);
 
-  final _mapController = MapController();
+  final MapController _mapController = MapController();
   final ValueNotifier<double> _sheetProgress = ValueNotifier<double>(0.0);
   late final StateController<bool> _shellBarHiddenController;
   late final StateController<double> _shellChromeProgressController;
@@ -55,23 +55,31 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _openPanel();
   }
 
+  void _setSheetProgress(double progress) {
+    _sheetProgress.value = progress;
+    _shellChromeProgressController.state = progress;
+  }
+
+  void _focusLocation(Location location) {
+    _mapController.move(
+      LatLng(location.coordinates.latitude, location.coordinates.longitude),
+      14.5,
+    );
+  }
+
   void _openPanel() {
     setState(() {
       _isExplorePanelVisible = true;
       _isExplorePanelExpanded = true;
     });
-    _sheetProgress.value = 1.0;
-    _shellChromeProgressController.state = 1.0;
+    _setSheetProgress(1.0);
     _setShellHidden(true);
   }
 
   void _selectLocation(Location location) {
     setState(() => _selectedLocationId = location.id);
     _openPanel();
-    _mapController.move(
-      LatLng(location.coordinates.latitude, location.coordinates.longitude),
-      14.5,
-    );
+    _focusLocation(location);
   }
 
   Future<void> _showLocationDetails(Location location) async {
@@ -82,12 +90,8 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
     });
-    _mapController.move(
-      LatLng(location.coordinates.latitude, location.coordinates.longitude),
-      14.5,
-    );
-    _sheetProgress.value = 0.0;
-    _shellChromeProgressController.state = 0.0;
+    _focusLocation(location);
+    _setSheetProgress(0.0);
     _setShellHidden(true);
     _isLocationDetailOpen = true;
 
@@ -108,16 +112,15 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
     });
-    _sheetProgress.value = 0.0;
-    _shellChromeProgressController.state = 0.0;
+    _setSheetProgress(0.0);
     _setShellHidden(false);
   }
 
   @override
   void dispose() {
-    _sheetProgress.dispose();
-    _setShellHidden(false);
     _shellChromeProgressController.state = 0.0;
+    _setShellHidden(false);
+    _sheetProgress.dispose();
     super.dispose();
   }
 
@@ -261,10 +264,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               onExpandChanged: _setPanelExpanded,
               onDismissed: _hidePanel,
               edgeToEdge: true,
-              onSheetProgressChanged: (progress) {
-                _sheetProgress.value = progress;
-                _shellChromeProgressController.state = progress;
-              },
+              onSheetProgressChanged: _setSheetProgress,
               onSelectLocation: _selectLocation,
             ),
         ],
@@ -326,6 +326,9 @@ class _FloatingCategoryRow extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
+          decoration: BoxDecoration(
+            color: SpontiColors.surface.withValues(alpha: 0.74),
+          ),
           padding: const EdgeInsets.all(10),
           child: LocationCategoryRow(
             selectedCategory: selectedCategory,

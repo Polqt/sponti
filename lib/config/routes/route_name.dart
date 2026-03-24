@@ -7,6 +7,7 @@ abstract final class RouteName {
   static const String discovery = '/discovery';
   static const String explore = '/explore';
   static const String favorites = '/favorites';
+  static const String myCheckIns = '/my-check-ins';
   static const String profile = '/profile';
 
   static const String locationDetail = '/locations/:id';

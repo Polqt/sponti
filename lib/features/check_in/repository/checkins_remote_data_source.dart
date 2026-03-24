@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract interface class CheckinsRemoteDataSource {
   Future<List<CheckIn>> getCheckInsForLocation(String locationId);
+  Future<List<CheckIn>> getMyCheckIns();
   Future<CheckIn> createCheckIn({
     required String locationId,
     required String userId,
@@ -69,6 +70,30 @@ class CheckinsRemoteDataSourceImpl implements CheckinsRemoteDataSource {
           .single();
 
       return CheckInModel.fromJson(response);
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<List<CheckIn>> getMyCheckIns() async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        return const <CheckIn>[];
+      }
+
+      final response = await _client
+          .from(SupabaseTables.checkIns)
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      return (response as List<dynamic>)
+          .map((e) => CheckInModel.fromJson(e as Map<String, dynamic>))
+          .toList(growable: false);
     } on PostgrestException catch (e) {
       throw ServerException(e.message);
     } catch (e) {

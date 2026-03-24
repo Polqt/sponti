@@ -30,6 +30,10 @@ class CheckinsRepositoryImpl implements CheckinsRepository {
   ) => _guard(() => _remote.getCheckInsForLocation(locationId));
 
   @override
+  Future<Either<Failure, List<CheckIn>>> getMyCheckIns() =>
+      _guard(_remote.getMyCheckIns);
+
+  @override
   Future<Either<Failure, CheckIn>> createCheckIn({
     required String locationId,
     required String userId,

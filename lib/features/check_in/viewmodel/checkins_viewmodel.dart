@@ -4,6 +4,7 @@ import 'package:sponti/features/check_in/models/checkins.dart';
 import 'package:sponti/features/check_in/repository/checkins_remote_data_source.dart';
 import 'package:sponti/features/check_in/repository/checkins_repository.dart';
 import 'package:sponti/features/check_in/repository/checkins_repository_impl.dart';
+import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final checkinsRemoteDataSourceProvider = Provider<CheckinsRemoteDataSource>((
@@ -115,7 +116,13 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
     if (userId == null) return false;
 
     final current = state.valueOrNull ?? const CheckInState();
-    state = AsyncData(current.copyWith(isLoading: true));
+    state = AsyncData(
+      current.copyWith(
+        isLoading: true,
+        isCheckedIn: true,
+        errorMessage: null,
+      ),
+    );
 
     final repository = ref.read(checkinsRepositoryProvider);
     final result = current.myCheckInId == null
@@ -152,6 +159,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
             checkIns: updatedCheckIns,
           ),
         );
+        _invalidateDependentProviders();
         return true;
       },
     );
@@ -163,7 +171,13 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
     final checkInId = current.myCheckInId;
     if (checkInId == null) return false;
 
-    state = AsyncData(current.copyWith(isLoading: true));
+    state = AsyncData(
+      current.copyWith(
+        isLoading: true,
+        isCheckedIn: false,
+        errorMessage: null,
+      ),
+    );
 
     final result = await ref
         .read(checkinsRepositoryProvider)
@@ -189,9 +203,15 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
                 .toList(),
           ),
         );
+        _invalidateDependentProviders();
         return true;
       },
     );
+  }
+
+  void _invalidateDependentProviders() {
+    ref.invalidate(profileProvider);
+    ref.invalidate(myCheckInsProvider);
   }
 }
 
@@ -199,3 +219,10 @@ final checkInProvider =
     AsyncNotifierProviderFamily<CheckInNotifier, CheckInState, String>(
       CheckInNotifier.new,
     );
+
+final myCheckInsProvider = FutureProvider<List<CheckIn>>((ref) async {
+  final result = await ref.read(checkinsRepositoryProvider).getMyCheckIns();
+  return result.fold((failure) {
+    throw StateError(failure.message);
+  }, (checkIns) => checkIns);
+});

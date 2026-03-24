@@ -66,7 +66,7 @@ class ProfileScreen extends ConsumerWidget {
                           _MenuItem(
                             icon: Icons.location_on_rounded,
                             label: 'My Check-ins',
-                            onTap: () {},
+                            onTap: () => context.push(RouteName.myCheckIns),
                           ),
                           _MenuItem(
                             icon: Icons.bookmark_rounded,
