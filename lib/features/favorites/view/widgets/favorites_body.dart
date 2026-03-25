@@ -162,14 +162,47 @@ class FavoritesBody extends StatelessWidget {
         if (favoriteLocations.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
-            child: AppEmptyState(
-              emoji: '🦗',
-              title: 'your list is crickets',
-              subtitle:
-                  "those bookmark icons aren't just decorative. "
-                  'go poke some spots and start a collection.',
-              actionLabel: 'find something good',
-              onAction: () => context.go(RouteName.location),
+            child: _StaggeredAnimation(
+              index: 3,
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            const Text(
+                              '🦗',
+                              style: TextStyle(fontSize: 64),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'Nothing saved yet',
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Start building your collection of\nmust-visit spots',
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: SpontiColors.textSecondary,
+                                height: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           )
         else if (filteredLocations.isEmpty)
