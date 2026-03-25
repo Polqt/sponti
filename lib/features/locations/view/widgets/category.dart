@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:shimmer/shimmer.dart';
@@ -5,7 +6,7 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/utils/icon_helpers.dart';
 import 'package:sponti/features/locations/model/location.dart';
 
-class CategoryChip extends StatelessWidget {
+class CategoryChip extends StatefulWidget {
   const CategoryChip({
     super.key,
     required this.label,
@@ -24,64 +25,131 @@ class CategoryChip extends StatelessWidget {
   final Widget? leading;
 
   @override
-  Widget build(BuildContext context) {
-    final foreground = isSelected ? color : SpontiColors.textSecondary;
+  State<CategoryChip> createState() => _CategoryChipState();
+}
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
+class _CategoryChipState extends State<CategoryChip> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = widget.isSelected ? widget.color : SpontiColors.textSecondary;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeInOut,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected
-                ? color.withValues(alpha: 0.16)
-                : SpontiColors.surfaceVariant.withValues(alpha: 0.82),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: isSelected ? color : SpontiColors.outline,
+              color: widget.isSelected 
+                ? widget.color.withValues(alpha: 0.4)
+                : Colors.white.withValues(alpha: 0.3),
+              width: 1.5,
             ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.14),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? color.withValues(alpha: 0.14)
-                      : Colors.white.withValues(alpha: 0.72),
-                  shape: BoxShape.circle,
+            boxShadow: [
+              if (widget.isSelected) ...[
+                BoxShadow(
+                  color: widget.color.withValues(alpha: 0.2),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 ),
-                alignment: Alignment.center,
-                child: IconTheme(
-                  data: IconThemeData(size: 14, color: foreground),
-                  child: leading ?? Icon(icon, size: 14, color: foreground),
+                BoxShadow(
+                  color: widget.color.withValues(alpha: 0.1),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: foreground,
-                  height: 1.0,
+              ] else ...[
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-              ),
+              ],
             ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: widget.isSelected
+                      ? [
+                          widget.color.withValues(alpha: 0.18),
+                          widget.color.withValues(alpha: 0.12),
+                        ]
+                      : [
+                          Colors.white.withValues(alpha: 0.65),
+                          Colors.white.withValues(alpha: 0.45),
+                        ],
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: widget.isSelected
+                          ? widget.color.withValues(alpha: 0.2)
+                          : Colors.white.withValues(alpha: 0.8),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: widget.isSelected
+                              ? widget.color.withValues(alpha: 0.15)
+                              : Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: AnimatedScale(
+                        scale: widget.isSelected ? 1.1 : 1.0,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        child: IconTheme(
+                          data: IconThemeData(size: 14, color: foreground),
+                          child: widget.leading ?? Icon(widget.icon, size: 14, color: foreground),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      style: TextStyle(
+                        fontSize: widget.isSelected ? 12.5 : 12,
+                        fontWeight: widget.isSelected ? FontWeight.w700 : FontWeight.w600,
+                        color: foreground,
+                        height: 1.0,
+                        letterSpacing: widget.isSelected ? 0.2 : 0,
+                      ),
+                      child: Text(widget.label),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
