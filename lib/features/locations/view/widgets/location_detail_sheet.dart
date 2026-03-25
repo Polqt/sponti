@@ -104,6 +104,7 @@ class _LocationDetailSheetState extends State<_LocationDetailSheet> {
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,

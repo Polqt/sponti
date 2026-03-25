@@ -28,6 +28,7 @@ class _SelectableExploreSheetState<T>
 
   @override
   Widget build(BuildContext context) {
+    final options = widget.options;
     return _SheetScaffold(
       title: widget.title,
       child: Column(
@@ -36,13 +37,14 @@ class _SelectableExploreSheetState<T>
           Flexible(
             child: ListView.separated(
               shrinkWrap: true,
-              itemCount: widget.options.length,
+              itemCount: options.length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
-                final option = widget.options[index];
+                final option = options[index];
+                final selected = _selected == option.value;
                 return _ExploreRadioRow<T>(
                   option: option,
-                  selected: _selected == option.value,
+                  selected: selected,
                   onTap: () => setState(() => _selected = option.value),
                 );
               },
@@ -146,13 +148,11 @@ class _ExploreRadioRow<T> extends StatelessWidget {
           ),
           child: Row(
             children: [
-              RadioGroup<T>(
+              Radio<T>(
+                value: option.value,
                 groupValue: selected ? option.value : null,
                 onChanged: (_) => onTap(),
-                child: Radio<T>(
-                  value: option.value,
-                  activeColor: SpontiColors.primary,
-                ),
+                activeColor: SpontiColors.primary,
               ),
               const SizedBox(width: 8),
               Expanded(

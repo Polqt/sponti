@@ -78,6 +78,7 @@ class CategoryChip extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: foreground,
+                  height: 1.0,
                 ),
               ),
             ],

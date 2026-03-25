@@ -35,6 +35,25 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
 
   final SupabaseClient _client;
 
+  Future<T> _executeQuery<T>(Future<T> Function() query) async {
+    try {
+      return await query();
+    } on PostgrestException catch (e) {
+      if (e.code == 'PGRST116') throw const NotFoundException();
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  List<LocationModel> _parseLocationList(dynamic response) {
+    return (response as List<dynamic>)
+        .map((e) => LocationModel.fromJson(
+          resolvePhotoUrls(e as Map<String, dynamic>),
+        ))
+        .toList();
+  }
+
   /// Converts storage paths in [photos] JSONB to full public URLs.
   @override
   Map<String, dynamic> resolvePhotoUrls(Map<String, dynamic> json) {
@@ -56,188 +75,103 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   Future<List<LocationModel>> getAllLocations({
     int page = 0,
     int pageSize = 20,
-  }) async {
-    try {
-      final response = await _client
-          .from(ApiConstants.locationsTable)
-          .select(_columns)
-          .order('created_at', ascending: false);
+  }) => _executeQuery(() async {
+    final response = await _client
+        .from(ApiConstants.locationsTable)
+        .select(_columns)
+        .order('created_at', ascending: false);
 
-      return (response as List<dynamic>)
-          .map(
-            (e) => LocationModel.fromJson(
-              resolvePhotoUrls(e as Map<String, dynamic>),
-            ),
-          )
-          .toList();
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+    return _parseLocationList(response);
+  });
 
   @override
-  Future<LocationModel> getLocationById(String id) async {
-    try {
-      final response = await _client
-          .from(ApiConstants.locationsTable)
-          .select(_columns)
-          .eq('id', id)
-          .single();
+  Future<LocationModel> getLocationById(String id) => _executeQuery(() async {
+    final response = await _client
+        .from(ApiConstants.locationsTable)
+        .select(_columns)
+        .eq('id', id)
+        .single();
 
-      return LocationModel.fromJson(resolvePhotoUrls(response));
-    } on PostgrestException catch (e) {
-      if (e.code == 'PGRST116') throw const NotFoundException();
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+    return LocationModel.fromJson(resolvePhotoUrls(response));
+  });
 
   @override
   Future<List<LocationModel>> getNearbyLocations({
     required double latitude,
     required double longitude,
     double radiusKm = 5.0,
-  }) async {
-    try {
-      final response = await _client.rpc(
-        ApiConstants.rpcGetNearbyLocations,
-        params: {'lat': latitude, 'lng': longitude, 'radius_km': radiusKm},
-      );
+  }) => _executeQuery(() async {
+    final response = await _client.rpc(
+      ApiConstants.rpcGetNearbyLocations,
+      params: {'lat': latitude, 'lng': longitude, 'radius_km': radiusKm},
+    );
 
-      return (response as List<dynamic>)
-          .map(
-            (e) => LocationModel.fromJson(
-              resolvePhotoUrls(e as Map<String, dynamic>),
-            ),
-          )
-          .toList();
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+    return _parseLocationList(response);
+  });
 
   @override
   Future<List<LocationModel>> filterByCategory(
     LocationCategory category,
-  ) async {
-    try {
-      final response = await _client
-          .from(ApiConstants.locationsTable)
-          .select(_columns)
-          .eq('category', category.name)
-          .order('rating', ascending: false);
+  ) => _executeQuery(() async {
+    final response = await _client
+        .from(ApiConstants.locationsTable)
+        .select(_columns)
+        .eq('category', category.name)
+        .order('rating', ascending: false);
 
-      return (response as List<dynamic>)
-          .map(
-            (e) => LocationModel.fromJson(
-              resolvePhotoUrls(e as Map<String, dynamic>),
-            ),
-          )
-          .toList();
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+    return _parseLocationList(response);
+  });
 
   @override
   Future<List<LocationModel>> fetchByCategories(
     List<String> categories,
-  ) async {
-    try {
-      final response = await _client
-          .from(ApiConstants.locationsTable)
-          .select(_columns)
-          .inFilter('category', categories)
-          .order('created_at', ascending: false);
+  ) => _executeQuery(() async {
+    final response = await _client
+        .from(ApiConstants.locationsTable)
+        .select(_columns)
+        .inFilter('category', categories)
+        .order('created_at', ascending: false);
 
-      return (response as List<dynamic>)
-          .map(
-            (e) => LocationModel.fromJson(
-              resolvePhotoUrls(e as Map<String, dynamic>),
-            ),
-          )
-          .toList();
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+    return _parseLocationList(response);
+  });
 
   @override
-  Future<List<LocationModel>> searchLocations(String query) async {
-    try {
-      final response = await _client.rpc(
-        ApiConstants.rpcSearchLocations,
-        params: {'search_query': query.trim()},
-      );
+  Future<List<LocationModel>> searchLocations(String query) => _executeQuery(() async {
+    final response = await _client.rpc(
+      ApiConstants.rpcSearchLocations,
+      params: {'search_query': query.trim()},
+    );
 
-      return (response as List<dynamic>)
-          .map(
-            (e) => LocationModel.fromJson(
-              resolvePhotoUrls(e as Map<String, dynamic>),
-            ),
-          )
-          .toList();
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+    return _parseLocationList(response);
+  });
 
   @override
-  Future<LocationModel> createLocation(LocationModel model) async {
-    try {
-      final response = await _client
-          .from(ApiConstants.locationsTable)
-          .insert(model.toJson())
-          .select(_columns)
-          .single();
+  Future<LocationModel> createLocation(LocationModel model) => _executeQuery(() async {
+    final response = await _client
+        .from(ApiConstants.locationsTable)
+        .insert(model.toJson())
+        .select(_columns)
+        .single();
 
-      return LocationModel.fromJson(resolvePhotoUrls(response));
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+    return LocationModel.fromJson(resolvePhotoUrls(response));
+  });
 
   @override
-  Future<LocationModel> updateLocation(LocationModel model) async {
-    try {
-      final response = await _client
-          .from(ApiConstants.locationsTable)
-          .update(
-            model.toJson()..['updated_at'] = DateTime.now().toIso8601String(),
-          )
-          .eq('id', model.id)
-          .select(_columns)
-          .single();
+  Future<LocationModel> updateLocation(LocationModel model) => _executeQuery(() async {
+    final response = await _client
+        .from(ApiConstants.locationsTable)
+        .update(
+          model.toJson()..['updated_at'] = DateTime.now().toIso8601String(),
+        )
+        .eq('id', model.id)
+        .select(_columns)
+        .single();
 
-      return LocationModel.fromJson(resolvePhotoUrls(response));
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+    return LocationModel.fromJson(resolvePhotoUrls(response));
+  });
 
   @override
-  Future<void> deleteLocation(String id) async {
-    try {
-      await _client.from(ApiConstants.locationsTable).delete().eq('id', id);
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+  Future<void> deleteLocation(String id) => _executeQuery(() async {
+    await _client.from(ApiConstants.locationsTable).delete().eq('id', id);
+  });
 }

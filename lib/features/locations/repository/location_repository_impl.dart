@@ -29,6 +29,18 @@ class LocationRepositoryImpl implements LocationRepository {
     }
   }
 
+  Future<Either<Failure, List<Location>>> _getCachedOrFail(
+    String message,
+    Failure Function(String) failureFactory,
+  ) async {
+    try {
+      final cached = await _local.getCachedLocations();
+      return Right(cached);
+    } catch (_) {
+      return Left(failureFactory(message));
+    }
+  }
+
   @override
   Future<Either<Failure, List<Location>>> getAllLocations({
     int page = 0,
@@ -49,24 +61,10 @@ class LocationRepositoryImpl implements LocationRepository {
       }
       return Right(locations);
     } on ServerException catch (e) {
-      if (page == 0) {
-        try {
-          final cached = await _local.getCachedLocations();
-          return Right(cached);
-        } catch (_) {
-          return Left(ServerFailure(e.message));
-        }
-      }
+      if (page == 0) return _getCachedOrFail(e.message, ServerFailure.new);
       return Left(ServerFailure(e.message));
     } on NetworkException catch (e) {
-      if (page == 0) {
-        try {
-          final cached = await _local.getCachedLocations();
-          return Right(cached);
-        } catch (_) {
-          return Left(NetworkFailure(e.message));
-        }
-      }
+      if (page == 0) return _getCachedOrFail(e.message, NetworkFailure.new);
       return Left(NetworkFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));

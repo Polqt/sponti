@@ -51,6 +51,7 @@ class _CategoryExploreSheetState extends State<_CategoryExploreSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final options = _options;
     return _SheetScaffold(
       title: 'Category',
       child: Column(
@@ -59,13 +60,14 @@ class _CategoryExploreSheetState extends State<_CategoryExploreSheet> {
           Flexible(
             child: ListView.separated(
               shrinkWrap: true,
-              itemCount: _options.length,
+              itemCount: options.length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
-                final option = _options[index];
+                final option = options[index];
+                final selected = _selected == option.category;
                 return _CategorySheetRow(
                   option: option,
-                  selected: _selected == option.category,
+                  selected: selected,
                   onTap: () => setState(() => _selected = option.category),
                 );
               },
@@ -74,9 +76,7 @@ class _CategoryExploreSheetState extends State<_CategoryExploreSheet> {
           const SizedBox(height: 16),
           AppButton(
             label: 'Apply',
-            onPressed: () => Navigator.of(
-              context,
-            ).pop(_CategorySheetResult(_selected)),
+            onPressed: () => Navigator.of(context).pop(_CategorySheetResult(_selected)),
           ),
         ],
       ),
@@ -142,13 +142,11 @@ class _CategorySheetRow extends StatelessWidget {
                 isSelected: selected,
               ),
               const Spacer(),
-              RadioGroup<bool>(
+              Radio<bool>(
+                value: true,
                 groupValue: selected,
                 onChanged: (_) => onTap(),
-                child: Radio<bool>(
-                  value: true,
-                  activeColor: option.color,
-                ),
+                activeColor: option.color,
               ),
             ],
           ),
