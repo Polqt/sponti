@@ -13,25 +13,34 @@ Future<void> showLocationDetailSheet(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (context) => _LocationDetailSheet(location: location),
+    builder: (context) => LocationDetailSheet(
+      location: location,
+      onDismissed: () => Navigator.of(context).pop(),
+    ),
   );
 }
 
-class _LocationDetailSheet extends StatefulWidget {
-  const _LocationDetailSheet({required this.location});
+class LocationDetailSheet extends StatefulWidget {
+  const LocationDetailSheet({
+    super.key,
+    required this.location,
+    this.onDismissed,
+  });
 
   final Location location;
+  final VoidCallback? onDismissed;
 
   @override
-  State<_LocationDetailSheet> createState() => _LocationDetailSheetState();
+  State<LocationDetailSheet> createState() => _LocationDetailSheetState();
 }
 
-class _LocationDetailSheetState extends State<_LocationDetailSheet> {
+class _LocationDetailSheetState extends State<LocationDetailSheet> {
   static const double _midSize = 0.76;
   static const double _maxSize = 0.96;
 
   late final DraggableScrollableController _controller;
   late final ScrollController _scrollController;
+  bool _isDismissing = false;
 
   @override
   void initState() {
@@ -53,11 +62,16 @@ class _LocationDetailSheetState extends State<_LocationDetailSheet> {
     final shouldDismiss = velocity > 500 || size < _midSize * 0.65;
 
     if (shouldDismiss) {
+      if (_isDismissing) return;
+      _isDismissing = true;
       _controller.animateTo(
         0,
         duration: const Duration(milliseconds: 260),
         curve: Curves.easeInCubic,
-      );
+      ).whenComplete(() {
+        if (!mounted) return;
+        widget.onDismissed?.call();
+      });
       return;
     }
 
@@ -78,6 +92,19 @@ class _LocationDetailSheetState extends State<_LocationDetailSheet> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant LocationDetailSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.location.id == widget.location.id) return;
+    _isDismissing = false;
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+    if (_controller.isAttached) {
+      _controller.jumpTo(_midSize);
+    }
   }
 
   @override

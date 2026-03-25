@@ -45,11 +45,14 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _shellChromeProgressController = ref.read(
       shellChromeProgressProvider.notifier,
     );
-    _mapController.mapEventStream.listen((event) {
-      if (event is MapEventMove || event is MapEventMoveEnd) {
-        ref.read(mapZoomProvider.notifier).updateZoom(_mapController.camera.zoom);
-      }
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _consumePending());
+  }
+
+  void _consumePending() {
+    final pending = ref.read(pendingLocationProvider);
+    if (pending == null) return;
+    ref.read(pendingLocationProvider.notifier).state = null;
+    _showLocationDetails(pending);
   }
 
   void _setShellHidden(bool hidden) {

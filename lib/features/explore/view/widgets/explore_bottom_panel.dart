@@ -21,6 +21,7 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
     required this.onSelectLocation,
     required this.selectedCategory,
     required this.onCategoryChanged,
+    this.onLocationTap,
     this.onSheetProgressChanged,
     this.onDismissed,
     this.edgeToEdge = false,
@@ -34,6 +35,7 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
   final double bottomInset;
   final ValueChanged<bool> onExpandChanged;
   final ValueChanged<Location> onSelectLocation;
+  final ValueChanged<Location>? onLocationTap;
   final LocationCategory? selectedCategory;
   final ValueChanged<LocationCategory?> onCategoryChanged;
   final ValueChanged<double>? onSheetProgressChanged;
@@ -326,7 +328,10 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
                 variant: LocationCardVariant.fullWidth,
                 isSaved: favoriteIds.contains(location.id),
                 showShadow: false,
-                onTap: () => widget.onSelectLocation(location),
+                onTap: () {
+                  widget.onSelectLocation(location);
+                  widget.onLocationTap?.call(location);
+                },
                 onSaveToggle: () =>
                     ref.read(favoriteIdsProvider.notifier).toggle(location.id),
               ),
