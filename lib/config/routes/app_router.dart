@@ -5,7 +5,7 @@ import 'package:sponti/config/shell/main_shell.dart';
 import 'package:sponti/features/auth/view/screens/sign_in_screen.dart';
 import 'package:sponti/features/check_in/view/screens/check_in_page.dart';
 import 'package:sponti/features/check_in/view/screens/my_check_ins_screen.dart';
-import 'package:sponti/features/discovery/view/screens/map_screen.dart';
+import 'package:sponti/features/discovery/view/screens/discovery_screen.dart';
 import 'package:sponti/features/discovery/view/screens/surprise_screen.dart';
 import 'package:sponti/features/favorites/view/screens/favorites_screen.dart';
 import 'package:sponti/features/locations/view/screens/location_detail.dart';
@@ -122,7 +122,7 @@ final appRouter = GoRouter(
         GoRoute(
           path: RouteName.discovery,
           pageBuilder: (context, state) =>
-              const NoTransitionPage(child: MapScreen()),
+              const NoTransitionPage(child: DiscoveryScreen()),
         ),
         GoRoute(
           path: RouteName.favorites,

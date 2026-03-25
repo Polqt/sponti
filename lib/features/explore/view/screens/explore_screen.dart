@@ -28,9 +28,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   late final StateController<double> _shellChromeProgressController;
 
   String? _selectedLocationId;
+  Location? _selectedLocation;
   bool _isPanelExpanded = false;
   LocationCategory? _lastAutoExpandedCategory;
-  bool _isLocationDetailOpen = false;
+  bool _wasPanelExpandedBeforeDetail = false;
 
   @override
   void initState() {
@@ -88,20 +89,31 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     );
   }
 
-  Future<void> _showLocationDetails(Location location) async {
-    if (_isLocationDetailOpen) return;
-
-    _selectLocation(location);
-    _setPanelExpanded(false);
+  void _showLocationDetails(Location location) {
+    _wasPanelExpandedBeforeDetail = _isPanelExpanded;
+    setState(() {
+      _selectedLocationId = location.id;
+      _selectedLocation = location;
+      _isPanelExpanded = false;
+    });
+    _mapController.move(
+      LatLng(location.coordinates.latitude, location.coordinates.longitude),
+      14.5,
+    );
+    _sheetProgress.value = 1.0;
+    _shellChromeProgressController.state = 1.0;
     _setShellHidden(true);
-    _isLocationDetailOpen = true;
+  }
 
-    try {
-      await showLocationDetailSheet(context, location: location);
-    } finally {
-      _isLocationDetailOpen = false;
-      _setShellHidden(_isPanelExpanded);
-    }
+  void _closeLocationDetails() {
+    setState(() {
+      _selectedLocation = null;
+      _isPanelExpanded = _wasPanelExpandedBeforeDetail;
+    });
+    final restoredProgress = _wasPanelExpandedBeforeDetail ? 1.0 : 0.0;
+    _sheetProgress.value = restoredProgress;
+    _shellChromeProgressController.state = restoredProgress;
+    _setShellHidden(_wasPanelExpandedBeforeDetail);
   }
 
   Future<void> _toggleNowOpen() async {
@@ -236,22 +248,31 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ),
               ),
             ),
-          ExploreBottomPanel(
-            locationsAsync: locationsAsync,
-            locations: locations,
-            selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-            isExpanded: _isPanelExpanded,
-            bottomInset: bottomInset,
-            onExpandChanged: _setPanelExpanded,
-            selectedCategory: filter.categoryFilter,
-            onCategoryChanged: _onCategoryChanged,
-            onSheetProgressChanged: (progress) {
-              _sheetProgress.value = progress;
-              _shellChromeProgressController.state = progress;
-            },
-            // Card tap → highlight map pin only (no navigation)
-            onSelectLocation: _selectLocation,
-          ),
+          if (_selectedLocation == null)
+            ExploreBottomPanel(
+              locationsAsync: locationsAsync,
+              locations: locations,
+              selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+              isExpanded: _isPanelExpanded,
+              bottomInset: bottomInset,
+              onExpandChanged: _setPanelExpanded,
+              selectedCategory: filter.categoryFilter,
+              onCategoryChanged: _onCategoryChanged,
+              onSheetProgressChanged: (progress) {
+                _sheetProgress.value = progress;
+                _shellChromeProgressController.state = progress;
+              },
+              onSelectLocation: _selectLocation,
+              onLocationTap: _showLocationDetails,
+            ),
+          if (_selectedLocation != null)
+            Positioned.fill(
+              child: LocationDetailSheet(
+                key: ValueKey(_selectedLocation!.id),
+                location: _selectedLocation!,
+                onDismissed: _closeLocationDetails,
+              ),
+            ),
         ],
       ),
     );

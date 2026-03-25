@@ -136,6 +136,10 @@ final surpriseMeProvider =
       SurpriseMeNotifier.new,
     );
 
+/// Holds a location that should be auto-opened when LocationScreen mounts.
+/// Set before navigating to /location; cleared after consumed.
+final pendingLocationProvider = StateProvider<Location?>((ref) => null);
+
 /// Streams a single location row from Supabase Realtime.
 /// NOT autoDispose — keeps the WebSocket alive during navigation (e.g. when
 /// the check-in page is pushed on top of the detail sheet) so the count

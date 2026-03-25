@@ -43,6 +43,14 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _shellChromeProgressController = ref.read(
       shellChromeProgressProvider.notifier,
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _consumePending());
+  }
+
+  void _consumePending() {
+    final pending = ref.read(pendingLocationProvider);
+    if (pending == null) return;
+    ref.read(pendingLocationProvider.notifier).state = null;
+    _showLocationDetails(pending);
   }
 
   void _setShellHidden(bool hidden) {
