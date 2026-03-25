@@ -28,6 +28,7 @@ class _SelectableExploreSheetState<T>
 
   @override
   Widget build(BuildContext context) {
+    final options = widget.options;
     return _SheetScaffold(
       title: widget.title,
       child: Column(
@@ -36,13 +37,14 @@ class _SelectableExploreSheetState<T>
           Flexible(
             child: ListView.separated(
               shrinkWrap: true,
-              itemCount: widget.options.length,
+              itemCount: options.length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
-                final option = widget.options[index];
+                final option = options[index];
+                final selected = _selected == option.value;
                 return _ExploreRadioRow<T>(
                   option: option,
-                  selected: _selected == option.value,
+                  selected: selected,
                   onTap: () => setState(() => _selected = option.value),
                 );
               },
@@ -144,41 +146,44 @@ class _ExploreRadioRow<T> extends StatelessWidget {
               color: selected ? SpontiColors.primary : SpontiColors.outline,
             ),
           ),
-          child: Row(
-            children: [
-              RadioGroup<T>(
-                groupValue: selected ? option.value : null,
-                onChanged: (_) => onTap(),
-                child: Radio<T>(
-                  value: option.value,
-                  activeColor: SpontiColors.primary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      option.label,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: SpontiColors.textPrimary,
-                      ),
-                    ),
-                    if (option.subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        option.subtitle!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SpontiColors.textSecondary,
+          child: RadioGroup<T>(
+            groupValue: selected ? option.value : null,
+            onChanged: (_) => onTap(),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(16),
+              child: Row(
+                children: [
+                  Radio<T>(
+                    value: option.value,
+                    activeColor: SpontiColors.primary,
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          option.label,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: SpontiColors.textPrimary,
+                          ),
                         ),
-                      ),
-                    ],
-                  ],
-                ),
+                        if (option.subtitle != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            option.subtitle!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SpontiColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

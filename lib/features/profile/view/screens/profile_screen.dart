@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
-import 'package:sponti/core/widgets/app_button.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/core/widgets/app_shimmer.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
@@ -11,6 +10,69 @@ import 'package:sponti/features/profile/view/widgets/profile_header.dart';
 import 'package:sponti/features/profile/view/widgets/profile_photo_picker.dart';
 import 'package:sponti/features/profile/view/widgets/profile_stats_card.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
+
+class _AnimatedFadeIn extends StatefulWidget {
+  const _AnimatedFadeIn({
+    required this.child,
+    required this.delay,
+  });
+
+  final Widget child;
+  final Duration delay;
+
+  @override
+  State<_AnimatedFadeIn> createState() => _AnimatedFadeInState();
+}
+
+class _AnimatedFadeInState extends State<_AnimatedFadeIn>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _opacityAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _opacityAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+
+    Future.delayed(widget.delay, () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacityAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: widget.child,
+      ),
+    );
+  }
+}
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -37,56 +99,81 @@ class ProfileScreen extends ConsumerWidget {
           }
 
           return CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverAppBar(
                 backgroundColor: SpontiColors.surface,
                 elevation: 0,
-                pinned: true,
+                pinned: false,
+                toolbarHeight: 0,
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 40),
+                  padding: const EdgeInsets.only(bottom: 100),
                   child: Column(
                     children: [
                       const SizedBox(height: 12),
-                      ProfileHeader(
-                        profile: profile,
-                        onEditTap: () => context.push(RouteName.editProfile),
-                        onAvatarTap: authUser != null
-                            ? () =>
-                                  _pickAndUploadPhoto(context, ref, authUser.id)
-                            : null,
+                      _AnimatedFadeIn(
+                        delay: Duration.zero,
+                        child: ProfileHeader(
+                          profile: profile,
+                          onAvatarTap: authUser != null
+                              ? () =>
+                                    _pickAndUploadPhoto(context, ref, authUser.id)
+                              : null,
+                        ),
                       ),
                       const SizedBox(height: 20),
-                      ProfileStatsCard(profile: profile),
-                      const SizedBox(height: 28),
-                      _MenuSection(
-                        title: 'My Activity',
-                        items: [
-                          _MenuItem(
-                            icon: Icons.location_on_rounded,
-                            label: 'My Check-ins',
-                            onTap: () => context.push(RouteName.myCheckIns),
-                          ),
-                          _MenuItem(
-                            icon: Icons.bookmark_rounded,
-                            label: 'Saved Spots',
-                            onTap: () => context.go(RouteName.favorites),
-                          ),
-                          _MenuItem(
-                            icon: Icons.add_location_alt_rounded,
-                            label: 'Suggested Spots',
-                            onTap: () => context.push(RouteName.suggestSpot),
-                          ),
-                        ],
+                      _AnimatedFadeIn(
+                        delay: const Duration(milliseconds: 100),
+                        child: ProfileStatsCard(profile: profile),
+                      ),
+                      const SizedBox(height: 32),
+                      _AnimatedFadeIn(
+                        delay: const Duration(milliseconds: 200),
+                        child: _MenuSection(
+                          title: 'My Activity',
+                          items: [
+                            _MenuItem(
+                              icon: Icons.location_on_rounded,
+                              iconColor: SpontiColors.primary,
+                              label: 'My Check-ins',
+                              onTap: () => context.push(RouteName.myCheckIns),
+                            ),
+                            _MenuItem(
+                              icon: Icons.bookmark_rounded,
+                              iconColor: SpontiColors.primary,
+                              label: 'Saved Spots',
+                              onTap: () => context.go(RouteName.favorites),
+                            ),
+                            _MenuItem(
+                              icon: Icons.add_location_alt_rounded,
+                              iconColor: SpontiColors.secondary,
+                              label: 'Suggested Spots',
+                              onTap: () => context.push(RouteName.suggestSpot),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 24),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: AppButton.destructive(
-                          label: 'Sign Out',
-                          prefixIcon: Icons.logout_rounded,
-                          onPressed: () => _confirmSignOut(context, ref),
+                      _AnimatedFadeIn(
+                        delay: const Duration(milliseconds: 300),
+                        child: _MenuSection(
+                          title: 'Settings',
+                          items: [
+                            _MenuItem(
+                              icon: Icons.edit_rounded,
+                              iconColor: SpontiColors.secondary,
+                              label: 'Edit Profile',
+                              onTap: () => context.push(RouteName.editProfile),
+                            ),
+                            _MenuItem(
+                              icon: Icons.logout_rounded,
+                              iconColor: SpontiColors.error,
+                              label: 'Sign Out',
+                              onTap: () => _confirmSignOut(context, ref),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -184,8 +271,41 @@ class _MenuSection extends StatelessWidget {
       children: [
         _SectionLabel(label: title),
         const SizedBox(height: 12),
-        for (final item in items)
-          _MenuTile(icon: item.icon, label: item.label, onTap: item.onTap),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: SpontiColors.shadow.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Column(
+              children: [
+                for (int i = 0; i < items.length; i++) ...[
+                  _MenuTile(
+                    icon: items[i].icon,
+                    iconColor: items[i].iconColor,
+                    label: items[i].label,
+                    onTap: items[i].onTap,
+                  ),
+                  if (i < items.length - 1)
+                    Container(
+                      height: 1,
+                      margin: EdgeInsets.zero,
+                      color: SpontiColors.outline.withValues(alpha: 0.3),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -196,11 +316,13 @@ class _MenuItem {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.iconColor,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Color? iconColor;
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -231,55 +353,45 @@ class _MenuTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.iconColor,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: SpontiColors.outline),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: SpontiColors.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, size: 18, color: SpontiColors.primary),
+    final color = iconColor ?? SpontiColors.primary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: color.withValues(alpha: 0.05),
+        highlightColor: color.withValues(alpha: 0.02),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, size: 24, color: color),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                  color: SpontiColors.textMuted,
-                ),
-              ],
-            ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: SpontiColors.textMuted.withValues(alpha: 0.5),
+              ),
+            ],
           ),
         ),
       ),

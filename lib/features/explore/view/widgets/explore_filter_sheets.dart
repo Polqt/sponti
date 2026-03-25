@@ -36,7 +36,7 @@ Future<void> showRankingFilterSheet(
   if (selected == null || selected == filter.rankingFilter) return;
 
   ref.read(exploreFilterProvider.notifier).setRanking(selected);
-  await ref.read(exploreProvider.notifier).onFilterChanged();
+  await ref.read(exploreProvider.notifier).refresh();
 }
 
 Future<void> showPriceFilterSheet(
@@ -53,7 +53,7 @@ Future<void> showPriceFilterSheet(
         subtitle: price.symbol,
       ),
     ),
-  ];
+  ].toList(growable: false);
 
   final selected = await _showExploreSheet<PriceRange?>(
     context: context,
@@ -65,7 +65,7 @@ Future<void> showPriceFilterSheet(
   if (selected == filter.priceFilter) return;
 
   ref.read(exploreFilterProvider.notifier).setPrice(selected);
-  await ref.read(exploreProvider.notifier).onFilterChanged();
+  await ref.read(exploreProvider.notifier).refresh();
 }
 
 Future<void> showCategoryFilterSheet(
@@ -81,7 +81,7 @@ Future<void> showCategoryFilterSheet(
   if (selected == null || selected.value == filter.categoryFilter) return;
 
   ref.read(exploreFilterProvider.notifier).setCategory(selected.value);
-  await ref.read(exploreProvider.notifier).onFilterChanged();
+  await ref.read(exploreProvider.notifier).refresh();
   if (context.mounted) {
     context.go(RouteName.explore);
   }

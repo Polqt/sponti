@@ -13,6 +13,8 @@ import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
+import 'package:sponti/features/locations/view/widgets/marker_collision_detector.dart';
+import 'package:sponti/features/locations/viewmodel/map_zoom_provider.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -40,6 +42,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     _shellChromeProgressController = ref.read(
       shellChromeProgressProvider.notifier,
     );
+    _mapController.mapEventStream.listen((event) {
+      if (event is MapEventMove || event is MapEventMoveEnd) {
+        ref.read(mapZoomProvider.notifier).updateZoom(_mapController.camera.zoom);
+      }
+    });
   }
 
   void _setShellHidden(bool hidden) {
@@ -60,32 +67,26 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   }
 
   void _syncSelection(List<Location> locations) {
-    if (locations.isEmpty) {
-      if (_selectedLocationId == null) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        setState(() => _selectedLocationId = null);
-      });
-      return;
-    }
+    final newSelectedId = locations.isEmpty
+        ? null
+        : (locations.any((l) => l.id == _selectedLocationId)
+            ? _selectedLocationId
+            : locations.first.id);
 
-    final selectedId = locations.any((l) => l.id == _selectedLocationId)
-        ? _selectedLocationId
-        : locations.first.id;
-
-    if (selectedId == _selectedLocationId) return;
+    if (newSelectedId == _selectedLocationId) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      setState(() => _selectedLocationId = selectedId);
+      setState(() => _selectedLocationId = newSelectedId);
     });
   }
 
   void _selectLocation(Location location) {
     setState(() => _selectedLocationId = location.id);
+    final currentZoom = _mapController.camera.zoom;
     _mapController.move(
       LatLng(location.coordinates.latitude, location.coordinates.longitude),
-      14.5,
+      currentZoom,
     );
   }
 
@@ -118,13 +119,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
   Future<void> _toggleNowOpen() async {
     ref.read(exploreFilterProvider.notifier).toggleNowOpen();
-    await ref.read(exploreProvider.notifier).onFilterChanged();
+    await ref.read(exploreProvider.notifier).refresh();
   }
 
   Future<void> _onCategoryChanged(LocationCategory? category) async {
     ref.read(exploreFilterProvider.notifier).setCategory(category);
     _setPanelExpanded(true);
-    await ref.read(exploreProvider.notifier).onFilterChanged();
+    await ref.read(exploreProvider.notifier).refresh();
   }
 
   void _syncPanelState(ExploreFilter filter) {
@@ -140,6 +141,61 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     });
   }
 
+  List<Marker> _buildSortedMarkers(List<Location> locations, String? selectedId) {
+    double currentZoom;
+    try {
+      currentZoom = _mapController.camera.zoom;
+    } catch (_) {
+      currentZoom = 15.5;
+    }
+
+    final markerData = locations.map((location) {
+      final isSelected = location.id == selectedId;
+      final zIndex = isSelected ? 1000.0 : 100.0 + (location.rating * 10).clamp(0.0, 100.0);
+      return (
+        location: location,
+        isSelected: isSelected,
+        zIndex: zIndex,
+        point: LatLng(location.coordinates.latitude, location.coordinates.longitude),
+      );
+    }).toList();
+
+    markerData.sort((a, b) => a.zIndex.compareTo(b.zIndex));
+
+    final markerPositions = {
+      for (var data in markerData) data.location.id: data.point,
+    };
+
+    final collidingIds = MarkerCollisionDetector.getCollidingMarkerIds(
+      markerPositions: markerPositions,
+      zoom: currentZoom,
+    );
+
+    return markerData.map((data) {
+      final shouldHideLabel = currentZoom < 16.0 &&
+          collidingIds.contains(data.location.id) &&
+          !data.isSelected;
+      return Marker(
+        point: data.point,
+        width: 100,
+        height: 50,
+        alignment: Alignment.center,
+        child: RepaintBoundary(
+          child: GestureDetector(
+            key: ValueKey('explore_marker_${data.location.id}'),
+            onTap: () => _showLocationDetails(data.location),
+            child: MapPin(
+              category: data.location.category,
+              isSelected: data.isSelected,
+              locationName: shouldHideLabel ? null : data.location.name,
+              rating: data.location.rating,
+            ),
+          ),
+        ),
+      );
+    }).toList(growable: false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final locationsAsync = ref.watch(exploreProvider);
@@ -147,15 +203,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final locations = locationsAsync.valueOrNull ?? const <Location>[];
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
-    final selectedId = locations.any((l) => l.id == _selectedLocationId)
-        ? _selectedLocationId
-        : (locations.isNotEmpty ? locations.first.id : null);
-    final selectedIndex = selectedId == null
-        ? 0
-        : locations.indexWhere((l) => l.id == selectedId);
-
     _syncSelection(locations);
     _syncPanelState(filter);
+
+    final selectedId = _selectedLocationId != null &&
+            locations.any((l) => l.id == _selectedLocationId)
+        ? _selectedLocationId
+        : (locations.isNotEmpty ? locations.first.id : null);
+    final selectedIndex =
+        selectedId != null ? locations.indexWhere((l) => l.id == selectedId) : 0;
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -169,9 +225,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   AppConstants.defaultLatitude,
                   AppConstants.defaultLongitude,
                 ),
-                initialZoom: 12.8,
+                initialZoom: 15.5,
                 minZoom: 10,
                 maxZoom: 18,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all,
+                  scrollWheelVelocity: 0.002,
+                  pinchZoomThreshold: 0.4,
+                  pinchMoveThreshold: 30.0,
+                ),
                 onTap: (_, _) => _setPanelExpanded(false),
               ),
               children: [
@@ -180,28 +242,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
                   subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.sponti.app',
+                  tileProvider: NetworkTileProvider(),
+                  maxNativeZoom: 18,
+                  keepBuffer: 2,
+                  panBuffer: 1,
                 ),
                 MarkerLayer(
-                  markers: [
-                    for (final location in locations)
-                      Marker(
-                        point: LatLng(
-                          location.coordinates.latitude,
-                          location.coordinates.longitude,
-                        ),
-                        width: 62,
-                        height: 62,
-                        child: GestureDetector(
-                          key: ValueKey('explore_marker_${location.id}'),
-                          onTap: () => _showLocationDetails(location),
-                          child: MapPin(
-                            category: location.category,
-                            color: Color(location.category.colorValue),
-                            isSelected: location.id == selectedId,
-                          ),
-                        ),
-                      ),
-                  ],
+                  rotate: false,
+                  markers: _buildSortedMarkers(locations, selectedId),
                 ),
               ],
             ),

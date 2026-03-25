@@ -28,39 +28,72 @@ class ProfileHeader extends StatelessWidget {
             child: Stack(
               children: [
                 Container(
-                  width: 96,
-                  height: 96,
+                  width: 110,
+                  height: 110,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: SpontiColors.primary.withValues(alpha: 0.2),
-                      width: 3,
+                    gradient: LinearGradient(
+                      colors: [
+                        SpontiColors.primary.withValues(alpha: 0.2),
+                        SpontiColors.primaryLight.withValues(alpha: 0.1),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: SpontiColors.primary.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                  child: ClipOval(
-                    child: profile.hasAvatar
-                        ? AppNetworkImage.circle(
-                            url: profile.avatarUrl!,
-                            size: 90,
-                          )
-                        : _DefaultAvatar(name: profile.fullName),
+                  padding: const EdgeInsets.all(4),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(3),
+                    child: ClipOval(
+                      child: profile.hasAvatar
+                          ? AppNetworkImage.circle(
+                              url: profile.avatarUrl!,
+                              size: 96,
+                            )
+                          : _DefaultAvatar(name: profile.fullName),
+                    ),
                   ),
                 ),
                 if (onAvatarTap != null)
                   Positioned(
-                    right: 0,
-                    bottom: 0,
+                    right: 2,
+                    bottom: 2,
                     child: Container(
-                      width: 28,
-                      height: 28,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
-                        color: SpontiColors.primary,
+                        gradient: const LinearGradient(
+                          colors: [
+                            SpontiColors.primary,
+                            SpontiColors.primaryLight,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: SpontiColors.primary.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: const Icon(
                         Icons.camera_alt_rounded,
-                        size: 14,
+                        size: 15,
                         color: Colors.white,
                       ),
                     ),
@@ -68,59 +101,39 @@ class ProfileHeader extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Text(
             profile.fullName,
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style: theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
             ),
             textAlign: TextAlign.center,
           ),
           if (profile.username != null && profile.username!.isNotEmpty) ...[
-            const SizedBox(height: 3),
+            const SizedBox(height: 4),
             Text(
               '@${profile.username}',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: SpontiColors.primary,
                 fontWeight: FontWeight.w600,
+                fontSize: 15,
               ),
             ),
           ],
           if (profile.bio != null && profile.bio!.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(
-              profile.bio!,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: SpontiColors.textSecondary,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-          if (onEditTap != null) ...[
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: onEditTap,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 9,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                profile.bio!,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: SpontiColors.textSecondary,
+                  height: 1.5,
                 ),
-                decoration: BoxDecoration(
-                  color: SpontiColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: SpontiColors.outline),
-                ),
-                child: const Text(
-                  'Edit Profile',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: SpontiColors.textPrimary,
-                  ),
-                ),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
