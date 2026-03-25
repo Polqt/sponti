@@ -24,19 +24,17 @@ class LoadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRect(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppShimmer(height: 120, width: double.infinity, borderRadius: 18),
-          const SizedBox(height: 10),
-          const AppShimmer(height: 14, width: 180, borderRadius: 8),
-          const SizedBox(height: 8),
-          const AppShimmer(height: 12, width: 220, borderRadius: 8),
-          const SizedBox(height: 8),
-          const AppShimmer(height: 12, width: 96, borderRadius: 8),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppShimmer(height: 120, width: double.infinity, borderRadius: 18),
+        const SizedBox(height: 10),
+        const AppShimmer(height: 14, width: 180, borderRadius: 8),
+        const SizedBox(height: 8),
+        const AppShimmer(height: 12, width: 220, borderRadius: 8),
+        const SizedBox(height: 8),
+        const AppShimmer(height: 12, width: 96, borderRadius: 8),
+      ],
     );
   }
 }

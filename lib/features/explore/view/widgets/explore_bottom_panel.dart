@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/features/explore/view/widgets/explore_loading.dart';
+import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
@@ -21,8 +22,10 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
     required this.onSelectLocation,
     required this.selectedCategory,
     required this.onCategoryChanged,
+    required this.filter,
     this.onLocationTap,
     this.onSheetProgressChanged,
+    this.onSheetExtentChanged,
     this.onDismissed,
     this.edgeToEdge = false,
     this.isExpanded = false,
@@ -33,17 +36,15 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
   final int selectedIndex;
   final bool isExpanded;
   final double bottomInset;
+  final ExploreFilter filter;
   final ValueChanged<bool> onExpandChanged;
   final ValueChanged<Location> onSelectLocation;
   final ValueChanged<Location>? onLocationTap;
   final LocationCategory? selectedCategory;
   final ValueChanged<LocationCategory?> onCategoryChanged;
   final ValueChanged<double>? onSheetProgressChanged;
-
-  /// Called when the sheet is dragged fully down to min size (dismiss intent).
+  final ValueChanged<double>? onSheetExtentChanged;
   final VoidCallback? onDismissed;
-
-  /// When `true` the sheet stretches edge-to-edge (used inside [LocationScreen]).
   final bool edgeToEdge;
 
   @override
@@ -173,6 +174,7 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
   void _onSheetNotification(DraggableScrollableNotification n) {
     final progress = ((n.extent - _minSize) / (_maxSize - _minSize)).clamp(0.0, 1.0);
     widget.onSheetProgressChanged?.call(progress);
+    widget.onSheetExtentChanged?.call(n.extent);
 
     if ((progress - _chromeProgress).abs() > 0.02) {
       _chromeProgress = progress;

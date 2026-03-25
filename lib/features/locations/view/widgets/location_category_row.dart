@@ -67,8 +67,7 @@ class _CategoryIconButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+        child: SizedBox(
           width: 42,
           height: 42,
           child: IconTheme(
