@@ -83,9 +83,8 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
   }
 
   void _pruneItemKeys() {
-    final activeIds = widget.locations
-        .map((location) => location.id)
-        .toSet();
+    if (_itemKeys.isEmpty) return;
+    final activeIds = widget.locations.map((location) => location.id).toSet();
     _itemKeys.removeWhere((id, _) => !activeIds.contains(id));
   }
 
@@ -170,14 +169,12 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
   }
 
   void _onSheetNotification(DraggableScrollableNotification n) {
-    final progress = ((n.extent - _minSize) / (_maxSize - _minSize)).clamp(
-      0.0,
-      1.0,
-    );
+    final progress = ((n.extent - _minSize) / (_maxSize - _minSize)).clamp(0.0, 1.0);
     widget.onSheetProgressChanged?.call(progress);
 
     if ((progress - _chromeProgress).abs() > 0.02) {
-      setState(() => _chromeProgress = progress);
+      _chromeProgress = progress;
+      if (mounted) setState(() {});
     } else {
       _chromeProgress = progress;
     }

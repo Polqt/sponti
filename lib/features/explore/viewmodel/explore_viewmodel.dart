@@ -125,27 +125,23 @@ class ExploreViewModel extends AsyncNotifier<List<Location>> {
         .cast<Location>()
         .toList(growable: false);
 
-    if (filter.priceFilter != null) {
-      locations = locations
-          .where((location) => location.priceRange == filter.priceFilter)
-          .toList(growable: false);
-    }
-
-    if (filter.nowOpenOnly) {
-      locations = locations
-          .where((location) => location.isOpenNow)
-          .toList(growable: false);
+    if (filter.priceFilter != null || filter.nowOpenOnly) {
+      locations = locations.where((location) {
+        if (filter.priceFilter != null &&
+            location.priceRange != filter.priceFilter) {
+          return false;
+        }
+        if (filter.nowOpenOnly && !location.isOpenNow) {
+          return false;
+        }
+        return true;
+      }).toList(growable: false);
     }
 
     return locations;
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(_fetch);
-  }
-
-  Future<void> onFilterChanged() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(_fetch);
   }
