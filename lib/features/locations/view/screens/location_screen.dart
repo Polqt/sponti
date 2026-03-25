@@ -9,13 +9,14 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
 import 'package:sponti/core/widgets/glass_container.dart';
 import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
+import 'package:sponti/features/explore/view/widgets/explore_floating_filter_pills.dart';
+import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
 import 'package:sponti/features/locations/view/widgets/marker_collision_detector.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
-import 'package:sponti/features/locations/viewmodel/map_zoom_provider.dart';
 
 class LocationScreen extends ConsumerStatefulWidget {
   const LocationScreen({super.key});
@@ -26,9 +27,13 @@ class LocationScreen extends ConsumerStatefulWidget {
 
 class _LocationScreenState extends ConsumerState<LocationScreen> {
   static const _defaultCenter = LatLng(10.6765, 122.9509);
+  static const double _minSheetSize = 0.25;
+  static const double _midSheetSize = 0.50;
 
   final MapController _mapController = MapController();
   final ValueNotifier<double> _sheetProgress = ValueNotifier<double>(0.0);
+  late final ValueNotifier<double> _sheetExtent;
+
   late final StateController<bool> _shellBarHiddenController;
   late final StateController<double> _shellChromeProgressController;
 
@@ -41,6 +46,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   @override
   void initState() {
     super.initState();
+    _sheetExtent = ValueNotifier<double>(_isExplorePanelExpanded ? _midSheetSize : _minSheetSize);
     _shellBarHiddenController = ref.read(shellBarHiddenProvider.notifier);
     _shellChromeProgressController = ref.read(
       shellChromeProgressProvider.notifier,
@@ -84,6 +90,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = true;
       _isExplorePanelExpanded = true;
     });
+    _sheetExtent.value = _midSheetSize;
     _setSheetProgress(1.0);
     _setShellHidden(true);
   }
@@ -102,6 +109,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
     });
+    _sheetExtent.value = _minSheetSize;
     _focusLocation(location);
     _setSheetProgress(0.0);
     _setShellHidden(true);
@@ -117,6 +125,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   void _setPanelExpanded(bool expanded) {
     setState(() => _isExplorePanelExpanded = expanded);
+    _sheetExtent.value = expanded ? _midSheetSize : _minSheetSize;
   }
 
   void _hidePanel() {
@@ -124,6 +133,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
     });
+    _sheetExtent.value = _minSheetSize;
     _setSheetProgress(0.0);
     _setShellHidden(false);
   }
@@ -188,6 +198,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _shellChromeProgressController.state = 0.0;
     _setShellHidden(false);
     _sheetProgress.dispose();
+    _sheetExtent.dispose();
     super.dispose();
   }
 
@@ -323,11 +334,27 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               bottomInset: bottomInset,
               selectedCategory: filter.selectedCategory,
               onCategoryChanged: _onCategoryChanged,
+              filter: const ExploreFilter(),
               onExpandChanged: _setPanelExpanded,
               onDismissed: _hidePanel,
               edgeToEdge: true,
               onSheetProgressChanged: _setSheetProgress,
+              onSheetExtentChanged: (extent) {
+                _sheetExtent.value = extent;
+              },
               onSelectLocation: _selectLocation,
+            ),
+          if (_isExplorePanelVisible)
+            ValueListenableBuilder<double>(
+              valueListenable: _sheetExtent,
+              builder: (context, extent, child) {
+                final screenHeight = MediaQuery.sizeOf(context).height;
+                final sheetTopPixels = screenHeight * (1 - extent);
+                return ExploreFloatingFilterPills(
+                  filter: const ExploreFilter(),
+                  bottomOffset: screenHeight - sheetTopPixels,
+                );
+              },
             ),
         ],
       ),

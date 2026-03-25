@@ -149,40 +149,36 @@ class _ExploreRadioRow<T> extends StatelessWidget {
           child: RadioGroup<T>(
             groupValue: selected ? option.value : null,
             onChanged: (_) => onTap(),
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(16),
-              child: Row(
-                children: [
-                  Radio<T>(
-                    value: option.value,
-                    activeColor: SpontiColors.primary,
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+            child: Row(
+              children: [
+                Radio<T>(
+                  value: option.value,
+                  activeColor: SpontiColors.primary,
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        option.label,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: SpontiColors.textPrimary,
+                        ),
+                      ),
+                      if (option.subtitle != null) ...[
+                        const SizedBox(height: 2),
                         Text(
-                          option.label,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: SpontiColors.textPrimary,
+                          option.subtitle!,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: SpontiColors.textSecondary,
                           ),
                         ),
-                        if (option.subtitle != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            option.subtitle!,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SpontiColors.textSecondary,
-                            ),
-                          ),
-                        ],
                       ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
