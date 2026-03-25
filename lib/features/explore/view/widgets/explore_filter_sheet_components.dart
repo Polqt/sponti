@@ -146,39 +146,43 @@ class _ExploreRadioRow<T> extends StatelessWidget {
               color: selected ? SpontiColors.primary : SpontiColors.outline,
             ),
           ),
-          child: Row(
-            children: [
-              Radio<T>(
-                value: option.value,
-                groupValue: selected ? option.value : null,
-                onChanged: (_) => onTap(),
-                activeColor: SpontiColors.primary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      option.label,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: SpontiColors.textPrimary,
-                      ),
-                    ),
-                    if (option.subtitle != null) ...[
-                      const SizedBox(height: 2),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Row(
+              children: [
+                Radio<T>(
+                  value: option.value,
+                  groupValue: selected ? option.value : null,
+                  activeColor: SpontiColors.primary,
+                  onChanged: (_) {},
+                  toggleable: true,
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        option.subtitle!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SpontiColors.textSecondary,
+                        option.label,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: SpontiColors.textPrimary,
                         ),
                       ),
+                      if (option.subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          option.subtitle!,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: SpontiColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -145,8 +145,9 @@ class _CategorySheetRow extends StatelessWidget {
               Radio<bool>(
                 value: true,
                 groupValue: selected,
-                onChanged: (_) => onTap(),
                 activeColor: option.color,
+                onChanged: (_) {},
+                toggleable: true,
               ),
             ],
           ),

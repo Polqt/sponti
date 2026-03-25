@@ -1,4 +1,6 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sponti/core/errors/failures.dart';
 import 'package:sponti/features/favorites/model/favorite.dart';
 import 'package:sponti/features/favorites/repository/favorites_remote_data_source.dart';
 import 'package:sponti/features/favorites/repository/favorites_repository.dart';
@@ -31,13 +33,10 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
   Future<void> toggle(String locationId) async {
     final current = [...await future];
     final isSaved = current.contains(locationId);
-    final updated = [...current];
 
-    if (isSaved) {
-      updated.remove(locationId);
-    } else {
-      updated.insert(0, locationId);
-    }
+    final updated = isSaved
+        ? (current..remove(locationId))
+        : ([locationId, ...current]);
 
     state = AsyncData(updated);
 
@@ -46,8 +45,10 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
         : await _repository.addFavorite(locationId);
 
     result.fold(
-      (failure) =>
-          state = AsyncError(StateError(failure.message), StackTrace.current),
+      (failure) => state = AsyncError(
+        StateError(failure.message),
+        StackTrace.current,
+      ),
       (_) => _invalidateDependentProviders(),
     );
 
@@ -56,15 +57,27 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
     }
   }
 
-  Future<void> remove(String locationId) async {
+  Future<void> remove(String locationId) => _updateFavorite(
+        locationId: locationId,
+        updater: (current) => current..remove(locationId),
+        operation: () => _repository.removeFavorite(locationId),
+      );
+
+  Future<void> _updateFavorite({
+    required String locationId,
+    required List<String> Function(List<String>) updater,
+    required Future<Either<Failure, void>> Function() operation,
+  }) async {
     final current = [...await future];
-    final updated = [...current]..remove(locationId);
+    final updated = updater([...current]);
     state = AsyncData(updated);
 
-    final result = await _repository.removeFavorite(locationId);
+    final result = await operation();
     result.fold(
-      (failure) =>
-          state = AsyncError(StateError(failure.message), StackTrace.current),
+      (failure) => state = AsyncError(
+        StateError(failure.message),
+        StackTrace.current,
+      ),
       (_) => _invalidateDependentProviders(),
     );
 
