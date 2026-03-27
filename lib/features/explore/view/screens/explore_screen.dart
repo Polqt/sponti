@@ -12,6 +12,7 @@ import 'package:sponti/features/explore/view/widgets/explore_filter_sheets.dart'
 import 'package:sponti/features/explore/view/widgets/explore_floating_filter_pills.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
 import 'package:sponti/features/locations/view/widgets/marker_collision_detector.dart';
@@ -163,11 +164,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final markerData = locations.map((location) {
       final isSelected = location.id == selectedId;
       final zIndex = isSelected ? 1000.0 : 100.0 + (location.rating * 10).clamp(0.0, 100.0);
+      final ranking = location.getPrimaryRanking(locations);
       return (
         location: location,
         isSelected: isSelected,
         zIndex: zIndex,
         point: LatLng(location.coordinates.latitude, location.coordinates.longitude),
+        ranking: ranking,
       );
     }).toList();
 
@@ -200,6 +203,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               isSelected: data.isSelected,
               locationName: shouldHideLabel ? null : data.location.name,
               rating: data.location.rating,
+              ranking: data.ranking,
             ),
           ),
         ),

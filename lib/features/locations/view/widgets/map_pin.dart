@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/category.dart';
 import 'package:sponti/features/locations/viewmodel/map_zoom_provider.dart';
 
@@ -12,6 +13,7 @@ class MapPin extends ConsumerWidget {
     this.locationName,
     this.onTap,
     this.rating,
+    this.ranking,
   });
 
   final LocationCategory category;
@@ -19,6 +21,7 @@ class MapPin extends ConsumerWidget {
   final String? locationName;
   final VoidCallback? onTap;
   final double? rating;
+  final LocationRanking? ranking;
 
   static const _textStyle = TextStyle(
     fontSize: 9,
@@ -56,28 +59,57 @@ class MapPin extends ConsumerWidget {
               scale: iconScale,
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
-              child: Container(
-                width: isSelected ? 34 : 30,
-                height: isSelected ? 34 : 30,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.22),
-                      blurRadius: isSelected ? 12 : 8,
-                      offset: const Offset(0, 3),
-                      spreadRadius: isSelected ? 1 : 0,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: isSelected ? 34 : 30,
+                    height: isSelected ? 34 : 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.22),
+                          blurRadius: isSelected ? 12 : 8,
+                          offset: const Offset(0, 3),
+                          spreadRadius: isSelected ? 1 : 0,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Center(
-                  child: LocationCategoryIcon(
-                    category: category,
-                    color: Colors.black.withValues(alpha: 0.75),
-                    size: isSelected ? 18 : 16,
+                    child: Center(
+                      child: LocationCategoryIcon(
+                        category: category,
+                        color: Colors.black.withValues(alpha: 0.75),
+                        size: isSelected ? 18 : 16,
+                      ),
+                    ),
                   ),
-                ),
+                  if (ranking != null)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: ranking!.indicatorColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: ranking!.indicatorColor.withValues(alpha: 0.4),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             if (showLabel) ...[
