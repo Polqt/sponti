@@ -9,7 +9,6 @@ import 'package:sponti/core/widgets/floating_message.dart';
 import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
 import 'package:sponti/features/explore/view/widgets/explore_filter_chips.dart';
 import 'package:sponti/features/explore/view/widgets/explore_filter_sheets.dart';
-import 'package:sponti/features/explore/view/widgets/explore_floating_filter_pills.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/utils/location_ranking.dart';
@@ -28,7 +27,6 @@ class ExploreScreen extends ConsumerStatefulWidget {
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   final _mapController = MapController();
   final ValueNotifier<double> _sheetProgress = ValueNotifier<double>(0.0);
-  late final ValueNotifier<double> _sheetExtent;
 
   late final StateController<bool> _shellBarHiddenController;
   late final StateController<double> _shellChromeProgressController;
@@ -39,13 +37,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   LocationCategory? _lastAutoExpandedCategory;
   bool _wasPanelExpandedBeforeDetail = false;
 
-  static const double _minSheetSize = 0.25;
-  static const double _midSheetSize = 0.50;
-
   @override
   void initState() {
     super.initState();
-    _sheetExtent = ValueNotifier<double>(_isPanelExpanded ? _midSheetSize : _minSheetSize);
     _shellBarHiddenController = ref.read(shellBarHiddenProvider.notifier);
     _shellChromeProgressController = ref.read(
       shellChromeProgressProvider.notifier,
@@ -64,7 +58,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   @override
   void dispose() {
     _sheetProgress.dispose();
-    _sheetExtent.dispose();
     _setShellHidden(false);
     _shellChromeProgressController.state = 0.0;
     super.dispose();
@@ -73,7 +66,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   void _setPanelExpanded(bool expanded) {
     setState(() => _isPanelExpanded = expanded);
     _setShellHidden(expanded);
-    _sheetExtent.value = expanded ? _midSheetSize : _minSheetSize;
   }
 
   void _syncSelection(List<Location> locations) {
@@ -107,7 +99,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       _selectedLocation = location;
       _isPanelExpanded = false;
     });
-    _sheetExtent.value = _minSheetSize;
     _mapController.move(
       LatLng(location.coordinates.latitude, location.coordinates.longitude),
       14.5,
@@ -122,7 +113,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       _selectedLocation = null;
       _isPanelExpanded = _wasPanelExpandedBeforeDetail;
     });
-    _sheetExtent.value = _wasPanelExpandedBeforeDetail ? _midSheetSize : _minSheetSize;
     final restoredProgress = _wasPanelExpandedBeforeDetail ? 1.0 : 0.0;
     _sheetProgress.value = restoredProgress;
     _shellChromeProgressController.state = restoredProgress;
@@ -326,23 +316,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 _sheetProgress.value = progress;
                 _shellChromeProgressController.state = progress;
               },
-              onSheetExtentChanged: (extent) {
-                _sheetExtent.value = extent;
-              },
               onSelectLocation: _selectLocation,
               onLocationTap: _showLocationDetails,
-            ),
-          if (_selectedLocation == null)
-            ValueListenableBuilder<double>(
-              valueListenable: _sheetExtent,
-              builder: (context, extent, child) {
-                final screenHeight = MediaQuery.sizeOf(context).height;
-                final sheetTopPixels = screenHeight * (1 - extent);
-                return ExploreFloatingFilterPills(
-                  filter: filter,
-                  bottomOffset: screenHeight - sheetTopPixels,
-                );
-              },
             ),
           if (_selectedLocation != null)
             Positioned.fill(

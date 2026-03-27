@@ -13,9 +13,15 @@ Future<void> showLocationDetailSheet(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (context) => LocationDetailSheet(
+    // Use the sheet's own context to pop so we don't accidentally pop a
+    // go_router page when the outer context belongs to a shell route.
+    builder: (sheetContext) => LocationDetailSheet(
       location: location,
-      onDismissed: () => Navigator.of(context).pop(),
+      onDismissed: () {
+        if (Navigator.of(sheetContext).canPop()) {
+          Navigator.of(sheetContext).pop();
+        }
+      },
     ),
   );
 }
@@ -57,21 +63,22 @@ class _LocationDetailSheetState extends State<LocationDetailSheet> {
   }
 
   void _snapToNearest({double velocity = 0}) {
-    if (!_controller.isAttached) return;
+    if (!_controller.isAttached || _isDismissing) return;
     final size = _controller.size;
     final shouldDismiss = velocity > 500 || size < _midSize * 0.65;
 
     if (shouldDismiss) {
-      if (_isDismissing) return;
       _isDismissing = true;
-      _controller.animateTo(
-        0,
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeInCubic,
-      ).whenComplete(() {
-        if (!mounted) return;
-        widget.onDismissed?.call();
-      });
+      _controller
+          .animateTo(
+            0,
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeInCubic,
+          )
+          .whenComplete(() {
+            if (!mounted) return;
+            widget.onDismissed?.call();
+          });
       return;
     }
 

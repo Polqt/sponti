@@ -8,11 +8,16 @@ class ExploreFloatingFilterPills extends ConsumerStatefulWidget {
   const ExploreFloatingFilterPills({
     super.key,
     required this.filter,
-    required this.bottomOffset,
-  });
+    this.bottomOffset,
+    this.topOffset,
+  }) : assert(
+         bottomOffset != null || topOffset != null,
+         'Provide either bottomOffset or topOffset.',
+       );
 
   final ExploreFilter filter;
-  final double bottomOffset;
+  final double? bottomOffset;
+  final double? topOffset;
 
   @override
   ConsumerState<ExploreFloatingFilterPills> createState() => _ExploreFloatingFilterPillsState();
@@ -63,6 +68,7 @@ class _ExploreFloatingFilterPillsState extends ConsumerState<ExploreFloatingFilt
   Widget build(BuildContext context) {
     final ranking = widget.filter.rankingFilter;
     final price = widget.filter.priceFilter;
+    final isTopAnchored = widget.topOffset != null;
 
     return Stack(
       children: [
@@ -75,7 +81,8 @@ class _ExploreFloatingFilterPillsState extends ConsumerState<ExploreFloatingFilt
           ),
         Positioned(
           left: 16,
-          bottom: widget.bottomOffset + 12,
+          top: isTopAnchored ? widget.topOffset! + 12 : null,
+          bottom: isTopAnchored ? null : widget.bottomOffset! + 12,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -102,6 +109,7 @@ class _ExploreFloatingFilterPillsState extends ConsumerState<ExploreFloatingFilt
           _DiscoveryDropdownCard(
             pillKey: _discoveryKey,
             bottomOffset: widget.bottomOffset,
+            topOffset: widget.topOffset,
             selectedRanking: ranking,
             onSelect: _selectRanking,
           ),
@@ -109,6 +117,7 @@ class _ExploreFloatingFilterPillsState extends ConsumerState<ExploreFloatingFilt
           _BudgetDropdownCard(
             pillKey: _budgetKey,
             bottomOffset: widget.bottomOffset,
+            topOffset: widget.topOffset,
             selectedPrice: price,
             onSelect: _selectPrice,
           ),
@@ -208,26 +217,30 @@ class _CompactFilterPill extends StatelessWidget {
 class _DiscoveryDropdownCard extends StatelessWidget {
   const _DiscoveryDropdownCard({
     required this.pillKey,
-    required this.bottomOffset,
     required this.selectedRanking,
     required this.onSelect,
-  });
+    this.bottomOffset,
+    this.topOffset,
+  }) : assert(
+         bottomOffset != null || topOffset != null,
+         'Provide either bottomOffset or topOffset.',
+       );
 
   final GlobalKey pillKey;
-  final double bottomOffset;
+  final double? bottomOffset;
+  final double? topOffset;
   final ExploreRanking selectedRanking;
   final ValueChanged<ExploreRanking> onSelect;
 
   @override
   Widget build(BuildContext context) {
-    final renderBox = pillKey.currentContext?.findRenderObject() as RenderBox?;
-    final offset = renderBox?.localToGlobal(Offset.zero);
-    
-    if (offset == null) return const SizedBox.shrink();
+    if (pillKey.currentContext == null) return const SizedBox.shrink();
+    final isTopAnchored = topOffset != null;
 
     return Positioned(
       left: 16,
-      bottom: bottomOffset + 60,
+      top: isTopAnchored ? topOffset! + 60 : null,
+      bottom: isTopAnchored ? null : bottomOffset! + 60,
       child: Container(
         width: 240,
         padding: const EdgeInsets.all(16),
@@ -277,26 +290,30 @@ class _DiscoveryDropdownCard extends StatelessWidget {
 class _BudgetDropdownCard extends StatelessWidget {
   const _BudgetDropdownCard({
     required this.pillKey,
-    required this.bottomOffset,
     required this.selectedPrice,
     required this.onSelect,
-  });
+    this.bottomOffset,
+    this.topOffset,
+  }) : assert(
+         bottomOffset != null || topOffset != null,
+         'Provide either bottomOffset or topOffset.',
+       );
 
   final GlobalKey pillKey;
-  final double bottomOffset;
+  final double? bottomOffset;
+  final double? topOffset;
   final PriceRange? selectedPrice;
   final ValueChanged<PriceRange?> onSelect;
 
   @override
   Widget build(BuildContext context) {
-    final renderBox = pillKey.currentContext?.findRenderObject() as RenderBox?;
-    final offset = renderBox?.localToGlobal(Offset.zero);
-    
-    if (offset == null) return const SizedBox.shrink();
+    if (pillKey.currentContext == null) return const SizedBox.shrink();
+    final isTopAnchored = topOffset != null;
 
     return Positioned(
       left: 16,
-      bottom: bottomOffset + 60,
+      top: isTopAnchored ? topOffset! + 60 : null,
+      bottom: isTopAnchored ? null : bottomOffset! + 60,
       child: Container(
         width: 240,
         padding: const EdgeInsets.all(16),
