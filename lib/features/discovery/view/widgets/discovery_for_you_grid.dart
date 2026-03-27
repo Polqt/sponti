@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/discovery/viewmodel/discovery_viewmodel.dart';
+import 'package:sponti/features/locations/utils/location_ranking.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
-class DiscoveryForYouGrid extends StatelessWidget {
+class DiscoveryForYouGrid extends ConsumerWidget {
   const DiscoveryForYouGrid({super.key, required this.cards});
 
   final List<DiscoveryCardData> cards;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GridView.builder(
       key: const ValueKey('for-you-grid'),
       shrinkWrap: true,
@@ -20,28 +25,39 @@ class DiscoveryForYouGrid extends StatelessWidget {
         mainAxisSpacing: 18,
         mainAxisExtent: 262,
       ),
-      itemBuilder: (context, index) => DiscoveryTopPickCard(card: cards[index]),
+      itemBuilder: (context, index) => DiscoveryTopPickCard(
+        card: cards[index],
+        onTap: () => _onCardTap(context, ref, cards[index]),
+      ),
     );
+  }
+
+  void _onCardTap(BuildContext context, WidgetRef ref, DiscoveryCardData card) {
+    final ranking = LocationRanking.fromTitle(card.title);
+    if (ranking != null) {
+      ref.read(locationFilterProvider.notifier).setRanking(ranking);
+      ref.read(locationFilterProvider.notifier).setCategory(null);
+      context.go(RouteName.location);
+    }
   }
 }
 
 class DiscoveryTopPickCard extends StatelessWidget {
-  const DiscoveryTopPickCard({super.key, required this.card});
+  const DiscoveryTopPickCard({
+    super.key,
+    required this.card,
+    required this.onTap,
+  });
 
   final DiscoveryCardData card;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(content: Text('${card.title} picks are coming soon.')),
-            );
-        },
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
           decoration: BoxDecoration(

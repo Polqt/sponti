@@ -29,6 +29,8 @@ class LocationModel extends Location {
     super.submittedBy,
     super.updatedAt,
     super.distanceKm,
+    super.isSeeded,
+    super.seededAt,
   });
 
   factory LocationModel.fromJson(Map<String, dynamic> json) {
@@ -82,6 +84,10 @@ class LocationModel extends Location {
           ? DateTime.parse(json['updated_at'] as String)
           : null,
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
+      isSeeded: json['is_seeded'] as bool? ?? false,
+      seededAt: json['seeded_at'] != null
+          ? DateTime.parse(json['seeded_at'] as String)
+          : null,
     );
   }
 
@@ -147,5 +153,7 @@ class LocationModel extends Location {
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
     distanceKm: entity.distanceKm,
+    isSeeded: entity.isSeeded,
+    seededAt: entity.seededAt,
   );
 }

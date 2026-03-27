@@ -8,6 +8,7 @@ import 'package:sponti/features/locations/repository/location_local_data_source.
 import 'package:sponti/features/locations/repository/location_remote_data_source.dart';
 import 'package:sponti/features/locations/repository/location_repository.dart';
 import 'package:sponti/features/locations/repository/location_repository_impl.dart';
+import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final locationLocalDataSourceProvider = Provider<LocationLocalDataSource>((
@@ -32,16 +33,22 @@ final locationRepositoryProvider = Provider<LocationRepository>((ref) {
 class LocationFilter {
   const LocationFilter({
     this.selectedCategory,
+    this.selectedRanking,
   });
 
   final LocationCategory? selectedCategory;
+  final LocationRanking? selectedRanking;
 
   LocationFilter copyWith({
     Object? selectedCategory = _sentinel,
+    Object? selectedRanking = _sentinel,
   }) => LocationFilter(
     selectedCategory: selectedCategory == _sentinel
         ? this.selectedCategory
         : selectedCategory as LocationCategory?,
+    selectedRanking: selectedRanking == _sentinel
+        ? this.selectedRanking
+        : selectedRanking as LocationRanking?,
   );
 
   static const _sentinel = Object();
@@ -53,6 +60,11 @@ class LocationFilterViewModel extends Notifier<LocationFilter> {
 
   void setCategory(LocationCategory? cat) =>
       state = state.copyWith(selectedCategory: cat);
+
+  void setRanking(LocationRanking? ranking) =>
+      state = state.copyWith(selectedRanking: ranking);
+
+  void clearFilters() => state = const LocationFilter();
 }
 
 final locationFilterProvider =

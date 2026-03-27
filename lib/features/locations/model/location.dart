@@ -113,6 +113,8 @@ class Location extends Equatable {
     this.submittedBy,
     this.updatedAt,
     this.distanceKm,
+    this.isSeeded = false,
+    this.seededAt,
   });
 
   final String id;
@@ -141,6 +143,8 @@ class Location extends Equatable {
   final double? distanceKm;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final bool isSeeded;
+  final DateTime? seededAt;
 
   bool get isOpenNow => operatingHours?.isOpenNow ?? false;
   String get primaryPhoto => photoUrls.isNotEmpty ? photoUrls.first : '';
@@ -174,6 +178,8 @@ class Location extends Equatable {
     String? instagramHandle,
     String? submittedBy,
     double? distanceKm,
+    bool? isSeeded,
+    DateTime? seededAt,
   }) => Location(
     id: id,
     name: name ?? this.name,
@@ -200,6 +206,8 @@ class Location extends Equatable {
     submittedBy: submittedBy ?? this.submittedBy,
     distanceKm: distanceKm ?? this.distanceKm,
     createdAt: createdAt,
+    isSeeded: isSeeded ?? this.isSeeded,
+    seededAt: seededAt ?? this.seededAt,
   );
 
   @override

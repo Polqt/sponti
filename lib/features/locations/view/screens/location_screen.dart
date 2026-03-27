@@ -12,6 +12,7 @@ import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
 import 'package:sponti/features/explore/view/widgets/explore_floating_filter_pills.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
@@ -67,6 +68,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   Future<void> _onCategoryChanged(LocationCategory? category) async {
     ref.read(locationFilterProvider.notifier).setCategory(category);
+    ref.read(locationFilterProvider.notifier).setRanking(null);
     await ref.read(locationsProvider.notifier).refresh();
     _openPanel();
   }
@@ -149,11 +151,13 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     final markerData = locations.map((location) {
       final isSelected = location.id == selectedId;
       final zIndex = isSelected ? 1000.0 : 100.0 + (location.rating * 10).clamp(0.0, 100.0);
+      final ranking = location.getPrimaryRanking(locations);
       return (
         location: location,
         isSelected: isSelected,
         zIndex: zIndex,
         point: LatLng(location.coordinates.latitude, location.coordinates.longitude),
+        ranking: ranking,
       );
     }).toList();
 
@@ -186,6 +190,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               isSelected: data.isSelected,
               locationName: shouldHideLabel ? null : data.location.name,
               rating: data.location.rating,
+              ranking: data.ranking,
             ),
           ),
         ),
@@ -206,8 +211,14 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   Widget build(BuildContext context) {
     final locationsAsync = ref.watch(locationsProvider);
     final filter = ref.watch(locationFilterProvider);
-    final locations = locationsAsync.valueOrNull ?? const <Location>[];
+    var locations = locationsAsync.valueOrNull ?? const <Location>[];
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+
+    if (filter.selectedRanking != null && locations.isNotEmpty) {
+      locations = locations
+          .where((loc) => loc.getPrimaryRanking(locations) == filter.selectedRanking)
+          .toList();
+    }
 
     if (!_didAutoCenter && locations.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -319,9 +330,24 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               bottom: bottomInset,
               child: SafeArea(
                 top: false,
-                child: _FloatingCategoryRow(
-                  selectedCategory: filter.selectedCategory,
-                  onChanged: _onCategoryChanged,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (filter.selectedRanking != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _RankingFilterChip(
+                          ranking: filter.selectedRanking!,
+                          onClear: () {
+                            ref.read(locationFilterProvider.notifier).setRanking(null);
+                          },
+                        ),
+                      ),
+                    _FloatingCategoryRow(
+                      selectedCategory: filter.selectedCategory,
+                      onChanged: _onCategoryChanged,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -422,6 +448,72 @@ class _FloatingCategoryRow extends StatelessWidget {
           child: LocationCategoryRow(
             selectedCategory: selectedCategory,
             onChanged: onChanged,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RankingFilterChip extends StatelessWidget {
+  const _RankingFilterChip({
+    required this.ranking,
+    required this.onClear,
+  });
+
+  final LocationRanking ranking;
+  final VoidCallback onClear;
+
+  String get _label => switch (ranking) {
+    LocationRanking.trending => 'Trending',
+    LocationRanking.popular => 'Popular',
+    LocationRanking.lowkey => 'Lowkey',
+    LocationRanking.newest => 'New',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          decoration: BoxDecoration(
+            color: SpontiColors.surface.withValues(alpha: 0.74),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: ranking.indicatorColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _label.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: SpontiColors.textPrimary,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: SpontiColors.textSecondary,
+                ),
+              ),
+            ],
           ),
         ),
       ),
