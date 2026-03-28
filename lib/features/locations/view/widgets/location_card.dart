@@ -38,6 +38,7 @@ class LocationCard extends StatelessWidget {
     return SizedBox(
       width: _isFullWidth ? double.infinity : width,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
           clipBehavior: Clip.antiAlias,

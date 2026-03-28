@@ -29,6 +29,7 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
     this.onDismissed,
     this.edgeToEdge = false,
     this.isExpanded = false,
+    this.isVisible = true,
   });
 
   final AsyncValue<List<Location>> locationsAsync;
@@ -46,6 +47,7 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
   final ValueChanged<double>? onSheetExtentChanged;
   final VoidCallback? onDismissed;
   final bool edgeToEdge;
+  final bool isVisible;
 
   @override
   ConsumerState<ExploreBottomPanel> createState() => _ExploreBottomPanelState();
@@ -259,26 +261,80 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
     );
 
     return Positioned.fill(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return AnimatedBuilder(
-            animation: _sheetController,
-            child: panelChild,
-            builder: (context, child) {
-              final height = constraints.maxHeight * _sheetController.value;
-              return Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 0),
-                  child: SizedBox(
-                    height: height,
-                    child: child,
-                  ),
-                ),
+      child: IgnorePointer(
+        ignoring: !widget.isVisible,
+        child: AnimatedOpacity(
+          opacity: widget.isVisible ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return AnimatedBuilder(
+                animation: _sheetController,
+                child: panelChild,
+                builder: (context, child) {
+                  final height = constraints.maxHeight * _sheetController.value;
+                  return Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 0),
+                      child: SizedBox(
+                        height: height,
+                        child: child,
+                      ),
+                    ),
+                  );
+                },
               );
             },
-          );
-        },
+          ),
+        ),
+      ),
+    );
+  }
+
+  VoidCallback _buildLocationTapHandler(Location location) {
+    return () {
+      final onLocationTap = widget.onLocationTap;
+      if (onLocationTap != null) {
+        onLocationTap(location);
+        return;
+      }
+      widget.onSelectLocation(location);
+    };
+  }
+
+  Widget _buildCard({
+    required Location location,
+    required bool isSelected,
+    required Set<String> favoriteIds,
+  }) {
+    return AnimatedContainer(
+      key: ValueKey(location.id),
+      duration: const Duration(milliseconds: 180),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isSelected
+              ? Color(location.category.colorValue)
+              : const Color(0x14A68F7B),
+          width: isSelected ? 1.5 : 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: _buildLocationTapHandler(location),
+          child: LocationCard(
+            location: location,
+            variant: LocationCardVariant.fullWidth,
+            isSaved: favoriteIds.contains(location.id),
+            showShadow: false,
+            onSaveToggle: () =>
+                ref.read(favoriteIdsProvider.notifier).toggle(location.id),
+          ),
+        ),
       ),
     );
   }
@@ -342,30 +398,10 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
         return KeyedSubtree(
           key: key,
           child: RepaintBoundary(
-            child: AnimatedContainer(
-              key: ValueKey(location.id),
-              duration: const Duration(milliseconds: 180),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: isSelected
-                      ? Color(location.category.colorValue)
-                      : const Color(0x14A68F7B),
-                  width: isSelected ? 1.5 : 1,
-                ),
-              ),
-              child: LocationCard(
-                location: location,
-                variant: LocationCardVariant.fullWidth,
-                isSaved: favoriteIds.contains(location.id),
-                showShadow: false,
-                onTap: () {
-                  widget.onSelectLocation(location);
-                  widget.onLocationTap?.call(location);
-                },
-                onSaveToggle: () =>
-                    ref.read(favoriteIdsProvider.notifier).toggle(location.id),
-              ),
+            child: _buildCard(
+              location: location,
+              isSelected: isSelected,
+              favoriteIds: favoriteIds,
             ),
           ),
         );

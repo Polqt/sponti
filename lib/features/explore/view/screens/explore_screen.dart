@@ -32,8 +32,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   late final StateController<double> _shellChromeProgressController;
 
   String? _selectedLocationId;
-  Location? _selectedLocation;
   bool _isPanelExpanded = false;
+  bool _isPanelVisible = true;
+  bool _isLocationDetailOpen = false;
   LocationCategory? _lastAutoExpandedCategory;
   bool _wasPanelExpandedBeforeDetail = false;
 
@@ -92,12 +93,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     );
   }
 
-  void _showLocationDetails(Location location) {
+  Future<void> _showLocationDetails(Location location) async {
+    if (_isLocationDetailOpen) return;
     _wasPanelExpandedBeforeDetail = _isPanelExpanded;
     setState(() {
       _selectedLocationId = location.id;
-      _selectedLocation = location;
       _isPanelExpanded = false;
+      _isPanelVisible = false;
     });
     _mapController.move(
       LatLng(location.coordinates.latitude, location.coordinates.longitude),
@@ -106,17 +108,24 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     _sheetProgress.value = 1.0;
     _shellChromeProgressController.state = 1.0;
     _setShellHidden(true);
-  }
+    _isLocationDetailOpen = true;
 
-  void _closeLocationDetails() {
-    setState(() {
-      _selectedLocation = null;
-      _isPanelExpanded = _wasPanelExpandedBeforeDetail;
-    });
-    final restoredProgress = _wasPanelExpandedBeforeDetail ? 1.0 : 0.0;
-    _sheetProgress.value = restoredProgress;
-    _shellChromeProgressController.state = restoredProgress;
-    _setShellHidden(_wasPanelExpandedBeforeDetail);
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+      if (!mounted) return;
+      await showLocationDetailSheet(context, location: location);
+    } finally {
+      if (!mounted) return;
+      _isLocationDetailOpen = false;
+      final restoredProgress = _wasPanelExpandedBeforeDetail ? 1.0 : 0.0;
+      setState(() {
+        _isPanelVisible = true;
+        _isPanelExpanded = _wasPanelExpandedBeforeDetail;
+      });
+      _sheetProgress.value = restoredProgress;
+      _shellChromeProgressController.state = restoredProgress;
+      _setShellHidden(_wasPanelExpandedBeforeDetail);
+    }
   }
 
   Future<void> _toggleNowOpen() async {
@@ -301,32 +310,24 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ),
               ),
             ),
-          if (_selectedLocation == null)
-            ExploreBottomPanel(
-              locationsAsync: locationsAsync,
-              locations: locations,
-              selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-              isExpanded: _isPanelExpanded,
-              bottomInset: bottomInset,
-              onExpandChanged: _setPanelExpanded,
-              selectedCategory: filter.categoryFilter,
-              onCategoryChanged: _onCategoryChanged,
-              filter: filter,
-              onSheetProgressChanged: (progress) {
-                _sheetProgress.value = progress;
-                _shellChromeProgressController.state = progress;
-              },
-              onSelectLocation: _selectLocation,
-              onLocationTap: _showLocationDetails,
-            ),
-          if (_selectedLocation != null)
-            Positioned.fill(
-              child: LocationDetailSheet(
-                key: ValueKey(_selectedLocation!.id),
-                location: _selectedLocation!,
-                onDismissed: _closeLocationDetails,
-              ),
-            ),
+          ExploreBottomPanel(
+            locationsAsync: locationsAsync,
+            locations: locations,
+            selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+            isVisible: _isPanelVisible,
+            bottomInset: bottomInset,
+            isExpanded: _isPanelExpanded,
+            onExpandChanged: _setPanelExpanded,
+            selectedCategory: filter.categoryFilter,
+            onCategoryChanged: _onCategoryChanged,
+            filter: filter,
+            onSheetProgressChanged: (progress) {
+              _sheetProgress.value = progress;
+              _shellChromeProgressController.state = progress;
+            },
+            onSelectLocation: _selectLocation,
+            onLocationTap: _showLocationDetails,
+          ),
         ],
       ),
     );
