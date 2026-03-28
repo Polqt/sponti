@@ -24,7 +24,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
 
   static const _columns = '''
     id, full_name, username, bio, avatar_url,
-    total_check_ins, total_favorites,
+    total_check_ins,
     created_at, updated_at
   ''';
 
