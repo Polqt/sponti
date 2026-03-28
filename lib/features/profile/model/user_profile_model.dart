@@ -25,7 +25,7 @@ class UserProfileModel extends UserProfile {
             (json['check_in_count'] as num? ?? json['total_check_ins'] as num?)
                 ?.toInt() ??
             0,
-        favoritesCount: (json['favorites_count'] as num?)?.toInt() ?? 0,
+        favoritesCount: (json['favorites_count'] as num? ?? json['total_favorites'] as num?)?.toInt() ?? 0,
         spotsSuggested: (json['spots_suggested'] as num?)?.toInt() ?? 0,
         createdAt: DateTime.parse(json['created_at'] as String),
         updatedAt: json['updated_at'] != null
@@ -63,7 +63,7 @@ class UserStatsModel extends UserStats {
 
   factory UserStatsModel.fromJson(Map<String, dynamic> json) => UserStatsModel(
     checkInCount: (json['check_in_count'] as num?)?.toInt() ?? 0,
-    favoritesCount: (json['favorites_count'] as num?)?.toInt() ?? 0,
+    favoritesCount: (json['favorites_count'] as num? ?? json['total_favorites'] as num?)?.toInt() ?? 0,
     spotsSuggested: (json['spots_suggested'] as num?)?.toInt() ?? 0,
   );
 }

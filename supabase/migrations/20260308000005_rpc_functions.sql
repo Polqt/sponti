@@ -34,14 +34,14 @@ AS $$
     l.special_hours_note, l.contact_number,
     l.website_url, l.instagram_handle, l.submitted_by,
     l.created_at, l.updated_at,
-    extensions.ST_Distance(
-      extensions.ST_SetSRID(extensions.ST_MakePoint(l.longitude, l.latitude), 4326)::extensions.geography,
-      extensions.ST_SetSRID(extensions.ST_MakePoint(lng, lat), 4326)::extensions.geography
+    ST_Distance(
+      ST_SetSRID(ST_MakePoint(l.longitude, l.latitude), 4326)::geography,
+      ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
     ) / 1000.0 AS distance_km
   FROM public.locations l
-  WHERE extensions.ST_DWithin(
-    extensions.ST_SetSRID(extensions.ST_MakePoint(l.longitude, l.latitude), 4326)::extensions.geography,
-    extensions.ST_SetSRID(extensions.ST_MakePoint(lng, lat), 4326)::extensions.geography,
+  WHERE ST_DWithin(
+    ST_SetSRID(ST_MakePoint(l.longitude, l.latitude), 4326)::geography,
+    ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
     radius_km * 1000
   )
   ORDER BY distance_km ASC;
