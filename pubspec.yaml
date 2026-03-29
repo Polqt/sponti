@@ -94,6 +94,7 @@ dependencies:
   uuid: ^4.5.3 # Generate unique IDs
   timeago: ^3.7.1 # "5 minutes ago" style timestamps for reviews
   collection: ^1.19.1 # Utility functions for collections (lists, maps, etc.)
+  smooth_sheets: ^0.17.0
 
 dev_dependencies:
   flutter_test:

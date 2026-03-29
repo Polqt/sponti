@@ -9,7 +9,6 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
 import 'package:sponti/core/widgets/glass_container.dart';
 import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
-import 'package:sponti/features/explore/view/widgets/explore_floating_filter_pills.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/utils/location_ranking.dart';
@@ -28,12 +27,9 @@ class LocationScreen extends ConsumerStatefulWidget {
 
 class _LocationScreenState extends ConsumerState<LocationScreen> {
   static const _defaultCenter = LatLng(10.6765, 122.9509);
-  static const double _minSheetSize = 0.25;
-  static const double _midSheetSize = 0.50;
 
   final MapController _mapController = MapController();
   final ValueNotifier<double> _sheetProgress = ValueNotifier<double>(0.0);
-  late final ValueNotifier<double> _sheetExtent;
 
   late final StateController<bool> _shellBarHiddenController;
   late final StateController<double> _shellChromeProgressController;
@@ -47,11 +43,8 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   @override
   void initState() {
     super.initState();
-    _sheetExtent = ValueNotifier<double>(_isExplorePanelExpanded ? _midSheetSize : _minSheetSize);
     _shellBarHiddenController = ref.read(shellBarHiddenProvider.notifier);
-    _shellChromeProgressController = ref.read(
-      shellChromeProgressProvider.notifier,
-    );
+    _shellChromeProgressController = ref.read(shellChromeProgressProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) => _consumePending());
   }
 
@@ -62,9 +55,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _showLocationDetails(pending);
   }
 
-  void _setShellHidden(bool hidden) {
-    _shellBarHiddenController.state = hidden;
-  }
+  void _setShellHidden(bool hidden) => _shellBarHiddenController.state = hidden;
 
   Future<void> _onCategoryChanged(LocationCategory? category) async {
     ref.read(locationFilterProvider.notifier).setCategory(category);
@@ -92,7 +83,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = true;
       _isExplorePanelExpanded = true;
     });
-    _sheetExtent.value = _midSheetSize;
     _setSheetProgress(1.0);
     _setShellHidden(true);
   }
@@ -111,7 +101,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
     });
-    _sheetExtent.value = _minSheetSize;
     _focusLocation(location);
     _setSheetProgress(0.0);
     _setShellHidden(true);
@@ -127,7 +116,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   void _setPanelExpanded(bool expanded) {
     setState(() => _isExplorePanelExpanded = expanded);
-    _sheetExtent.value = expanded ? _midSheetSize : _minSheetSize;
   }
 
   void _hidePanel() {
@@ -135,7 +123,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
     });
-    _sheetExtent.value = _minSheetSize;
     _setSheetProgress(0.0);
     _setShellHidden(false);
   }
@@ -203,7 +190,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _shellChromeProgressController.state = 0.0;
     _setShellHidden(false);
     _sheetProgress.dispose();
-    _sheetExtent.dispose();
     super.dispose();
   }
 
@@ -245,6 +231,17 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
         : (locations.isNotEmpty ? locations.first.id : null);
     final selectedIndex =
         selectedId != null ? locations.indexWhere((l) => l.id == selectedId) : 0;
+
+    // Build an ExploreFilter that reflects the current locationFilterProvider
+    // state so the panel pills show the correct active selection.
+    final panelFilter = ExploreFilter(
+      rankingFilter: filter.selectedRanking != null
+          ? ExploreRanking.values.firstWhere(
+              (r) => r.name == filter.selectedRanking!.name,
+              orElse: () => ExploreRanking.trending,
+            )
+          : ExploreRanking.trending,
+    );
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -299,10 +296,10 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               },
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Column(
+                child: const Column(
                   children: [
-                    const _GlassSearchBar(),
-                    const SizedBox(height: 10),
+                    _GlassSearchBar(),
+                    SizedBox(height: 10),
                   ],
                 ),
               ),
@@ -360,27 +357,12 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               bottomInset: bottomInset,
               selectedCategory: filter.selectedCategory,
               onCategoryChanged: _onCategoryChanged,
-              filter: const ExploreFilter(),
+              filter: panelFilter,
               onExpandChanged: _setPanelExpanded,
               onDismissed: _hidePanel,
               edgeToEdge: true,
               onSheetProgressChanged: _setSheetProgress,
-              onSheetExtentChanged: (extent) {
-                _sheetExtent.value = extent;
-              },
               onSelectLocation: _selectLocation,
-            ),
-          if (_isExplorePanelVisible)
-            ValueListenableBuilder<double>(
-              valueListenable: _sheetExtent,
-              builder: (context, extent, child) {
-                final screenHeight = MediaQuery.sizeOf(context).height;
-                final sheetTopPixels = screenHeight * (1 - extent);
-                return ExploreFloatingFilterPills(
-                  filter: const ExploreFilter(),
-                  bottomOffset: screenHeight - sheetTopPixels,
-                );
-              },
             ),
         ],
       ),
@@ -465,11 +447,11 @@ class _RankingFilterChip extends StatelessWidget {
   final VoidCallback onClear;
 
   String get _label => switch (ranking) {
-    LocationRanking.trending => 'Trending',
-    LocationRanking.popular => 'Popular',
-    LocationRanking.lowkey => 'Lowkey',
-    LocationRanking.newest => 'New',
-  };
+        LocationRanking.trending => 'Trending',
+        LocationRanking.popular => 'Popular',
+        LocationRanking.lowkey => 'Lowkey',
+        LocationRanking.newest => 'New',
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -507,7 +489,7 @@ class _RankingFilterChip extends StatelessWidget {
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: onClear,
-                child: Icon(
+                child: const Icon(
                   Icons.close_rounded,
                   size: 18,
                   color: SpontiColors.textSecondary,

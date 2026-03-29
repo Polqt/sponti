@@ -76,9 +76,12 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
     int page = 0,
     int pageSize = 20,
   }) => _executeQuery(() async {
+    final start = page * pageSize;
+    final end = start + pageSize - 1;
     final response = await _client
         .from(ApiConstants.locationsTable)
         .select(_columns)
+        .range(start, end)
         .order('created_at', ascending: false);
 
     return _parseLocationList(response);

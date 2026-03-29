@@ -13,7 +13,10 @@ class ExploreFilterChips extends StatelessWidget {
     required this.onTapPrice,
     required this.onTapCategory,
     required this.onToggleNowOpen,
+    this.showRankingChip = true,
+    this.showPriceChip = true,
     this.showCategoryChip = true,
+    this.showNowOpenChip = true,
   });
 
   final ExploreFilter filter;
@@ -21,7 +24,10 @@ class ExploreFilterChips extends StatelessWidget {
   final VoidCallback onTapPrice;
   final VoidCallback onTapCategory;
   final VoidCallback onToggleNowOpen;
+  final bool showRankingChip;
+  final bool showPriceChip;
   final bool showCategoryChip;
+  final bool showNowOpenChip;
 
   @override
   Widget build(BuildContext context) {
@@ -29,54 +35,74 @@ class ExploreFilterChips extends StatelessWidget {
     final category = filter.categoryFilter;
     final price = filter.priceFilter;
     final nowOpen = filter.nowOpenOnly;
+    final children = <Widget>[];
+
+    void addChip(Widget chip) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(width: 10));
+      }
+      children.add(chip);
+    }
+
+    if (showRankingChip) {
+      addChip(
+        _ExploreFilterChip(
+          label: '${ranking.label} \u2713',
+          color: _rankingColor(ranking),
+          leading: const Icon(Icons.auto_awesome_rounded),
+          isActive: true,
+          onTap: onTapRanking,
+        ),
+      );
+    }
+
+    if (showPriceChip) {
+      addChip(
+        _ExploreFilterChip(
+          label: price == null ? 'Any price' : '${_priceLabel(price)} \u2713',
+          color: _priceColor(price),
+          leading: const Icon(Icons.payments_outlined),
+          isActive: price != null,
+          onTap: onTapPrice,
+        ),
+      );
+    }
+
+    if (showCategoryChip) {
+      addChip(
+        _ExploreFilterChip(
+          label: category == null ? 'Category' : '${category.label} \u2713',
+          color: category == null
+              ? SpontiColors.textSecondary
+              : Color(category.colorValue),
+          leading: category == null
+              ? const Icon(Icons.grid_view_rounded)
+              : LocationCategoryIcon(
+                  category: category,
+                  color: Color(category.colorValue),
+                ),
+          isActive: category != null,
+          onTap: onTapCategory,
+        ),
+      );
+    }
+
+    if (showNowOpenChip) {
+      addChip(
+        _ExploreFilterChip(
+          label: nowOpen ? 'Now open \u2713' : 'Now open',
+          color: SpontiColors.success,
+          leading: const Icon(Icons.schedule_rounded),
+          isActive: nowOpen,
+          onTap: onToggleNowOpen,
+        ),
+      );
+    }
 
     return GlassContainer(
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _ExploreFilterChip(
-              label: '${ranking.label} \u2713',
-              color: _rankingColor(ranking),
-              leading: const Icon(Icons.auto_awesome_rounded),
-              isActive: true,
-              onTap: onTapRanking,
-            ),
-            const SizedBox(width: 10),
-            _ExploreFilterChip(
-              label: price == null ? 'Any price' : '${_priceLabel(price)} \u2713',
-              color: _priceColor(price),
-              leading: const Icon(Icons.payments_outlined),
-              isActive: price != null,
-              onTap: onTapPrice,
-            ),
-            if (showCategoryChip) ...[
-              const SizedBox(width: 10),
-              _ExploreFilterChip(
-                label: category == null ? 'Category' : '${category.label} \u2713',
-                color: category == null
-                    ? SpontiColors.textSecondary
-                    : Color(category.colorValue),
-                leading: category == null
-                    ? const Icon(Icons.grid_view_rounded)
-                    : LocationCategoryIcon(
-                        category: category,
-                        color: Color(category.colorValue),
-                      ),
-                isActive: category != null,
-                onTap: onTapCategory,
-              ),
-            ],
-            const SizedBox(width: 10),
-            _ExploreFilterChip(
-              label: nowOpen ? 'Now open \u2713' : 'Now open',
-              color: SpontiColors.success,
-              leading: const Icon(Icons.schedule_rounded),
-              isActive: nowOpen,
-              onTap: onToggleNowOpen,
-            ),
-          ],
-        ),
+        child: Row(children: children),
       ),
     );
   }

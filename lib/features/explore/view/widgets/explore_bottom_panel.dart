@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
+import 'package:sponti/features/explore/view/widgets/explore_budget_filter_modal.dart';
+import 'package:sponti/features/explore/view/widgets/explore_discovery_filter_modal.dart';
 import 'package:sponti/features/explore/view/widgets/explore_loading.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
@@ -25,11 +27,9 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
     required this.filter,
     this.onLocationTap,
     this.onSheetProgressChanged,
-    this.onSheetExtentChanged,
     this.onDismissed,
     this.edgeToEdge = false,
     this.isExpanded = false,
-    this.isVisible = true,
   });
 
   final AsyncValue<List<Location>> locationsAsync;
@@ -44,42 +44,34 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
   final LocationCategory? selectedCategory;
   final ValueChanged<LocationCategory?> onCategoryChanged;
   final ValueChanged<double>? onSheetProgressChanged;
-  final ValueChanged<double>? onSheetExtentChanged;
   final VoidCallback? onDismissed;
   final bool edgeToEdge;
-  final bool isVisible;
 
   @override
   ConsumerState<ExploreBottomPanel> createState() => _ExploreBottomPanelState();
 }
 
-class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
-    with SingleTickerProviderStateMixin {
+class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
   static const double _minSize = 0.25;
   static const double _midSize = 0.50;
   static const double _maxSize = 0.92;
-  static const double _floatingPillsReservedSpace = 54.0;
-
   static const double _expandThreshold = 0.35;
 
-  late final AnimationController _sheetController;
-  late final ScrollController _listController;
+  late final DraggableScrollableController _sheetController;
+  // Own scroll controller — fully decoupled from DraggableScrollableSheet so
+  // list scrolling never resizes the sheet or fires sheet notifications.
+  late final ScrollController _listScrollController;
+
+  double _chromeProgress = 0.0;
   final _itemKeys = <String, GlobalKey>{};
   int? _lastScrolledIndex;
   bool _scrollScheduled = false;
-  late bool _reportedExpanded;
 
   @override
   void initState() {
     super.initState();
-    _reportedExpanded = widget.isExpanded;
-    _sheetController = AnimationController(
-      vsync: this,
-      lowerBound: _minSize,
-      upperBound: _maxSize,
-      value: widget.isExpanded ? _midSize : _minSize,
-    )..addListener(_handleSheetExtentChanged);
-    _listController = ScrollController();
+    _sheetController = DraggableScrollableController();
+    _listScrollController = ScrollController();
     _scheduleScrollSelectedIntoView();
   }
 
@@ -88,7 +80,6 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
     super.didUpdateWidget(oldWidget);
     _pruneItemKeys();
     if (oldWidget.isExpanded != widget.isExpanded) {
-      _reportedExpanded = widget.isExpanded;
       _animateTo(widget.isExpanded ? _midSize : _minSize);
     }
     if (oldWidget.selectedIndex != widget.selectedIndex ||
@@ -99,32 +90,15 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
 
   void _pruneItemKeys() {
     if (_itemKeys.isEmpty) return;
-    final activeIds = widget.locations.map((location) => location.id).toSet();
+    final activeIds = widget.locations.map((l) => l.id).toSet();
     _itemKeys.removeWhere((id, _) => !activeIds.contains(id));
   }
 
   @override
   void dispose() {
-    _sheetController
-      ..removeListener(_handleSheetExtentChanged)
-      ..dispose();
-    _listController.dispose();
+    _sheetController.dispose();
+    _listScrollController.dispose();
     super.dispose();
-  }
-
-  void _handleSheetExtentChanged() {
-    final extent = _sheetController.value.clamp(_minSize, _maxSize);
-    final progress =
-        ((extent - _minSize) / (_maxSize - _minSize)).clamp(0.0, 1.0);
-
-    widget.onSheetProgressChanged?.call(progress);
-    widget.onSheetExtentChanged?.call(extent);
-
-    final expandedNow = extent >= _expandThreshold;
-    if (expandedNow != _reportedExpanded) {
-      _reportedExpanded = expandedNow;
-      widget.onExpandChanged(expandedNow);
-    }
   }
 
   void _scheduleScrollSelectedIntoView() {
@@ -141,14 +115,23 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
     final index = widget.selectedIndex.clamp(0, widget.locations.length - 1);
     if (_lastScrolledIndex == index) return;
     _lastScrolledIndex = index;
+
     final key = _itemKeys[widget.locations[index].id];
     final ctx = key?.currentContext;
     if (ctx == null) {
       _scheduleScrollSelectedIntoView();
       return;
     }
-    Scrollable.ensureVisible(
-      ctx,
+
+    // Target the list's own scroll position directly — never the sheet's
+    // scrollable — so ensureVisible cannot change the sheet extent.
+    final renderObject = ctx.findRenderObject();
+    if (renderObject == null || !_listScrollController.hasClients) {
+      _scheduleScrollSelectedIntoView();
+      return;
+    }
+    _listScrollController.position.ensureVisible(
+      renderObject,
       alignment: 0.18,
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOutCubic,
@@ -156,21 +139,19 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
   }
 
   Future<void> _animateTo(double target) async {
+    if (!_sheetController.isAttached) return;
     try {
       await _sheetController.animateTo(
-        target.clamp(_minSize, _maxSize),
+        target,
         duration: const Duration(milliseconds: 320),
         curve: Curves.easeOutCubic,
       );
     } catch (_) {}
   }
 
-  void _updateSheetSize(double size) {
-    _sheetController.value = size.clamp(_minSize, _maxSize);
-  }
-
   void _snapToNearest({double velocity = 0}) {
-    final size = _sheetController.value;
+    if (!_sheetController.isAttached) return;
+    final size = _sheetController.size;
 
     double target;
     if (velocity < -600) {
@@ -194,10 +175,26 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
       _animateTo(_minSize).then((_) {
         if (mounted) widget.onDismissed!();
       });
-      return;
+    } else {
+      _animateTo(target);
+    }
+  }
+
+  void _onSheetNotification(DraggableScrollableNotification n) {
+    final progress = ((n.extent - _minSize) / (_maxSize - _minSize)).clamp(0.0, 1.0);
+    widget.onSheetProgressChanged?.call(progress);
+
+    if ((progress - _chromeProgress).abs() > 0.02) {
+      _chromeProgress = progress;
+      if (mounted) setState(() {});
+    } else {
+      _chromeProgress = progress;
     }
 
-    _animateTo(target);
+    final expandedNow = n.extent >= _expandThreshold;
+    if (expandedNow != widget.isExpanded) {
+      widget.onExpandChanged(expandedNow);
+    }
   }
 
   @override
@@ -209,164 +206,104 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
         ? const BorderRadius.vertical(top: Radius.circular(30))
         : BorderRadius.circular(28);
 
-    final panelChild = ClipRRect(
-      borderRadius: radius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F6F1).withValues(alpha: 0.97),
-            borderRadius: radius,
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.72),
-            ),
-          ),
-          child: Column(
-            children: [
-              _SheetHandle(
-                screenHeight: screenHeight,
-                currentSize: () => _sheetController.value,
-                minSize: _minSize,
-                maxSize: _maxSize,
-                onSizeChanged: _updateSheetSize,
-                onSnapNearest: _snapToNearest,
-                countText: '${widget.locations.length} spots found',
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
-                child: LocationCategoryRow(
-                  selectedCategory: widget.selectedCategory,
-                  onChanged: widget.onCategoryChanged,
-                ),
-              ),
-              const Divider(
-                height: 1,
-                thickness: 1,
-                color: Color(0x14A68F7B),
-              ),
-              Expanded(
-                child: Stack(
-                  children: [
-                    _buildList(
-                      scrollController: _listController,
-                      favoriteIds: favoriteIds,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
     return Positioned.fill(
-      child: IgnorePointer(
-        ignoring: !widget.isVisible,
-        child: AnimatedOpacity(
-          opacity: widget.isVisible ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return AnimatedBuilder(
-                animation: _sheetController,
-                child: panelChild,
-                builder: (context, child) {
-                  final height = constraints.maxHeight * _sheetController.value;
-                  return Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 0),
-                      child: SizedBox(
-                        height: height,
-                        child: child,
+      child: NotificationListener<DraggableScrollableNotification>(
+        onNotification: (n) {
+          _onSheetNotification(n);
+          return false;
+        },
+        child: DraggableScrollableSheet(
+          controller: _sheetController,
+          minChildSize: _minSize,
+          maxChildSize: _maxSize,
+          initialChildSize: widget.isExpanded ? _midSize : _minSize,
+          snap: true,
+          snapSizes: const [_minSize, _midSize, _maxSize],
+          snapAnimationDuration: const Duration(milliseconds: 320),
+          builder: (context, sheetScrollController) {
+            // Attach sheetScrollController to an invisible zero-size ListView so
+            // the framework is satisfied. The real list uses _listScrollController
+            // and is fully decoupled from the sheet extent.
+            return Stack(
+              children: [
+                SizedBox.shrink(
+                  child: ListView(
+                    controller: sheetScrollController,
+                    physics: const NeverScrollableScrollPhysics(),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 0),
+                  child: ClipRRect(
+                    borderRadius: radius,
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8F6F1).withValues(alpha: 0.97),
+                          borderRadius: radius,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.72),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            // Drag handle — only this strip resizes the sheet.
+                            _DragHandle(
+                              screenHeight: screenHeight,
+                              controller: _sheetController,
+                              minSize: _minSize,
+                              maxSize: _maxSize,
+                              onSnapNearest: _snapToNearest,
+                            ),
+                            // Title row + filter pills — taps are never consumed
+                            // by the drag recogniser above.
+                            _HeaderRow(
+                              countText: '${widget.locations.length} spots found',
+                              filter: widget.filter,
+                              isExpanded: widget.isExpanded,
+                            ),
+                            // Category row — fixed, never scrolls.
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: LocationCategoryRow(
+                                selectedCategory: widget.selectedCategory,
+                                onChanged: widget.onCategoryChanged,
+                              ),
+                            ),
+                            const Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: Color(0x14A68F7B),
+                            ),
+                            Expanded(child: _buildList(favoriteIds: favoriteIds)),
+                          ],
+                        ),
                       ),
                     ),
-                  );
-                },
-              );
-            },
-          ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  VoidCallback _buildLocationTapHandler(Location location) {
-    return () {
-      final onLocationTap = widget.onLocationTap;
-      if (onLocationTap != null) {
-        onLocationTap(location);
-        return;
-      }
-      widget.onSelectLocation(location);
-    };
-  }
-
-  Widget _buildCard({
-    required Location location,
-    required bool isSelected,
-    required Set<String> favoriteIds,
-  }) {
-    return AnimatedContainer(
-      key: ValueKey(location.id),
-      duration: const Duration(milliseconds: 180),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isSelected
-              ? Color(location.category.colorValue)
-              : const Color(0x14A68F7B),
-          width: isSelected ? 1.5 : 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: _buildLocationTapHandler(location),
-          child: LocationCard(
-            location: location,
-            variant: LocationCardVariant.fullWidth,
-            isSaved: favoriteIds.contains(location.id),
-            showShadow: false,
-            onSaveToggle: () =>
-                ref.read(favoriteIdsProvider.notifier).toggle(location.id),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildList({
-    required ScrollController scrollController,
-    required Set<String> favoriteIds,
-  }) {
+  Widget _buildList({required Set<String> favoriteIds}) {
     if (widget.locationsAsync.isLoading) {
       return ListView(
-        controller: scrollController,
-        primary: false,
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          14 + _floatingPillsReservedSpace,
-          16,
-          16,
-        ),
+        controller: _listScrollController,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         children: const [LoadingList()],
       );
     }
 
     if (widget.locations.isEmpty) {
       return ListView(
-        controller: scrollController,
-        primary: false,
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          16 + _floatingPillsReservedSpace,
-          16,
-          22,
-        ),
+        controller: _listScrollController,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 22),
         children: const [
           AppEmptyState(
             emoji: '🔭',
@@ -378,14 +315,9 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
     }
 
     return ListView.separated(
-      controller: scrollController,
-      primary: false,
-      padding: const EdgeInsets.fromLTRB(
-        16,
-        14 + _floatingPillsReservedSpace,
-        16,
-        24,
-      ),
+      controller: _listScrollController,
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
       itemCount: widget.locations.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
@@ -398,10 +330,30 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
         return KeyedSubtree(
           key: key,
           child: RepaintBoundary(
-            child: _buildCard(
-              location: location,
-              isSelected: isSelected,
-              favoriteIds: favoriteIds,
+            child: AnimatedContainer(
+              key: ValueKey(location.id),
+              duration: const Duration(milliseconds: 180),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: isSelected
+                      ? Color(location.category.colorValue)
+                      : const Color(0x14A68F7B),
+                  width: isSelected ? 1.5 : 1,
+                ),
+              ),
+              child: LocationCard(
+                location: location,
+                variant: LocationCardVariant.fullWidth,
+                isSaved: favoriteIds.contains(location.id),
+                showShadow: false,
+                onTap: () {
+                  widget.onSelectLocation(location);
+                  widget.onLocationTap?.call(location);
+                },
+                onSaveToggle: () =>
+                    ref.read(favoriteIdsProvider.notifier).toggle(location.id),
+              ),
             ),
           ),
         );
@@ -410,33 +362,33 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel>
   }
 }
 
-class _SheetHandle extends StatelessWidget {
-  const _SheetHandle({
+// ---------------------------------------------------------------------------
+// _DragHandle — thin strip at the top; ONLY this widget drives sheet resize.
+// ---------------------------------------------------------------------------
+
+class _DragHandle extends StatelessWidget {
+  const _DragHandle({
     required this.screenHeight,
-    required this.currentSize,
+    required this.controller,
     required this.minSize,
     required this.maxSize,
-    required this.onSizeChanged,
     required this.onSnapNearest,
-    required this.countText,
   });
 
   final double screenHeight;
-  final double Function() currentSize;
+  final DraggableScrollableController controller;
   final double minSize;
   final double maxSize;
-  final ValueChanged<double> onSizeChanged;
   final void Function({double velocity}) onSnapNearest;
-  final String countText;
 
-  void _onDragUpdate(DragUpdateDetails details) {
-    final delta = -details.delta.dy / screenHeight;
-    onSizeChanged((currentSize() + delta).clamp(minSize, maxSize));
+  void _onDragUpdate(DragUpdateDetails d) {
+    if (!controller.isAttached) return;
+    final delta = -d.delta.dy / screenHeight;
+    controller.jumpTo((controller.size + delta).clamp(minSize, maxSize));
   }
 
-  void _onDragEnd(DragEndDetails details) {
-    onSnapNearest(velocity: details.primaryVelocity ?? 0);
-  }
+  void _onDragEnd(DragEndDetails d) =>
+      onSnapNearest(velocity: d.primaryVelocity ?? 0);
 
   @override
   Widget build(BuildContext context) {
@@ -445,64 +397,182 @@ class _SheetHandle extends StatelessWidget {
       onVerticalDragUpdate: _onDragUpdate,
       onVerticalDragEnd: _onDragEnd,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 12, 22, 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 42,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: SpontiColors.textMuted.withValues(alpha: 0.26),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Center(
+          child: Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: SpontiColors.textMuted.withValues(alpha: 0.26),
+              borderRadius: BorderRadius.circular(999),
             ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Color(0x14F97316),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.explore_rounded,
-                    color: Color(0xFFF97316),
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Nearby picks',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: SpontiColors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        countText,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SpontiColors.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// _HeaderRow — title + count + filter pills. No drag recogniser here so
+// pill taps are never swallowed by the sheet's gesture arena.
+// ---------------------------------------------------------------------------
+
+class _HeaderRow extends ConsumerWidget {
+  const _HeaderRow({
+    required this.countText,
+    required this.filter,
+    required this.isExpanded,
+  });
+
+  final String countText;
+  final ExploreFilter filter;
+  final bool isExpanded;
+
+  Future<void> _onRankingTap(BuildContext context, WidgetRef ref) async {
+    final result = await showDiscoveryFilterModal(
+      context: context,
+      initialValue: filter.rankingFilter,
+    );
+    // null means "None" — reset to default trending.
+    ref.read(exploreFilterProvider.notifier)
+        .setRanking(result ?? ExploreRanking.trending);
+    await ref.read(exploreProvider.notifier).refresh();
+  }
+
+  Future<void> _onPriceTap(BuildContext context, WidgetRef ref) async {
+    final result = await showBudgetFilterModal(
+      context: context,
+      initialValue: filter.priceFilter,
+    );
+    ref.read(exploreFilterProvider.notifier).setPrice(result);
+    await ref.read(exploreProvider.notifier).refresh();
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Nearby picks',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: SpontiColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  countText,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: SpontiColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isExpanded) ...[
+            _FilterPill(
+              label: filter.rankingFilter.label,
+              color: _rankingColor(filter.rankingFilter),
+              onTap: () => _onRankingTap(context, ref),
+            ),
+            const SizedBox(width: 6),
+            _FilterPill(
+              label: filter.priceFilter?.symbol ?? 'Any',
+              color: filter.priceFilter != null
+                  ? _priceColor(filter.priceFilter!)
+                  : SpontiColors.textSecondary,
+              isActive: filter.priceFilter != null,
+              onTap: () => _onPriceTap(context, ref),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _FilterPill — compact tappable chip used in the header row.
+// ---------------------------------------------------------------------------
+
+class _FilterPill extends StatelessWidget {
+  const _FilterPill({
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.isActive = true,
+  });
+
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: isActive
+                ? color.withValues(alpha: 0.1)
+                : SpontiColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: isActive
+                  ? color.withValues(alpha: 0.45)
+                  : SpontiColors.outline,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: isActive ? color : SpontiColors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 3),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 13,
+                color: isActive ? color : SpontiColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Color _rankingColor(ExploreRanking ranking) => switch (ranking) {
+  ExploreRanking.trending => SpontiColors.primary,
+  ExploreRanking.popular => const Color(0xFFE07A15),
+  ExploreRanking.lowkey => const Color(0xFF3A7D44),
+  ExploreRanking.newest => SpontiColors.accent,
+};
+
+Color _priceColor(PriceRange price) => switch (price) {
+  PriceRange.free => SpontiColors.secondary,
+  PriceRange.budget => SpontiColors.primary,
+  PriceRange.moderate => SpontiColors.warning,
+  PriceRange.expensive => const Color(0xFF7B4F2E),
+};
