@@ -12,7 +12,6 @@ class MapPin extends ConsumerWidget {
     required this.isSelected,
     this.locationName,
     this.onTap,
-    this.rating,
     this.ranking,
   });
 
@@ -20,7 +19,6 @@ class MapPin extends ConsumerWidget {
   final bool isSelected;
   final String? locationName;
   final VoidCallback? onTap;
-  final double? rating;
   final LocationRanking? ranking;
 
   static const _textStyle = TextStyle(

@@ -25,6 +25,8 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
     required this.selectedCategory,
     required this.onCategoryChanged,
     required this.filter,
+    this.onRankingChanged,
+    this.onPriceChanged,
     this.onLocationTap,
     this.onSheetProgressChanged,
     this.onDismissed,
@@ -40,6 +42,8 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
   final ExploreFilter filter;
   final ValueChanged<bool> onExpandChanged;
   final ValueChanged<Location> onSelectLocation;
+  final ValueChanged<ExploreRanking?>? onRankingChanged;
+  final ValueChanged<PriceRange?>? onPriceChanged;
   final ValueChanged<Location>? onLocationTap;
   final LocationCategory? selectedCategory;
   final ValueChanged<LocationCategory?> onCategoryChanged;
@@ -262,6 +266,8 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
                               countText: '${widget.locations.length} spots found',
                               filter: widget.filter,
                               isExpanded: widget.isExpanded,
+                              onRankingChanged: widget.onRankingChanged,
+                              onPriceChanged: widget.onPriceChanged,
                             ),
                             // Category row — fixed, never scrolls.
                             Padding(
@@ -418,39 +424,40 @@ class _DragHandle extends StatelessWidget {
 // pill taps are never swallowed by the sheet's gesture arena.
 // ---------------------------------------------------------------------------
 
-class _HeaderRow extends ConsumerWidget {
+class _HeaderRow extends StatelessWidget {
   const _HeaderRow({
     required this.countText,
     required this.filter,
     required this.isExpanded,
+    this.onRankingChanged,
+    this.onPriceChanged,
   });
 
   final String countText;
   final ExploreFilter filter;
   final bool isExpanded;
+  final ValueChanged<ExploreRanking?>? onRankingChanged;
+  final ValueChanged<PriceRange?>? onPriceChanged;
 
-  Future<void> _onRankingTap(BuildContext context, WidgetRef ref) async {
+  Future<void> _onRankingTap(BuildContext context) async {
     final result = await showDiscoveryFilterModal(
       context: context,
       initialValue: filter.rankingFilter,
     );
     // null means "None" — reset to default trending.
-    ref.read(exploreFilterProvider.notifier)
-        .setRanking(result ?? ExploreRanking.trending);
-    await ref.read(exploreProvider.notifier).refresh();
+    onRankingChanged?.call(result);
   }
 
-  Future<void> _onPriceTap(BuildContext context, WidgetRef ref) async {
+  Future<void> _onPriceTap(BuildContext context) async {
     final result = await showBudgetFilterModal(
       context: context,
       initialValue: filter.priceFilter,
     );
-    ref.read(exploreFilterProvider.notifier).setPrice(result);
-    await ref.read(exploreProvider.notifier).refresh();
+    onPriceChanged?.call(result);
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Row(
@@ -483,7 +490,7 @@ class _HeaderRow extends ConsumerWidget {
             _FilterPill(
               label: filter.rankingFilter.label,
               color: _rankingColor(filter.rankingFilter),
-              onTap: () => _onRankingTap(context, ref),
+              onTap: () => _onRankingTap(context),
             ),
             const SizedBox(width: 6),
             _FilterPill(
@@ -492,7 +499,7 @@ class _HeaderRow extends ConsumerWidget {
                   ? _priceColor(filter.priceFilter!)
                   : SpontiColors.textSecondary,
               isActive: filter.priceFilter != null,
-              onTap: () => _onPriceTap(context, ref),
+              onTap: () => _onPriceTap(context),
             ),
           ],
         ],

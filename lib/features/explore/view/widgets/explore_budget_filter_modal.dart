@@ -41,9 +41,7 @@ class _BudgetFilterModalState extends State<_BudgetFilterModal> {
 
   void _pick(PriceRange? price) {
     setState(() => _selected = price);
-    Future.microtask(() {
-      if (mounted) Navigator.of(context).pop(price);
-    });
+    Navigator.of(context, rootNavigator: true).pop(price);
   }
 
   @override
@@ -95,7 +93,10 @@ class _BudgetFilterModalState extends State<_BudgetFilterModal> {
                     ),
                     GestureDetector(
                       onTap: () =>
-                          Navigator.of(context).pop(widget.initialValue),
+                          Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).pop(widget.initialValue),
                       child: Container(
                         width: 28,
                         height: 28,

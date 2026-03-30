@@ -11,10 +11,8 @@ import 'package:sponti/features/explore/view/widgets/explore_filter_chips.dart';
 import 'package:sponti/features/explore/view/widgets/explore_filter_sheets.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
-import 'package:sponti/features/locations/utils/location_ranking.dart';
+import 'package:sponti/features/locations/utils/location_map_markers.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
-import 'package:sponti/features/locations/view/widgets/map_pin.dart';
-import 'package:sponti/features/locations/view/widgets/marker_collision_detector.dart';
 import 'package:sponti/features/locations/viewmodel/map_zoom_provider.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
@@ -113,15 +111,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     _setShellHidden(_wasPanelExpandedBeforeDetail);
   }
 
-  Future<void> _toggleNowOpen() async {
+  void _toggleNowOpen() {
     ref.read(exploreFilterProvider.notifier).toggleNowOpen();
-    await ref.read(exploreProvider.notifier).refresh();
   }
 
-  Future<void> _onCategoryChanged(LocationCategory? category) async {
+  void _onCategoryChanged(LocationCategory? category) {
     ref.read(exploreFilterProvider.notifier).setCategory(category);
     _setPanelExpanded(true);
-    await ref.read(exploreProvider.notifier).refresh();
   }
 
   void _syncPanelState(ExploreFilter filter) {
@@ -135,64 +131,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       _lastAutoExpandedCategory = filter.categoryFilter;
       _setPanelExpanded(true);
     });
-  }
-
-  List<Marker> _buildSortedMarkers(List<Location> locations, String? selectedId) {
-    double currentZoom;
-    try {
-      currentZoom = _mapController.camera.zoom;
-    } catch (_) {
-      currentZoom = 15.5;
-    }
-
-    final markerData = locations.map((location) {
-      final isSelected = location.id == selectedId;
-      final zIndex = isSelected ? 1000.0 : 100.0 + (location.rating * 10).clamp(0.0, 100.0);
-      final ranking = location.getPrimaryRanking(locations);
-      return (
-        location: location,
-        isSelected: isSelected,
-        zIndex: zIndex,
-        point: LatLng(location.coordinates.latitude, location.coordinates.longitude),
-        ranking: ranking,
-      );
-    }).toList();
-
-    markerData.sort((a, b) => a.zIndex.compareTo(b.zIndex));
-
-    final markerPositions = {
-      for (var data in markerData) data.location.id: data.point,
-    };
-
-    final collidingIds = MarkerCollisionDetector.getCollidingMarkerIds(
-      markerPositions: markerPositions,
-      zoom: currentZoom,
-    );
-
-    return markerData.map((data) {
-      final shouldHideLabel = currentZoom < 16.0 &&
-          collidingIds.contains(data.location.id) &&
-          !data.isSelected;
-      return Marker(
-        point: data.point,
-        width: 100,
-        height: 50,
-        alignment: Alignment.center,
-        child: RepaintBoundary(
-          child: GestureDetector(
-            key: ValueKey('explore_marker_${data.location.id}'),
-            onTap: () => _showLocationDetails(data.location),
-            child: MapPin(
-              category: data.location.category,
-              isSelected: data.isSelected,
-              locationName: shouldHideLabel ? null : data.location.name,
-              rating: data.location.rating,
-              ranking: data.ranking,
-            ),
-          ),
-        ),
-      );
-    }).toList(growable: false);
   }
 
   @override
@@ -211,6 +149,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         : (locations.isNotEmpty ? locations.first.id : null);
     final selectedIndex =
         selectedId != null ? locations.indexWhere((l) => l.id == selectedId) : 0;
+    final currentZoom = (() {
+      try {
+        return _mapController.camera.zoom;
+      } catch (_) {
+        return 15.5;
+      }
+    })();
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -248,7 +193,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ),
                 MarkerLayer(
                   rotate: false,
-                  markers: _buildSortedMarkers(locations, selectedId),
+                  markers: buildLocationMarkers(
+                    locations: locations,
+                    selectedId: selectedId,
+                    zoom: currentZoom,
+                    keyPrefix: 'explore_marker',
+                    onTap: _showLocationDetails,
+                  ),
                 ),
               ],
             ),
@@ -304,6 +255,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               selectedCategory: filter.categoryFilter,
               onCategoryChanged: _onCategoryChanged,
               filter: filter,
+              onRankingChanged: (ranking) {
+                ref.read(exploreFilterProvider.notifier).setRanking(
+                  ranking ?? ExploreRanking.trending,
+                );
+              },
+              onPriceChanged: (price) {
+                ref.read(exploreFilterProvider.notifier).setPrice(price);
+              },
               onSheetProgressChanged: (progress) {
                 _sheetProgress.value = progress;
                 _shellChromeProgressController.state = progress;

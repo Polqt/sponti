@@ -11,11 +11,10 @@ import 'package:sponti/core/widgets/glass_container.dart';
 import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/utils/location_map_markers.dart';
 import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
-import 'package:sponti/features/locations/view/widgets/map_pin.dart';
-import 'package:sponti/features/locations/view/widgets/marker_collision_detector.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
 class LocationScreen extends ConsumerStatefulWidget {
@@ -127,64 +126,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _setShellHidden(false);
   }
 
-  List<Marker> _buildSortedMarkers(List<Location> locations, String? selectedId) {
-    double currentZoom;
-    try {
-      currentZoom = _mapController.camera.zoom;
-    } catch (_) {
-      currentZoom = 15.5;
-    }
-
-    final markerData = locations.map((location) {
-      final isSelected = location.id == selectedId;
-      final zIndex = isSelected ? 1000.0 : 100.0 + (location.rating * 10).clamp(0.0, 100.0);
-      final ranking = location.getPrimaryRanking(locations);
-      return (
-        location: location,
-        isSelected: isSelected,
-        zIndex: zIndex,
-        point: LatLng(location.coordinates.latitude, location.coordinates.longitude),
-        ranking: ranking,
-      );
-    }).toList();
-
-    markerData.sort((a, b) => a.zIndex.compareTo(b.zIndex));
-
-    final markerPositions = {
-      for (var data in markerData) data.location.id: data.point,
-    };
-
-    final collidingIds = MarkerCollisionDetector.getCollidingMarkerIds(
-      markerPositions: markerPositions,
-      zoom: currentZoom,
-    );
-
-    return markerData.map((data) {
-      final shouldHideLabel = currentZoom < 16.0 &&
-          collidingIds.contains(data.location.id) &&
-          !data.isSelected;
-      return Marker(
-        point: data.point,
-        width: 100,
-        height: 50,
-        alignment: Alignment.center,
-        child: RepaintBoundary(
-          child: GestureDetector(
-            key: ValueKey('location_marker_${data.location.id}'),
-            onTap: () => _showLocationDetails(data.location),
-            child: MapPin(
-              category: data.location.category,
-              isSelected: data.isSelected,
-              locationName: shouldHideLabel ? null : data.location.name,
-              rating: data.location.rating,
-              ranking: data.ranking,
-            ),
-          ),
-        ),
-      );
-    }).toList(growable: false);
-  }
-
   @override
   void dispose() {
     _shellChromeProgressController.state = 0.0;
@@ -199,10 +140,19 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     final filter = ref.watch(locationFilterProvider);
     var locations = locationsAsync.valueOrNull ?? const <Location>[];
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final rankingSnapshot = locations.isEmpty
+        ? null
+        : locations.createRankingSnapshot();
 
-    if (filter.selectedRanking != null && locations.isNotEmpty) {
+    if (filter.selectedRanking != null && rankingSnapshot != null) {
       locations = locations
-          .where((loc) => loc.getPrimaryRanking(locations) == filter.selectedRanking)
+          .where((loc) => rankingSnapshot.rankingFor(loc) == filter.selectedRanking)
+          .toList();
+    }
+
+    if (filter.selectedPrice != null) {
+      locations = locations
+          .where((loc) => loc.priceRange == filter.selectedPrice)
           .toList();
     }
 
@@ -231,6 +181,13 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
         : (locations.isNotEmpty ? locations.first.id : null);
     final selectedIndex =
         selectedId != null ? locations.indexWhere((l) => l.id == selectedId) : 0;
+    final currentZoom = (() {
+      try {
+        return _mapController.camera.zoom;
+      } catch (_) {
+        return 15.5;
+      }
+    })();
 
     // Build an ExploreFilter that reflects the current locationFilterProvider
     // state so the panel pills show the correct active selection.
@@ -241,6 +198,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               orElse: () => ExploreRanking.trending,
             )
           : ExploreRanking.trending,
+      priceFilter: filter.selectedPrice,
     );
 
     return Scaffold(
@@ -276,7 +234,13 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 ),
                 MarkerLayer(
                   rotate: false,
-                  markers: _buildSortedMarkers(locations, selectedId),
+                  markers: buildLocationMarkers(
+                    locations: locations,
+                    selectedId: selectedId,
+                    zoom: currentZoom,
+                    keyPrefix: 'location_marker',
+                    onTap: _showLocationDetails,
+                  ),
                 ),
               ],
             ),
@@ -358,6 +322,19 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               selectedCategory: filter.selectedCategory,
               onCategoryChanged: _onCategoryChanged,
               filter: panelFilter,
+              onRankingChanged: (ranking) {
+                ref.read(locationFilterProvider.notifier).setRanking(
+                  ranking == null
+                      ? null
+                      : LocationRanking.values.firstWhere(
+                          (value) => value.name == ranking.name,
+                          orElse: () => LocationRanking.trending,
+                        ),
+                );
+              },
+              onPriceChanged: (price) {
+                ref.read(locationFilterProvider.notifier).setPrice(price);
+              },
               onExpandChanged: _setPanelExpanded,
               onDismissed: _hidePanel,
               edgeToEdge: true,

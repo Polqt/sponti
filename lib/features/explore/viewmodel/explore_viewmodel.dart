@@ -106,10 +106,12 @@ class ExploreFilterViewModel extends Notifier<ExploreFilter> {
 
 class ExploreViewModel extends AsyncNotifier<List<Location>> {
   @override
-  Future<List<Location>> build() => _fetch();
+  Future<List<Location>> build() {
+    final filter = ref.watch(exploreFilterProvider);
+    return _fetch(filter);
+  }
 
-  Future<List<Location>> _fetch() async {
-    final filter = ref.read(exploreFilterProvider);
+  Future<List<Location>> _fetch(ExploreFilter filter) async {
     final response = await Supabase.instance.client.rpc(
       SupabaseRPC.getTrendingLocations,
       params: {
@@ -142,8 +144,9 @@ class ExploreViewModel extends AsyncNotifier<List<Location>> {
   }
 
   Future<void> refresh() async {
+    final filter = ref.read(exploreFilterProvider);
     state = const AsyncLoading();
-    state = await AsyncValue.guard(_fetch);
+    state = await AsyncValue.guard(() => _fetch(filter));
   }
 }
 

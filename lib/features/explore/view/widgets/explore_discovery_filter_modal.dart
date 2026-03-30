@@ -41,9 +41,7 @@ class _DiscoveryFilterModalState extends State<_DiscoveryFilterModal> {
 
   void _pick(ExploreRanking? ranking) {
     setState(() => _selected = ranking);
-    Future.microtask(() {
-      if (mounted) Navigator.of(context).pop(ranking);
-    });
+    Navigator.of(context, rootNavigator: true).pop(ranking);
   }
 
   @override
@@ -95,7 +93,10 @@ class _DiscoveryFilterModalState extends State<_DiscoveryFilterModal> {
                     ),
                     GestureDetector(
                       onTap: () =>
-                          Navigator.of(context).pop(widget.initialValue),
+                          Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).pop(widget.initialValue),
                       child: Container(
                         width: 28,
                         height: 28,
