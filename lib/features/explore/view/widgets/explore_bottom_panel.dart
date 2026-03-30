@@ -442,7 +442,7 @@ class _HeaderRow extends StatelessWidget {
   Future<void> _onRankingTap(BuildContext context) async {
     final result = await showDiscoveryFilterModal(
       context: context,
-      initialValue: filter.rankingFilter,
+      initialValue: filter.hasRankingFilter ? filter.rankingFilter : null,
     );
     // null means "None" — reset to default trending.
     onRankingChanged?.call(result);
@@ -488,8 +488,11 @@ class _HeaderRow extends StatelessWidget {
           ),
           if (isExpanded) ...[
             _FilterPill(
-              label: filter.rankingFilter.label,
-              color: _rankingColor(filter.rankingFilter),
+              label: filter.hasRankingFilter ? filter.rankingFilter.label : 'Any',
+              color: filter.hasRankingFilter
+                  ? _rankingColor(filter.rankingFilter)
+                  : SpontiColors.textSecondary,
+              isActive: filter.hasRankingFilter,
               onTap: () => _onRankingTap(context),
             ),
             const SizedBox(width: 6),

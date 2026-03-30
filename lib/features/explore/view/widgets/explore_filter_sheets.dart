@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_button.dart';
+import 'package:sponti/features/explore/view/widgets/explore_discovery_filter_modal.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/category.dart';
@@ -16,24 +17,17 @@ Future<void> showRankingFilterSheet(
   WidgetRef ref,
   ExploreFilter filter,
 ) async {
-  final options = ExploreRanking.values
-      .map(
-        (ranking) => _ExploreSheetOption(
-          value: ranking,
-          label: ranking.label,
-          subtitle: ranking.subtitle,
-        ),
-      )
-      .toList(growable: false);
-
-  final selected = await _showExploreSheet<ExploreRanking>(
+  final selected = await showDiscoveryFilterModal(
     context: context,
-    title: 'Ranking',
-    initialValue: filter.rankingFilter,
-    options: options,
+    initialValue: filter.hasRankingFilter ? filter.rankingFilter : null,
   );
 
-  if (selected == null || selected == filter.rankingFilter) return;
+  if (selected == null && !filter.hasRankingFilter) return;
+  if (selected != null &&
+      filter.hasRankingFilter &&
+      selected == filter.rankingFilter) {
+    return;
+  }
 
   ref.read(exploreFilterProvider.notifier).setRanking(selected);
 }

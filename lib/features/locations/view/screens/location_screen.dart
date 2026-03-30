@@ -198,6 +198,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               orElse: () => ExploreRanking.trending,
             )
           : ExploreRanking.trending,
+      hasRankingFilter: filter.selectedRanking != null,
       priceFilter: filter.selectedPrice,
     );
 

@@ -32,6 +32,7 @@ class ExploreFilterChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ranking = filter.rankingFilter;
+    final hasRankingFilter = filter.hasRankingFilter;
     final category = filter.categoryFilter;
     final price = filter.priceFilter;
     final nowOpen = filter.nowOpenOnly;
@@ -47,10 +48,12 @@ class ExploreFilterChips extends StatelessWidget {
     if (showRankingChip) {
       addChip(
         _ExploreFilterChip(
-          label: '${ranking.label} \u2713',
-          color: _rankingColor(ranking),
+          label: hasRankingFilter ? '${ranking.label} \u2713' : 'Sort',
+          color: hasRankingFilter
+              ? _rankingColor(ranking)
+              : SpontiColors.textSecondary,
           leading: const Icon(Icons.auto_awesome_rounded),
-          isActive: true,
+          isActive: hasRankingFilter,
           onTap: onTapRanking,
         ),
       );

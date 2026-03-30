@@ -256,9 +256,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               onCategoryChanged: _onCategoryChanged,
               filter: filter,
               onRankingChanged: (ranking) {
-                ref.read(exploreFilterProvider.notifier).setRanking(
-                  ranking ?? ExploreRanking.trending,
-                );
+                ref.read(exploreFilterProvider.notifier).setRanking(ranking);
               },
               onPriceChanged: (price) {
                 ref.read(exploreFilterProvider.notifier).setPrice(price);
