@@ -49,7 +49,7 @@ class DiscoveryBody extends ConsumerWidget {
             const DiscoveryCategoryAccordionsSection(),
             const SizedBox(height: 32),
             Text(
-              'TOP CURATORS',
+              'COMMUNITY LEADERS',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.4,
@@ -57,7 +57,7 @@ class DiscoveryBody extends ConsumerWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Live community leaders based on reviews and check-ins.',
+              'Live leaderboards for curators, reviewers, and visitors.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: const Color(0xFF6F675F),
                 fontWeight: FontWeight.w500,

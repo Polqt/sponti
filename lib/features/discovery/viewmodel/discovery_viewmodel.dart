@@ -136,6 +136,26 @@ final discoveryViewModelProvider =
     );
 
 const _topCuratorsLimit = 8;
+const _curatorProfileColumns =
+    'id, full_name, username, avatar_url, total_reviews, total_check_ins, updated_at';
+
+enum DiscoveryCuratorRanking { overall, reviewers, visitors }
+
+@immutable
+class DiscoveryCuratorLeaderboards {
+  const DiscoveryCuratorLeaderboards({
+    required this.topCurators,
+    required this.topReviewers,
+    required this.topVisitors,
+  });
+
+  final List<DiscoveryCurator> topCurators;
+  final List<DiscoveryCurator> topReviewers;
+  final List<DiscoveryCurator> topVisitors;
+
+  bool get isEmpty =>
+      topCurators.isEmpty && topReviewers.isEmpty && topVisitors.isEmpty;
+}
 
 List<Location> _parseLocations(
   List<dynamic> response,
@@ -151,20 +171,54 @@ List<Location> _parseLocations(
 }
 
 List<DiscoveryCurator> _parseCurators(List<dynamic> rows) {
-  final curators = rows
+  return rows
       .map((item) => DiscoveryCurator.fromJson(item as Map<String, dynamic>))
       .where((curator) => curator.activityScore > 0)
-      .toList();
+      .toList(growable: false);
+}
 
-  curators.sort((a, b) {
-    final scoreComparison = b.activityScore.compareTo(a.activityScore);
-    if (scoreComparison != 0) return scoreComparison;
+List<DiscoveryCurator> _rankCurators(
+  List<DiscoveryCurator> curators,
+  DiscoveryCuratorRanking ranking,
+) {
+  final ranked = curators.where((curator) {
+    return switch (ranking) {
+      DiscoveryCuratorRanking.overall => curator.activityScore > 0,
+      DiscoveryCuratorRanking.reviewers => curator.totalReviews > 0,
+      DiscoveryCuratorRanking.visitors => curator.totalCheckIns > 0,
+    };
+  }).toList();
 
-    final reviewComparison = b.totalReviews.compareTo(a.totalReviews);
-    if (reviewComparison != 0) return reviewComparison;
+  ranked.sort((a, b) {
+    final primaryComparison = switch (ranking) {
+      DiscoveryCuratorRanking.overall =>
+        b.activityScore.compareTo(a.activityScore),
+      DiscoveryCuratorRanking.reviewers =>
+        b.totalReviews.compareTo(a.totalReviews),
+      DiscoveryCuratorRanking.visitors =>
+        b.totalCheckIns.compareTo(a.totalCheckIns),
+    };
+    if (primaryComparison != 0) return primaryComparison;
 
-    final checkInComparison = b.totalCheckIns.compareTo(a.totalCheckIns);
-    if (checkInComparison != 0) return checkInComparison;
+    final secondaryComparison = switch (ranking) {
+      DiscoveryCuratorRanking.overall =>
+        b.totalReviews.compareTo(a.totalReviews),
+      DiscoveryCuratorRanking.reviewers =>
+        b.totalCheckIns.compareTo(a.totalCheckIns),
+      DiscoveryCuratorRanking.visitors =>
+        b.totalReviews.compareTo(a.totalReviews),
+    };
+    if (secondaryComparison != 0) return secondaryComparison;
+
+    final tertiaryComparison = switch (ranking) {
+      DiscoveryCuratorRanking.overall =>
+        b.totalCheckIns.compareTo(a.totalCheckIns),
+      DiscoveryCuratorRanking.reviewers =>
+        b.activityScore.compareTo(a.activityScore),
+      DiscoveryCuratorRanking.visitors =>
+        b.activityScore.compareTo(a.activityScore),
+    };
+    if (tertiaryComparison != 0) return tertiaryComparison;
 
     final nameComparison = a.rankingKey.compareTo(b.rankingKey);
     if (nameComparison != 0) return nameComparison;
@@ -172,7 +226,20 @@ List<DiscoveryCurator> _parseCurators(List<dynamic> rows) {
     return a.id.compareTo(b.id);
   });
 
-  return List.unmodifiable(curators.take(_topCuratorsLimit));
+  return List.unmodifiable(ranked.take(_topCuratorsLimit));
+}
+
+DiscoveryCuratorLeaderboards _buildCuratorLeaderboards(
+  List<DiscoveryCurator> curators, {
+  List<DiscoveryCurator>? overallCurators,
+}) {
+  return DiscoveryCuratorLeaderboards(
+    topCurators: overallCurators == null
+        ? _rankCurators(curators, DiscoveryCuratorRanking.overall)
+        : _rankCurators(overallCurators, DiscoveryCuratorRanking.overall),
+    topReviewers: _rankCurators(curators, DiscoveryCuratorRanking.reviewers),
+    topVisitors: _rankCurators(curators, DiscoveryCuratorRanking.visitors),
+  );
 }
 
 /// Fetches top spots per category ordered by favorites count (popular ranking).
@@ -193,19 +260,27 @@ final categoryTopSpotsProvider = FutureProvider.autoDispose
   return _parseLocations(response as List<dynamic>, remote);
 });
 
-final topCuratorsProvider = StreamProvider.autoDispose<List<DiscoveryCurator>>((
+final curatorLeaderboardsProvider =
+    StreamProvider.autoDispose<DiscoveryCuratorLeaderboards>((
   ref,
 ) async* {
   final client = Supabase.instance.client;
-  final initialResponse = await client.rpc(
-    ApiConstants.rpcGetTopCurators,
-    params: {'limit_count': _topCuratorsLimit},
-  );
+  final responses = await Future.wait<dynamic>([
+    client.rpc(
+      ApiConstants.rpcGetTopCurators,
+      params: {'limit_count': _topCuratorsLimit},
+    ),
+    client.from(ApiConstants.profilesTable).select(_curatorProfileColumns),
+  ]);
 
-  yield _parseCurators(initialResponse as List<dynamic>);
+  yield _buildCuratorLeaderboards(
+    _parseCurators(responses[1] as List<dynamic>),
+    overallCurators: _parseCurators(responses[0] as List<dynamic>),
+  );
 
   yield* client
       .from(ApiConstants.profilesTable)
       .stream(primaryKey: const ['id'])
-      .map(_parseCurators);
+      .map(_parseCurators)
+      .map(_buildCuratorLeaderboards);
 });
