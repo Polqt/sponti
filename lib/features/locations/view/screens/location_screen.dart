@@ -9,14 +9,12 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
 import 'package:sponti/core/widgets/glass_container.dart';
 import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
-import 'package:sponti/features/explore/view/widgets/explore_floating_filter_pills.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/utils/location_map_markers.dart';
 import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
-import 'package:sponti/features/locations/view/widgets/map_pin.dart';
-import 'package:sponti/features/locations/view/widgets/marker_collision_detector.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
 class LocationScreen extends ConsumerStatefulWidget {
@@ -28,12 +26,9 @@ class LocationScreen extends ConsumerStatefulWidget {
 
 class _LocationScreenState extends ConsumerState<LocationScreen> {
   static const _defaultCenter = LatLng(10.6765, 122.9509);
-  static const double _minSheetSize = 0.25;
-  static const double _midSheetSize = 0.50;
 
   final MapController _mapController = MapController();
   final ValueNotifier<double> _sheetProgress = ValueNotifier<double>(0.0);
-  late final ValueNotifier<double> _sheetExtent;
 
   late final StateController<bool> _shellBarHiddenController;
   late final StateController<double> _shellChromeProgressController;
@@ -47,11 +42,8 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   @override
   void initState() {
     super.initState();
-    _sheetExtent = ValueNotifier<double>(_isExplorePanelExpanded ? _midSheetSize : _minSheetSize);
     _shellBarHiddenController = ref.read(shellBarHiddenProvider.notifier);
-    _shellChromeProgressController = ref.read(
-      shellChromeProgressProvider.notifier,
-    );
+    _shellChromeProgressController = ref.read(shellChromeProgressProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) => _consumePending());
   }
 
@@ -62,9 +54,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _showLocationDetails(pending);
   }
 
-  void _setShellHidden(bool hidden) {
-    _shellBarHiddenController.state = hidden;
-  }
+  void _setShellHidden(bool hidden) => _shellBarHiddenController.state = hidden;
 
   Future<void> _onCategoryChanged(LocationCategory? category) async {
     ref.read(locationFilterProvider.notifier).setCategory(category);
@@ -92,7 +82,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = true;
       _isExplorePanelExpanded = true;
     });
-    _sheetExtent.value = _midSheetSize;
     _setSheetProgress(1.0);
     _setShellHidden(true);
   }
@@ -111,7 +100,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
     });
-    _sheetExtent.value = _minSheetSize;
     _focusLocation(location);
     _setSheetProgress(0.0);
     _setShellHidden(true);
@@ -127,7 +115,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   void _setPanelExpanded(bool expanded) {
     setState(() => _isExplorePanelExpanded = expanded);
-    _sheetExtent.value = expanded ? _midSheetSize : _minSheetSize;
   }
 
   void _hidePanel() {
@@ -135,67 +122,8 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
     });
-    _sheetExtent.value = _minSheetSize;
     _setSheetProgress(0.0);
     _setShellHidden(false);
-  }
-
-  List<Marker> _buildSortedMarkers(List<Location> locations, String? selectedId) {
-    double currentZoom;
-    try {
-      currentZoom = _mapController.camera.zoom;
-    } catch (_) {
-      currentZoom = 15.5;
-    }
-
-    final markerData = locations.map((location) {
-      final isSelected = location.id == selectedId;
-      final zIndex = isSelected ? 1000.0 : 100.0 + (location.rating * 10).clamp(0.0, 100.0);
-      final ranking = location.getPrimaryRanking(locations);
-      return (
-        location: location,
-        isSelected: isSelected,
-        zIndex: zIndex,
-        point: LatLng(location.coordinates.latitude, location.coordinates.longitude),
-        ranking: ranking,
-      );
-    }).toList();
-
-    markerData.sort((a, b) => a.zIndex.compareTo(b.zIndex));
-
-    final markerPositions = {
-      for (var data in markerData) data.location.id: data.point,
-    };
-
-    final collidingIds = MarkerCollisionDetector.getCollidingMarkerIds(
-      markerPositions: markerPositions,
-      zoom: currentZoom,
-    );
-
-    return markerData.map((data) {
-      final shouldHideLabel = currentZoom < 16.0 &&
-          collidingIds.contains(data.location.id) &&
-          !data.isSelected;
-      return Marker(
-        point: data.point,
-        width: 100,
-        height: 50,
-        alignment: Alignment.center,
-        child: RepaintBoundary(
-          child: GestureDetector(
-            key: ValueKey('location_marker_${data.location.id}'),
-            onTap: () => _showLocationDetails(data.location),
-            child: MapPin(
-              category: data.location.category,
-              isSelected: data.isSelected,
-              locationName: shouldHideLabel ? null : data.location.name,
-              rating: data.location.rating,
-              ranking: data.ranking,
-            ),
-          ),
-        ),
-      );
-    }).toList(growable: false);
   }
 
   @override
@@ -203,7 +131,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _shellChromeProgressController.state = 0.0;
     _setShellHidden(false);
     _sheetProgress.dispose();
-    _sheetExtent.dispose();
     super.dispose();
   }
 
@@ -213,10 +140,19 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     final filter = ref.watch(locationFilterProvider);
     var locations = locationsAsync.valueOrNull ?? const <Location>[];
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final rankingSnapshot = locations.isEmpty
+        ? null
+        : locations.createRankingSnapshot();
 
-    if (filter.selectedRanking != null && locations.isNotEmpty) {
+    if (filter.selectedRanking != null && rankingSnapshot != null) {
       locations = locations
-          .where((loc) => loc.getPrimaryRanking(locations) == filter.selectedRanking)
+          .where((loc) => rankingSnapshot.rankingFor(loc) == filter.selectedRanking)
+          .toList();
+    }
+
+    if (filter.selectedPrice != null) {
+      locations = locations
+          .where((loc) => loc.priceRange == filter.selectedPrice)
           .toList();
     }
 
@@ -245,6 +181,26 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
         : (locations.isNotEmpty ? locations.first.id : null);
     final selectedIndex =
         selectedId != null ? locations.indexWhere((l) => l.id == selectedId) : 0;
+    final currentZoom = (() {
+      try {
+        return _mapController.camera.zoom;
+      } catch (_) {
+        return 15.5;
+      }
+    })();
+
+    // Build an ExploreFilter that reflects the current locationFilterProvider
+    // state so the panel pills show the correct active selection.
+    final panelFilter = ExploreFilter(
+      rankingFilter: filter.selectedRanking != null
+          ? ExploreRanking.values.firstWhere(
+              (r) => r.name == filter.selectedRanking!.name,
+              orElse: () => ExploreRanking.trending,
+            )
+          : ExploreRanking.trending,
+      hasRankingFilter: filter.selectedRanking != null,
+      priceFilter: filter.selectedPrice,
+    );
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -279,7 +235,13 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 ),
                 MarkerLayer(
                   rotate: false,
-                  markers: _buildSortedMarkers(locations, selectedId),
+                  markers: buildLocationMarkers(
+                    locations: locations,
+                    selectedId: selectedId,
+                    zoom: currentZoom,
+                    keyPrefix: 'location_marker',
+                    onTap: _showLocationDetails,
+                  ),
                 ),
               ],
             ),
@@ -299,10 +261,10 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               },
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Column(
+                child: const Column(
                   children: [
-                    const _GlassSearchBar(),
-                    const SizedBox(height: 10),
+                    _GlassSearchBar(),
+                    SizedBox(height: 10),
                   ],
                 ),
               ),
@@ -360,27 +322,25 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               bottomInset: bottomInset,
               selectedCategory: filter.selectedCategory,
               onCategoryChanged: _onCategoryChanged,
-              filter: const ExploreFilter(),
+              filter: panelFilter,
+              onRankingChanged: (ranking) {
+                ref.read(locationFilterProvider.notifier).setRanking(
+                  ranking == null
+                      ? null
+                      : LocationRanking.values.firstWhere(
+                          (value) => value.name == ranking.name,
+                          orElse: () => LocationRanking.trending,
+                        ),
+                );
+              },
+              onPriceChanged: (price) {
+                ref.read(locationFilterProvider.notifier).setPrice(price);
+              },
               onExpandChanged: _setPanelExpanded,
               onDismissed: _hidePanel,
               edgeToEdge: true,
               onSheetProgressChanged: _setSheetProgress,
-              onSheetExtentChanged: (extent) {
-                _sheetExtent.value = extent;
-              },
               onSelectLocation: _selectLocation,
-            ),
-          if (_isExplorePanelVisible)
-            ValueListenableBuilder<double>(
-              valueListenable: _sheetExtent,
-              builder: (context, extent, child) {
-                final screenHeight = MediaQuery.sizeOf(context).height;
-                final sheetTopPixels = screenHeight * (1 - extent);
-                return ExploreFloatingFilterPills(
-                  filter: const ExploreFilter(),
-                  bottomOffset: screenHeight - sheetTopPixels,
-                );
-              },
             ),
         ],
       ),
@@ -465,11 +425,11 @@ class _RankingFilterChip extends StatelessWidget {
   final VoidCallback onClear;
 
   String get _label => switch (ranking) {
-    LocationRanking.trending => 'Trending',
-    LocationRanking.popular => 'Popular',
-    LocationRanking.lowkey => 'Lowkey',
-    LocationRanking.newest => 'New',
-  };
+        LocationRanking.trending => 'Trending',
+        LocationRanking.popular => 'Popular',
+        LocationRanking.lowkey => 'Lowkey',
+        LocationRanking.newest => 'New',
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -507,7 +467,7 @@ class _RankingFilterChip extends StatelessWidget {
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: onClear,
-                child: Icon(
+                child: const Icon(
                   Icons.close_rounded,
                   size: 18,
                   color: SpontiColors.textSecondary,

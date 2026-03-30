@@ -21,6 +21,8 @@ abstract interface class LocationRemoteDataSource {
   Map<String, dynamic> resolvePhotoUrls(Map<String, dynamic> json);
 }
 
+const _defaultLocationsPageSize = 1000;
+
 const _columns = '''
   id, name, description, category, latitude, longitude, address,
   landmark, price_range, photos, tags, rating, review_count,
@@ -74,11 +76,14 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   @override
   Future<List<LocationModel>> getAllLocations({
     int page = 0,
-    int pageSize = 20,
+    int pageSize = _defaultLocationsPageSize,
   }) => _executeQuery(() async {
+    final start = page * pageSize;
+    final end = start + pageSize - 1;
     final response = await _client
         .from(ApiConstants.locationsTable)
         .select(_columns)
+        .range(start, end)
         .order('created_at', ascending: false);
 
     return _parseLocationList(response);

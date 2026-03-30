@@ -34,14 +34,17 @@ class LocationFilter {
   const LocationFilter({
     this.selectedCategory,
     this.selectedRanking,
+    this.selectedPrice,
   });
 
   final LocationCategory? selectedCategory;
   final LocationRanking? selectedRanking;
+  final PriceRange? selectedPrice;
 
   LocationFilter copyWith({
     Object? selectedCategory = _sentinel,
     Object? selectedRanking = _sentinel,
+    Object? selectedPrice = _sentinel,
   }) => LocationFilter(
     selectedCategory: selectedCategory == _sentinel
         ? this.selectedCategory
@@ -49,6 +52,9 @@ class LocationFilter {
     selectedRanking: selectedRanking == _sentinel
         ? this.selectedRanking
         : selectedRanking as LocationRanking?,
+    selectedPrice: selectedPrice == _sentinel
+        ? this.selectedPrice
+        : selectedPrice as PriceRange?,
   );
 
   static const _sentinel = Object();
@@ -63,6 +69,9 @@ class LocationFilterViewModel extends Notifier<LocationFilter> {
 
   void setRanking(LocationRanking? ranking) =>
       state = state.copyWith(selectedRanking: ranking);
+
+  void setPrice(PriceRange? price) =>
+      state = state.copyWith(selectedPrice: price);
 
   void clearFilters() => state = const LocationFilter();
 }

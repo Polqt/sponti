@@ -44,7 +44,7 @@ class LocationRepositoryImpl implements LocationRepository {
   @override
   Future<Either<Failure, List<Location>>> getAllLocations({
     int page = 0,
-    int pageSize = 20,
+    int pageSize = 1000,
   }) async {
     try {
       final locations = await _remote.getAllLocations(

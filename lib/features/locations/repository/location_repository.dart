@@ -5,7 +5,7 @@ import 'package:sponti/features/locations/model/location.dart';
 abstract interface class LocationRepository {
   Future<Either<Failure, List<Location>>> getAllLocations({
     int page = 0,
-    int pageSize = 20,
+    int pageSize = 1000,
   });
 
   Future<Either<Failure, Location>> getLocationById(String id);

@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/config/supabase_options.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/model/location_model.dart';
+import 'package:sponti/features/locations/repository/location_remote_data_source.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _unsetExploreField = Object();
+const _exploreFetchLimit = 1000;
 
 enum ExploreRanking {
   trending(
@@ -38,24 +40,28 @@ enum ExploreRanking {
 class ExploreFilter {
   const ExploreFilter({
     this.rankingFilter = ExploreRanking.trending,
+    this.hasRankingFilter = true,
     this.categoryFilter,
     this.priceFilter,
     this.nowOpenOnly = false,
   });
 
   final ExploreRanking rankingFilter;
+  final bool hasRankingFilter;
   final LocationCategory? categoryFilter;
   final PriceRange? priceFilter;
   final bool nowOpenOnly;
 
   ExploreFilter copyWith({
     ExploreRanking? rankingFilter,
+    bool? hasRankingFilter,
     Object? categoryFilter = _unsetExploreField,
     Object? priceFilter = _unsetExploreField,
     bool? nowOpenOnly,
   }) {
     return ExploreFilter(
       rankingFilter: rankingFilter ?? this.rankingFilter,
+      hasRankingFilter: hasRankingFilter ?? this.hasRankingFilter,
       categoryFilter: identical(categoryFilter, _unsetExploreField)
           ? this.categoryFilter
           : categoryFilter as LocationCategory?,
@@ -71,8 +77,11 @@ class ExploreFilterViewModel extends Notifier<ExploreFilter> {
   @override
   ExploreFilter build() => const ExploreFilter();
 
-  void setRanking(ExploreRanking ranking) {
-    state = state.copyWith(rankingFilter: ranking);
+  void setRanking(ExploreRanking? ranking) {
+    state = state.copyWith(
+      rankingFilter: ranking ?? state.rankingFilter,
+      hasRankingFilter: ranking != null,
+    );
   }
 
   void toggleCategory(LocationCategory category) {
@@ -106,27 +115,60 @@ class ExploreFilterViewModel extends Notifier<ExploreFilter> {
 
 class ExploreViewModel extends AsyncNotifier<List<Location>> {
   @override
-  Future<List<Location>> build() => _fetch();
+  Future<List<Location>> build() {
+    final filter = ref.watch(exploreFilterProvider);
+    return _fetch(filter);
+  }
 
-  Future<List<Location>> _fetch() async {
-    final filter = ref.read(exploreFilterProvider);
-    final response = await Supabase.instance.client.rpc(
-      SupabaseRPC.getTrendingLocations,
-      params: {
-        'ranking_filter': filter.rankingFilter.rpcValue,
-        'category_filter': filter.categoryFilter?.name,
-        'limit_count': 30,
-      },
-    );
+  Future<List<Location>> _fetch(ExploreFilter filter) async {
+    final client = Supabase.instance.client;
+    final remote = LocationRemoteDataSourceImpl(client);
 
-    final rows = response is List<dynamic> ? response : const <dynamic>[];
-    var locations = rows
-        .map((row) => LocationModel.fromJson(Map<String, dynamic>.from(row as Map)))
-        .cast<Location>()
-        .toList(growable: false);
+    late final List<Location> locations;
+    if (filter.hasRankingFilter) {
+      final response = await client.rpc(
+        SupabaseRPC.getTrendingLocations,
+        params: {
+          'ranking_filter': filter.rankingFilter.rpcValue,
+          'category_filter': filter.categoryFilter?.name,
+          'limit_count': _exploreFetchLimit,
+        },
+      );
+
+      final rows = response is List<dynamic> ? response : const <dynamic>[];
+      locations = rows
+          .map(
+            (row) => LocationModel.fromJson(
+              remote.resolvePhotoUrls(
+                Map<String, dynamic>.from(row as Map),
+              ),
+            ),
+          )
+          .cast<Location>()
+          .toList(growable: false);
+    } else {
+      dynamic query = client.from(SupabaseTables.locations).select();
+      if (filter.categoryFilter != null) {
+        query = query.eq('category', filter.categoryFilter!.name);
+      }
+      final response = await query
+          .order('created_at', ascending: false)
+          .limit(_exploreFetchLimit);
+      final rows = response is List<dynamic> ? response : const <dynamic>[];
+      locations = rows
+          .map(
+            (row) => LocationModel.fromJson(
+              remote.resolvePhotoUrls(
+                Map<String, dynamic>.from(row as Map),
+              ),
+            ),
+          )
+          .cast<Location>()
+          .toList(growable: false);
+    }
 
     if (filter.priceFilter != null || filter.nowOpenOnly) {
-      locations = locations.where((location) {
+      return locations.where((location) {
         if (filter.priceFilter != null &&
             location.priceRange != filter.priceFilter) {
           return false;
@@ -142,8 +184,9 @@ class ExploreViewModel extends AsyncNotifier<List<Location>> {
   }
 
   Future<void> refresh() async {
+    final filter = ref.read(exploreFilterProvider);
     state = const AsyncLoading();
-    state = await AsyncValue.guard(_fetch);
+    state = await AsyncValue.guard(() => _fetch(filter));
   }
 }
 
