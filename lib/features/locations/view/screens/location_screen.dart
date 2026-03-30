@@ -3,7 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
@@ -353,33 +355,40 @@ class _GlassSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassContainer(
-      child: Row(
-        children: [
-          const Icon(
-            Icons.search_rounded,
-            size: 20,
-            color: SpontiColors.textSecondary,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Search spots, cafes, parks',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.push(RouteName.search),
+        child: GlassContainer(
+          child: Row(
+            children: [
+              const Icon(
+                Icons.search_rounded,
+                size: 20,
                 color: SpontiColors.textSecondary,
-                fontWeight: FontWeight.w500,
               ),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Search spots, cafes, parks',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: SpontiColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.tune_rounded,
+                size: 18,
+                color: SpontiColors.textSecondary.withValues(alpha: 0.9),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Icon(
-            Icons.tune_rounded,
-            size: 18,
-            color: SpontiColors.textSecondary.withValues(alpha: 0.9),
-          ),
-        ],
+        ),
       ),
     );
   }
