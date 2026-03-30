@@ -12,5 +12,6 @@ abstract interface class ProfileRepository {
     required String userId,
     required Uint8List bytes,
     required String extension,
+    required String contentType,
   });
 }

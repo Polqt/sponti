@@ -13,105 +13,84 @@ class SurpriseMeModal extends ConsumerStatefulWidget {
 }
 
 class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
-  late Set<LocationCategory> _selected;
+  static const Color _backgroundColor = Color(0xFF111113);
+
+  late final ProviderSubscription<AsyncValue<Location?>>
+      _surpriseMeSubscription;
+  Set<LocationCategory> _selected = <LocationCategory>{};
 
   @override
   void initState() {
     super.initState();
-    _selected = {};
+    _surpriseMeSubscription = ref.listenManual<AsyncValue<Location?>>(
+      surpriseMeProvider,
+      (_, next) {
+        next.whenOrNull(
+          data: (location) {
+            if (!mounted || location == null) return;
+            final router = GoRouter.of(context);
+            Navigator.of(context).pop();
+            Future<void>(
+              () => router.push(RouteName.locationDetailPath(location.id)),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   void dispose() {
-    // Reset the surprise me provider when modal is dismissed
-    ref.read(surpriseMeProvider.notifier).reset();
+    _surpriseMeSubscription.close();
     super.dispose();
   }
 
   void _toggleCategory(LocationCategory category) {
-    setState(() {
-      if (_selected.contains(category)) {
-        _selected.remove(category);
-      } else {
-        _selected.add(category);
-      }
-    });
+    final updated = Set<LocationCategory>.of(_selected);
+    if (!updated.add(category)) {
+      updated.remove(category);
+    }
+    setState(() => _selected = updated);
   }
 
-  void _onSurpriseMe() {
-    final categories = _selected.map((c) => c.name).toList();
+  void _pickFromSelectedCategories() {
+    final categories = _selected.map((category) => category.name).toList();
     ref.read(surpriseMeProvider.notifier).pickRandom(categories);
   }
 
-  void _onAnyCategory() {
-    ref.read(surpriseMeProvider.notifier).pickRandom([]);
+  void _pickFromAnyCategory() {
+    ref.read(surpriseMeProvider.notifier).pickRandom(const <String>[]);
   }
 
   @override
   Widget build(BuildContext context) {
     final surpriseMeState = ref.watch(surpriseMeProvider);
-
-    ref.listen<AsyncValue<Location?>>(surpriseMeProvider, (_, next) {
-      next.whenOrNull(
-        data: (location) {
-          if (location != null) {
-            Navigator.pop(context);
-            context.push(RouteName.locationDetailPath(location.id));
-          }
-        },
-      );
-    });
+    final isLoading = surpriseMeState is AsyncLoading;
+    final errorText = surpriseMeState.hasError
+        ? surpriseMeState.error.toString()
+        : null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF111113),
+      backgroundColor: _backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Column(
               children: [
-                // Close button
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        child: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                const _CloseRow(),
                 const SizedBox(height: 12),
-
-                // Drag handle pill
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+                const _DragHandle(),
                 const SizedBox(height: 24),
-
-                // Subtitle
                 Text(
                   'feeling spontaneous?',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.45),
+                    color: Colors.white.withValues(alpha: 0.45),
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
                 const SizedBox(height: 8),
-
-                // Title
                 const Text(
                   'what are you in the mood for?',
                   style: TextStyle(
@@ -121,59 +100,58 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
                   ),
                 ),
                 const SizedBox(height: 8),
-
-                // Description
                 Text(
-                  'pick one or more — we\'ll find something great.',
+                  'pick one or more - we\'ll find something great.',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.35),
+                    color: Colors.white.withValues(alpha: 0.35),
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
                 const SizedBox(height: 28),
-
-                // Category grid
-                GridView.count(
-                  crossAxisCount: 3,
+                GridView.builder(
+                  itemCount: LocationCategory.values.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.85,
+                  ),
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 0.85,
-                  children: LocationCategory.values.map((category) {
-                    final isSelected = _selected.contains(category);
+                  itemBuilder: (context, index) {
+                    final category = LocationCategory.values[index];
                     return CategoryChip(
+                      key: ValueKey(category.name),
                       category: category,
-                      isSelected: isSelected,
+                      isSelected: _selected.contains(category),
                       onTap: () => _toggleCategory(category),
                     );
-                  }).toList(),
+                  },
                 ),
                 const SizedBox(height: 32),
-
-                // Primary button
-                _buildPrimaryButton(surpriseMeState),
+                SurprisePrimaryButton(
+                  isLoading: isLoading,
+                  onPressed: _pickFromSelectedCategories,
+                ),
                 const SizedBox(height: 12),
-
-                // Secondary button
-                _buildSecondaryButton(surpriseMeState),
-                const SizedBox(height: 20),
-
-                // Error message
-                if (surpriseMeState is AsyncError)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      surpriseMeState.error.toString(),
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      textAlign: TextAlign.center,
+                SurpriseAnyCategoryButton(
+                  isLoading: isLoading,
+                  onPressed: _pickFromAnyCategory,
+                ),
+                if (errorText != null) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    errorText,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
                     ),
+                    textAlign: TextAlign.center,
                   ),
+                ] else
+                  const SizedBox(height: 20),
               ],
             ),
           ),
@@ -181,17 +159,69 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
       ),
     );
   }
+}
 
-  Widget _buildPrimaryButton(AsyncValue<Location?> state) {
-    final isLoading = state is AsyncLoading;
+class _CloseRow extends StatelessWidget {
+  const _CloseRow();
 
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            child: const Icon(
+              Icons.close,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DragHandle extends StatelessWidget {
+  const _DragHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 4,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+}
+
+class SurprisePrimaryButton extends StatelessWidget {
+  const SurprisePrimaryButton({
+    super.key,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  static const Color _primaryColor = Color(0xFF2979FF);
+
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: isLoading ? null : _onSurpriseMe,
+        onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2979FF),
-          disabledBackgroundColor: const Color(0xFF2979FF).withOpacity(0.5),
+          backgroundColor: _primaryColor,
+          disabledBackgroundColor: _primaryColor.withValues(alpha: 0.5),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
@@ -204,7 +234,7 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.white.withOpacity(0.8),
+                    Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               )
@@ -219,24 +249,34 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
       ),
     );
   }
+}
 
-  Widget _buildSecondaryButton(AsyncValue<Location?> state) {
-    final isLoading = state is AsyncLoading;
+class SurpriseAnyCategoryButton extends StatelessWidget {
+  const SurpriseAnyCategoryButton({
+    super.key,
+    required this.isLoading,
+    required this.onPressed,
+  });
 
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
-        onPressed: isLoading ? null : _onAnyCategory,
+        onPressed: isLoading ? null : onPressed,
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),
           side: BorderSide(
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withValues(alpha: 0.15),
             width: 0.5,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
-          disabledForegroundColor: Colors.white.withOpacity(0.5),
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
         ),
         child: const Text(
           'any category',
@@ -253,6 +293,7 @@ class _SurpriseMeModalState extends ConsumerState<SurpriseMeModal> {
 
 class CategoryChip extends StatelessWidget {
   const CategoryChip({
+    super.key,
     required this.category,
     required this.isSelected,
     required this.onTap,
@@ -268,10 +309,12 @@ class CategoryChip extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF1e1e22),
+          color: const Color(0xFF1E1E22),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? Colors.white : Colors.white.withOpacity(0.1),
+            color: isSelected
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.1),
             width: isSelected ? 2 : 0.5,
           ),
         ),

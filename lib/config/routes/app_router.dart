@@ -3,16 +3,19 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/main_shell.dart';
 import 'package:sponti/features/auth/view/screens/sign_in_screen.dart';
-import 'package:sponti/features/discovery/view/screens/map_screen.dart';
-import 'package:sponti/features/explore/view/screens/explore_screen.dart';
+import 'package:sponti/features/check_in/view/screens/check_in_page.dart';
+import 'package:sponti/features/check_in/view/screens/my_check_ins_screen.dart';
+import 'package:sponti/features/discovery/view/screens/discovery_screen.dart';
+import 'package:sponti/features/discovery/view/screens/surprise_screen.dart';
 import 'package:sponti/features/favorites/view/screens/favorites_screen.dart';
+import 'package:sponti/features/locations/view/screens/location_detail.dart';
 import 'package:sponti/features/locations/view/screens/location_screen.dart';
 import 'package:sponti/features/onboarding/repository/onboarding_local_data_source.dart';
 import 'package:sponti/features/onboarding/view/screens/video_onboarding_screen.dart';
 import 'package:sponti/features/profile/view/screens/edit_profile_screen.dart';
 import 'package:sponti/features/profile/view/screens/profile_screen.dart';
-import 'package:sponti/features/suggestions/presentation/suggest_spot_screen.dart';
-import 'package:sponti/features/surprise_me/presentation/surprise_me_modal.dart';
+import 'package:sponti/features/reviews/view/screens/reviews_screen.dart';
+import 'package:sponti/features/suggestions/view/suggest_spot_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -70,6 +73,43 @@ final appRouter = GoRouter(
       path: RouteName.suggestSpot,
       builder: (context, state) => const SuggestSpotScreen(),
     ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.checkIn,
+      builder: (context, state) {
+        final locationId = state.uri.queryParameters['locationId'] ?? '';
+        final locationName = state.uri.queryParameters['locationName'] ?? '';
+        return CheckInPage(
+          locationId: locationId,
+          locationName: Uri.decodeComponent(locationName),
+        );
+      },
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.reviews,
+      builder: (context, state) {
+        final locationId = state.uri.queryParameters['locationId'] ?? '';
+        final locationName = state.uri.queryParameters['locationName'] ?? '';
+        return ReviewsScreen(
+          locationId: locationId,
+          locationName: Uri.decodeComponent(locationName),
+        );
+      },
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.myCheckIns,
+      builder: (context, state) => const MyCheckInsScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.locationDetail,
+      builder: (context, state) {
+        final locationId = state.pathParameters['id'] ?? '';
+        return LocationDetailPage(locationId: locationId);
+      },
+    ),
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) => MainShell(child: child),
@@ -82,7 +122,7 @@ final appRouter = GoRouter(
         GoRoute(
           path: RouteName.discovery,
           pageBuilder: (context, state) =>
-              const NoTransitionPage(child: MapScreen()),
+              const NoTransitionPage(child: DiscoveryScreen()),
         ),
         GoRoute(
           path: RouteName.favorites,

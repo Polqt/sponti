@@ -299,7 +299,10 @@ class _CardBody extends StatelessWidget {
               ),
               Text(
                 ' (${SpontiFormatter.reviewCount(location.reviewCount)})',
-                style: TextStyle(fontSize: 10, color: SpontiColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: SpontiColors.textMuted,
+                ),
               ),
               const Spacer(),
               if (location.distanceKm != null) ...[
@@ -311,7 +314,7 @@ class _CardBody extends StatelessWidget {
                 const SizedBox(width: 2),
                 Text(
                   SpontiFormatter.distance(location.distanceKm!),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: SpontiColors.primary,
@@ -321,7 +324,7 @@ class _CardBody extends StatelessWidget {
               ],
               Text(
                 location.priceRange.symbol,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: SpontiColors.textSecondary,

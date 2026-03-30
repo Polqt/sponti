@@ -15,12 +15,13 @@ class LocationCategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selected = selectedCategory;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
           _CategoryIconButton(
-            isSelected: selectedCategory == null,
+            isSelected: selected == null,
             color: SpontiColors.primary,
             onTap: () => onChanged(null),
             child: const Icon(Icons.grid_view_rounded),
@@ -28,11 +29,9 @@ class LocationCategoryRow extends StatelessWidget {
           for (final category in LocationCategory.values) ...[
             const SizedBox(width: 10),
             _CategoryIconButton(
-              isSelected: selectedCategory == category,
+              isSelected: selected == category,
               color: Color(category.colorValue),
-              onTap: () => onChanged(
-                selectedCategory == category ? null : category,
-              ),
+              onTap: () => onChanged(selected == category ? null : category),
               child: LocationCategoryIcon(
                 category: category,
                 color: Color(category.colorValue),
@@ -68,8 +67,7 @@ class _CategoryIconButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+        child: SizedBox(
           width: 42,
           height: 42,
           child: IconTheme(

@@ -44,4 +44,20 @@ class ReviewModel extends Review {
     'photos': photos,
     'created_at': createdAt.toIso8601String(),
   };
+
+  Map<String, dynamic> toUpsertJson() => {
+    'location_id': locationId,
+    'user_id': userId,
+    'rating': rating,
+    'comment': comment,
+    'photos': photos,
+    'updated_at': DateTime.now().toIso8601String(),
+  };
+
+  Map<String, dynamic> toUpdateJson() => {
+    'rating': rating,
+    'comment': comment,
+    'photos': photos,
+    'updated_at': DateTime.now().toIso8601String(),
+  };
 }

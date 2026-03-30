@@ -114,26 +114,39 @@ class _FavoritesCategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foregroundColor = isSelected
-        ? option.color
-        : SpontiColors.textSecondary;
+    final foregroundColor = isSelected ? option.color : SpontiColors.textSecondary;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
+        splashColor: option.color.withValues(alpha: 0.1),
+        highlightColor: option.color.withValues(alpha: 0.05),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           decoration: BoxDecoration(
             color: isSelected
-                ? option.color.withValues(alpha: 0.14)
-                : SpontiColors.surfaceVariant.withValues(alpha: 0.82),
+                ? option.color.withValues(alpha: 0.12)
+                : SpontiColors.white,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: isSelected ? option.color : SpontiColors.outline,
+              color: isSelected
+                  ? option.color.withValues(alpha: 0.4)
+                  : SpontiColors.outline,
+              width: isSelected ? 1.5 : 1,
             ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: option.color.withValues(alpha: 0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -142,15 +155,16 @@ class _FavoritesCategoryChip extends StatelessWidget {
                 category: option.category,
                 fallbackIcon: option.fallbackIcon,
                 color: foregroundColor,
-                size: 16,
+                size: 17,
               ),
               const SizedBox(width: 8),
               Text(
                 option.label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: foregroundColor,
-                  fontWeight: FontWeight.w700,
-                ),
+                      color: foregroundColor,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                    ),
               ),
             ],
           ),

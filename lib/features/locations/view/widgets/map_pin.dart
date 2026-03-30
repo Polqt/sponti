@@ -1,68 +1,138 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/category.dart';
+import 'package:sponti/features/locations/viewmodel/map_zoom_provider.dart';
 
-class MapPin extends StatelessWidget {
+class MapPin extends ConsumerWidget {
   const MapPin({
     super.key,
     required this.category,
-    required this.color,
     required this.isSelected,
+    this.locationName,
     this.onTap,
+    this.rating,
+    this.ranking,
   });
 
   final LocationCategory category;
-  final Color color;
   final bool isSelected;
+  final String? locationName;
   final VoidCallback? onTap;
+  final double? rating;
+  final LocationRanking? ranking;
+
+  static const _textStyle = TextStyle(
+    fontSize: 9,
+    fontWeight: FontWeight.w700,
+    color: Colors.black,
+    height: 1.2,
+    shadows: [
+      Shadow(
+        color: Colors.white,
+        offset: Offset.zero,
+        blurRadius: 4,
+      ),
+    ],
+  );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final zoomState = ref.watch(mapZoomProvider);
+    final showLabel = zoomState.shouldShowLabels &&
+        locationName != null &&
+        locationName!.isNotEmpty;
+    final labelOpacity = zoomState.labelOpacity;
+    final iconScale = zoomState.iconScale * (isSelected ? 1.15 : 1.0);
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.translucent,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: AnimatedScale(
-          scale: isSelected ? 1.18 : 1.0,
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          child: Container(
-            width: isSelected ? 48 : 44,
-            height: isSelected ? 48 : 44,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.96),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: isSelected ? 0.95 : 0.84),
-                width: isSelected ? 2.6 : 1.8,
+      child: SizedBox(
+        width: showLabel ? 100 : 50,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            AnimatedScale(
+              scale: iconScale,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: isSelected ? 34 : 30,
+                    height: isSelected ? 34 : 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.22),
+                          blurRadius: isSelected ? 12 : 8,
+                          offset: const Offset(0, 3),
+                          spreadRadius: isSelected ? 1 : 0,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: LocationCategoryIcon(
+                        category: category,
+                        color: Colors.black.withValues(alpha: 0.75),
+                        size: isSelected ? 18 : 16,
+                      ),
+                    ),
+                  ),
+                  if (ranking != null)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: ranking!.indicatorColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: ranking!.indicatorColor.withValues(alpha: 0.4),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: isSelected ? 0.28 : 0.18),
-                  blurRadius: isSelected ? 18 : 10,
-                  offset: const Offset(0, 6),
-                ),
-              ],
             ),
-            child: Center(
-              child: Container(
-                width: isSelected ? 22 : 20,
-                height: isSelected ? 22 : 20,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: LocationCategoryIcon(
-                  category: category,
-                  fallbackIcon: category.icon,
-                  color: Colors.white,
-                  size: isSelected ? 17 : 15,
+            if (showLabel) ...[
+              const SizedBox(width: 5),
+              Flexible(
+                child: AnimatedOpacity(
+                  opacity: labelOpacity,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  child: Text(
+                    (locationName!.length > 18
+                            ? '${locationName!.substring(0, 18)}...'
+                            : locationName!)
+                        .toUpperCase(),
+                    style: _textStyle,
+                    maxLines: 2,
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                  ),
                 ),
               ),
-            ),
-          ),
+            ],
+          ],
         ),
       ),
     );

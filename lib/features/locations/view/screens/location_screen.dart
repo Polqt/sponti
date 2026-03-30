@@ -9,11 +9,14 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
 import 'package:sponti/core/widgets/glass_container.dart';
 import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
-import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
+import 'package:sponti/features/explore/view/widgets/explore_floating_filter_pills.dart';
+import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
+import 'package:sponti/features/locations/view/widgets/marker_collision_detector.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
 class LocationScreen extends ConsumerStatefulWidget {
@@ -25,9 +28,15 @@ class LocationScreen extends ConsumerStatefulWidget {
 
 class _LocationScreenState extends ConsumerState<LocationScreen> {
   static const _defaultCenter = LatLng(10.6765, 122.9509);
+  static const double _minSheetSize = 0.25;
+  static const double _midSheetSize = 0.50;
 
-  final _mapController = MapController();
+  final MapController _mapController = MapController();
   final ValueNotifier<double> _sheetProgress = ValueNotifier<double>(0.0);
+  late final ValueNotifier<double> _sheetExtent;
+
+  late final StateController<bool> _shellBarHiddenController;
+  late final StateController<double> _shellChromeProgressController;
 
   String? _selectedLocationId;
   bool _didAutoCenter = false;
@@ -35,14 +44,47 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   bool _isExplorePanelExpanded = false;
   bool _isLocationDetailOpen = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _sheetExtent = ValueNotifier<double>(_isExplorePanelExpanded ? _midSheetSize : _minSheetSize);
+    _shellBarHiddenController = ref.read(shellBarHiddenProvider.notifier);
+    _shellChromeProgressController = ref.read(
+      shellChromeProgressProvider.notifier,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _consumePending());
+  }
+
+  void _consumePending() {
+    final pending = ref.read(pendingLocationProvider);
+    if (pending == null) return;
+    ref.read(pendingLocationProvider.notifier).state = null;
+    _showLocationDetails(pending);
+  }
+
   void _setShellHidden(bool hidden) {
-    ref.read(shellBarHiddenProvider.notifier).state = hidden;
+    _shellBarHiddenController.state = hidden;
   }
 
   Future<void> _onCategoryChanged(LocationCategory? category) async {
     ref.read(locationFilterProvider.notifier).setCategory(category);
-    ref.read(locationsProvider.notifier).onFilterChanged();
+    ref.read(locationFilterProvider.notifier).setRanking(null);
+    await ref.read(locationsProvider.notifier).refresh();
     _openPanel();
+  }
+
+  void _setSheetProgress(double progress) {
+    _sheetProgress.value = progress;
+    _shellChromeProgressController.state = progress;
+  }
+
+  void _focusLocation(Location location) {
+    final currentZoom = _mapController.camera.zoom;
+    final optimalZoom = currentZoom < 15.0 ? 15.5 : currentZoom;
+    _mapController.move(
+      LatLng(location.coordinates.latitude, location.coordinates.longitude),
+      optimalZoom,
+    );
   }
 
   void _openPanel() {
@@ -50,18 +92,15 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = true;
       _isExplorePanelExpanded = true;
     });
-    _sheetProgress.value = 1.0;
-    ref.read(shellChromeProgressProvider.notifier).state = 1.0;
+    _sheetExtent.value = _midSheetSize;
+    _setSheetProgress(1.0);
     _setShellHidden(true);
   }
 
   void _selectLocation(Location location) {
     setState(() => _selectedLocationId = location.id);
     _openPanel();
-    _mapController.move(
-      LatLng(location.coordinates.latitude, location.coordinates.longitude),
-      14.5,
-    );
+    _focusLocation(location);
   }
 
   Future<void> _showLocationDetails(Location location) async {
@@ -72,12 +111,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
     });
-    _mapController.move(
-      LatLng(location.coordinates.latitude, location.coordinates.longitude),
-      14.5,
-    );
-    _sheetProgress.value = 0.0;
-    ref.read(shellChromeProgressProvider.notifier).state = 0.0;
+    _sheetExtent.value = _minSheetSize;
+    _focusLocation(location);
+    _setSheetProgress(0.0);
     _setShellHidden(true);
     _isLocationDetailOpen = true;
 
@@ -91,6 +127,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   void _setPanelExpanded(bool expanded) {
     setState(() => _isExplorePanelExpanded = expanded);
+    _sheetExtent.value = expanded ? _midSheetSize : _minSheetSize;
   }
 
   void _hidePanel() {
@@ -98,16 +135,75 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
     });
-    _sheetProgress.value = 0.0;
-    ref.read(shellChromeProgressProvider.notifier).state = 0.0;
+    _sheetExtent.value = _minSheetSize;
+    _setSheetProgress(0.0);
     _setShellHidden(false);
+  }
+
+  List<Marker> _buildSortedMarkers(List<Location> locations, String? selectedId) {
+    double currentZoom;
+    try {
+      currentZoom = _mapController.camera.zoom;
+    } catch (_) {
+      currentZoom = 15.5;
+    }
+
+    final markerData = locations.map((location) {
+      final isSelected = location.id == selectedId;
+      final zIndex = isSelected ? 1000.0 : 100.0 + (location.rating * 10).clamp(0.0, 100.0);
+      final ranking = location.getPrimaryRanking(locations);
+      return (
+        location: location,
+        isSelected: isSelected,
+        zIndex: zIndex,
+        point: LatLng(location.coordinates.latitude, location.coordinates.longitude),
+        ranking: ranking,
+      );
+    }).toList();
+
+    markerData.sort((a, b) => a.zIndex.compareTo(b.zIndex));
+
+    final markerPositions = {
+      for (var data in markerData) data.location.id: data.point,
+    };
+
+    final collidingIds = MarkerCollisionDetector.getCollidingMarkerIds(
+      markerPositions: markerPositions,
+      zoom: currentZoom,
+    );
+
+    return markerData.map((data) {
+      final shouldHideLabel = currentZoom < 16.0 &&
+          collidingIds.contains(data.location.id) &&
+          !data.isSelected;
+      return Marker(
+        point: data.point,
+        width: 100,
+        height: 50,
+        alignment: Alignment.center,
+        child: RepaintBoundary(
+          child: GestureDetector(
+            key: ValueKey('location_marker_${data.location.id}'),
+            onTap: () => _showLocationDetails(data.location),
+            child: MapPin(
+              category: data.location.category,
+              isSelected: data.isSelected,
+              locationName: shouldHideLabel ? null : data.location.name,
+              rating: data.location.rating,
+              ranking: data.ranking,
+            ),
+          ),
+        ),
+      );
+    }).toList(growable: false);
   }
 
   @override
   void dispose() {
-    _sheetProgress.dispose();
+    _shellChromeProgressController.state = 0.0;
     _setShellHidden(false);
-    ref.read(shellChromeProgressProvider.notifier).state = 0.0;
+    _sheetProgress.dispose();
+    _sheetExtent.dispose();
     super.dispose();
   }
 
@@ -115,9 +211,26 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   Widget build(BuildContext context) {
     final locationsAsync = ref.watch(locationsProvider);
     final filter = ref.watch(locationFilterProvider);
-    final favoriteIds = ref.watch(favoriteIdSetProvider);
-    final locations = locationsAsync.valueOrNull ?? const <Location>[];
+    var locations = locationsAsync.valueOrNull ?? const <Location>[];
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+
+    if (filter.selectedRanking != null && locations.isNotEmpty) {
+      locations = locations
+          .where((loc) => loc.getPrimaryRanking(locations) == filter.selectedRanking)
+          .toList();
+    }
+
+    if (!_didAutoCenter && locations.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final mapCenter = LatLng(
+          locations.first.coordinates.latitude,
+          locations.first.coordinates.longitude,
+        );
+        _mapController.move(mapCenter, 15.5);
+        _didAutoCenter = true;
+      });
+    }
 
     final mapCenter = locations.isNotEmpty
         ? LatLng(
@@ -126,21 +239,12 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
           )
         : _defaultCenter;
 
-    if (!_didAutoCenter && locations.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _mapController.move(mapCenter, 13.3);
-        _didAutoCenter = true;
-      });
-    }
-
-    final hasSelected = locations.any((l) => l.id == _selectedLocationId);
-    final selectedId = hasSelected
+    final selectedId = _selectedLocationId != null &&
+            locations.any((l) => l.id == _selectedLocationId)
         ? _selectedLocationId
         : (locations.isNotEmpty ? locations.first.id : null);
-    final selectedIndex = selectedId == null
-        ? 0
-        : locations.indexWhere((l) => l.id == selectedId);
+    final selectedIndex =
+        selectedId != null ? locations.indexWhere((l) => l.id == selectedId) : 0;
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -151,9 +255,15 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               mapController: _mapController,
               options: MapOptions(
                 initialCenter: mapCenter,
-                initialZoom: 12.8,
+                initialZoom: 15.5,
                 minZoom: 10,
                 maxZoom: 18,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all,
+                  scrollWheelVelocity: 0.002,
+                  pinchZoomThreshold: 0.4,
+                  pinchMoveThreshold: 30.0,
+                ),
                 onTap: (_, _) => _hidePanel(),
               ),
               children: [
@@ -162,27 +272,14 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                       'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
                   subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.sponti.app',
+                  tileProvider: NetworkTileProvider(),
+                  maxNativeZoom: 18,
+                  keepBuffer: 2,
+                  panBuffer: 1,
                 ),
                 MarkerLayer(
-                  markers: [
-                    for (final location in locations)
-                      Marker(
-                        point: LatLng(
-                          location.coordinates.latitude,
-                          location.coordinates.longitude,
-                        ),
-                        width: 62,
-                        height: 62,
-                        child: GestureDetector(
-                          onTap: () => _showLocationDetails(location),
-                          child: MapPin(
-                            category: location.category,
-                            color: Color(location.category.colorValue),
-                            isSelected: location.id == selectedId,
-                          ),
-                        ),
-                      ),
-                  ],
+                  rotate: false,
+                  markers: _buildSortedMarkers(locations, selectedId),
                 ),
               ],
             ),
@@ -206,42 +303,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                   children: [
                     const _GlassSearchBar(),
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GlassContainer(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Bacolod Spots',
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        color: SpontiColors.textPrimary,
-                                      ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${locations.length} places nearby',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: SpontiColors.textSecondary,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        GlassIconButton(
-                          icon: Icons.refresh_rounded,
-                          onTap: () =>
-                              ref.read(locationsProvider.notifier).refresh(),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
@@ -269,9 +330,24 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               bottom: bottomInset,
               child: SafeArea(
                 top: false,
-                child: _FloatingCategoryRow(
-                  selectedCategory: filter.selectedCategory,
-                  onChanged: _onCategoryChanged,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (filter.selectedRanking != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _RankingFilterChip(
+                          ranking: filter.selectedRanking!,
+                          onClear: () {
+                            ref.read(locationFilterProvider.notifier).setRanking(null);
+                          },
+                        ),
+                      ),
+                    _FloatingCategoryRow(
+                      selectedCategory: filter.selectedCategory,
+                      onChanged: _onCategoryChanged,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -282,18 +358,29 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
               isExpanded: _isExplorePanelExpanded,
               bottomInset: bottomInset,
-              favoriteIds: favoriteIds,
               selectedCategory: filter.selectedCategory,
               onCategoryChanged: _onCategoryChanged,
+              filter: const ExploreFilter(),
               onExpandChanged: _setPanelExpanded,
+              onDismissed: _hidePanel,
               edgeToEdge: true,
-              onSheetProgressChanged: (progress) {
-                _sheetProgress.value = progress;
-                ref.read(shellChromeProgressProvider.notifier).state = progress;
+              onSheetProgressChanged: _setSheetProgress,
+              onSheetExtentChanged: (extent) {
+                _sheetExtent.value = extent;
               },
               onSelectLocation: _selectLocation,
-              onSaveToggle: (location) =>
-                  ref.read(favoriteIdsProvider.notifier).toggle(location.id),
+            ),
+          if (_isExplorePanelVisible)
+            ValueListenableBuilder<double>(
+              valueListenable: _sheetExtent,
+              builder: (context, extent, child) {
+                final screenHeight = MediaQuery.sizeOf(context).height;
+                final sheetTopPixels = screenHeight * (1 - extent);
+                return ExploreFloatingFilterPills(
+                  filter: const ExploreFilter(),
+                  bottomOffset: screenHeight - sheetTopPixels,
+                );
+              },
             ),
         ],
       ),
@@ -354,10 +441,79 @@ class _FloatingCategoryRow extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
+          decoration: BoxDecoration(
+            color: SpontiColors.surface.withValues(alpha: 0.74),
+          ),
           padding: const EdgeInsets.all(10),
           child: LocationCategoryRow(
             selectedCategory: selectedCategory,
             onChanged: onChanged,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RankingFilterChip extends StatelessWidget {
+  const _RankingFilterChip({
+    required this.ranking,
+    required this.onClear,
+  });
+
+  final LocationRanking ranking;
+  final VoidCallback onClear;
+
+  String get _label => switch (ranking) {
+    LocationRanking.trending => 'Trending',
+    LocationRanking.popular => 'Popular',
+    LocationRanking.lowkey => 'Lowkey',
+    LocationRanking.newest => 'New',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          decoration: BoxDecoration(
+            color: SpontiColors.surface.withValues(alpha: 0.74),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: ranking.indicatorColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _label.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: SpontiColors.textPrimary,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: SpontiColors.textSecondary,
+                ),
+              ),
+            ],
           ),
         ),
       ),

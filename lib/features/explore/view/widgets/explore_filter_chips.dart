@@ -25,8 +25,10 @@ class ExploreFilterChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ranking = filter.rankingFilter;
     final category = filter.categoryFilter;
     final price = filter.priceFilter;
+    final nowOpen = filter.nowOpenOnly;
 
     return GlassContainer(
       child: SingleChildScrollView(
@@ -34,8 +36,8 @@ class ExploreFilterChips extends StatelessWidget {
         child: Row(
           children: [
             _ExploreFilterChip(
-              label: '${_rankingLabel(filter.rankingFilter)} \u2713',
-              color: _rankingColor(filter.rankingFilter),
+              label: '${ranking.label} \u2713',
+              color: _rankingColor(ranking),
               leading: const Icon(Icons.auto_awesome_rounded),
               isActive: true,
               onTap: onTapRanking,
@@ -67,10 +69,10 @@ class ExploreFilterChips extends StatelessWidget {
             ],
             const SizedBox(width: 10),
             _ExploreFilterChip(
-              label: filter.nowOpenOnly ? 'Now open \u2713' : 'Now open',
+              label: nowOpen ? 'Now open \u2713' : 'Now open',
               color: SpontiColors.success,
               leading: const Icon(Icons.schedule_rounded),
-              isActive: filter.nowOpenOnly,
+              isActive: nowOpen,
               onTap: onToggleNowOpen,
             ),
           ],
@@ -139,19 +141,12 @@ class _ExploreFilterChip extends StatelessWidget {
   }
 }
 
-String _rankingLabel(String ranking) {
+Color _rankingColor(ExploreRanking ranking) {
   return switch (ranking) {
-    'lowkey' => 'Lowkey',
-    'new' => 'New',
-    _ => 'Trending',
-  };
-}
-
-Color _rankingColor(String ranking) {
-  return switch (ranking) {
-    'lowkey' => const Color(0xFF3A7D44),
-    'new' => SpontiColors.accent,
-    _ => SpontiColors.primary,
+    ExploreRanking.popular => const Color(0xFFE07A15),
+    ExploreRanking.lowkey => const Color(0xFF3A7D44),
+    ExploreRanking.newest => SpontiColors.accent,
+    ExploreRanking.trending => SpontiColors.primary,
   };
 }
 

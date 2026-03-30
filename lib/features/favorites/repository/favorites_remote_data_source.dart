@@ -22,18 +22,9 @@ class FavoritesRemoteDataSourceImpl implements FavoritesRemoteDataSource {
     return user.id;
   }
 
-  @override
-  Future<List<FavoriteModel>> getFavorites() async {
+  Future<T> _executeQuery<T>(Future<T> Function() query) async {
     try {
-      final response = await _client
-          .from(ApiConstants.favoritesTable)
-          .select('location_id, user_id, created_at, locations(*)')
-          .eq('user_id', _userId)
-          .order('created_at', ascending: false);
-
-      return (response as List<dynamic>)
-          .map((row) => FavoriteModel.fromJson(row as Map<String, dynamic>))
-          .toList(growable: false);
+      return await query();
     } on AuthException {
       rethrow;
     } on PostgrestException catch (e) {
@@ -44,35 +35,32 @@ class FavoritesRemoteDataSourceImpl implements FavoritesRemoteDataSource {
   }
 
   @override
-  Future<void> addFavorite(String locationId) async {
-    try {
-      await _client.from(ApiConstants.favoritesTable).upsert({
-        'location_id': locationId,
-        'user_id': _userId,
-      }, onConflict: 'location_id,user_id');
-    } on AuthException {
-      rethrow;
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+  Future<List<FavoriteModel>> getFavorites() => _executeQuery(() async {
+        final response = await _client
+            .from(ApiConstants.favoritesTable)
+            .select('location_id, user_id, created_at, locations(*)')
+            .eq('user_id', _userId)
+            .order('created_at', ascending: false);
+
+        return (response as List<dynamic>)
+            .map((row) => FavoriteModel.fromJson(row as Map<String, dynamic>))
+            .toList(growable: false);
+      });
 
   @override
-  Future<void> removeFavorite(String locationId) async {
-    try {
-      await _client
-          .from(ApiConstants.favoritesTable)
-          .delete()
-          .eq('user_id', _userId)
-          .eq('location_id', locationId);
-    } on AuthException {
-      rethrow;
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+  Future<void> addFavorite(String locationId) => _executeQuery(() async {
+        await _client.from(ApiConstants.favoritesTable).upsert({
+          'location_id': locationId,
+          'user_id': _userId,
+        }, onConflict: 'location_id,user_id');
+      });
+
+  @override
+  Future<void> removeFavorite(String locationId) => _executeQuery(() async {
+        await _client
+            .from(ApiConstants.favoritesTable)
+            .delete()
+            .eq('user_id', _userId)
+            .eq('location_id', locationId);
+      });
 }
