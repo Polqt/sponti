@@ -4,7 +4,7 @@ import 'package:sponti/features/discovery/view/widgets/discovery_category_accord
 import 'package:sponti/features/discovery/view/widgets/discovery_column_switcher.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_for_you_grid.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_friends_placeholder.dart';
-import 'package:sponti/features/discovery/view/widgets/discovery_top_curators_placeholder.dart';
+import 'package:sponti/features/discovery/view/widgets/discovery_top_curators_section.dart';
 import 'package:sponti/features/discovery/viewmodel/discovery_viewmodel.dart';
 
 class DiscoveryBody extends ConsumerWidget {
@@ -55,8 +55,16 @@ class DiscoveryBody extends ConsumerWidget {
                 letterSpacing: 0.4,
               ),
             ),
+            const SizedBox(height: 6),
+            Text(
+              'Live community leaders based on reviews and check-ins.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF6F675F),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             const SizedBox(height: 16),
-            const DiscoveryTopCuratorsPlaceholder(),
+            const DiscoveryTopCuratorsSection(),
           ],
         ],
       ),

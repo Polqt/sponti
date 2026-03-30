@@ -14,6 +14,7 @@ abstract final class ApiConstants {
   static const String rpcGetTrendingLocations = 'get_trending_locations';
   static const String rpcSearchLocations = 'search_locations';
   static const String rpcGetLocationWithStats = 'get_location_with_stats';
+  static const String rpcGetTopCurators = 'get_top_curators';
 
   // Storage buckets
   static const String locationPhotosBucket = 'location-photos';

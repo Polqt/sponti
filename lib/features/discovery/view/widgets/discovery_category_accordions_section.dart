@@ -75,7 +75,7 @@ class DiscoveryCategoryAccordionTile extends StatelessWidget {
     final color = Color(category.colorValue);
     final borderRadius = BorderRadius.vertical(
       top: isFirst ? const Radius.circular(20) : Radius.zero,
-      bottom: isLast && !isExpanded ? const Radius.circular(20) : Radius.zero,
+      bottom: isLast ? const Radius.circular(20) : Radius.zero,
     );
 
     return ClipRRect(
@@ -128,14 +128,13 @@ class DiscoveryCategoryAccordionTile extends StatelessWidget {
               ),
             ),
           ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: DiscoveryCategoryAccordionContent(category: category),
-            crossFadeState: isExpanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
+          AnimatedSize(
             duration: const Duration(milliseconds: 220),
-            sizeCurve: Curves.easeOutCubic,
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: isExpanded
+                ? DiscoveryCategoryAccordionContent(category: category)
+                : const SizedBox.shrink(),
           ),
         ],
       ),
@@ -259,7 +258,7 @@ class _SpotCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            // Price + saves row
+            // Price + check-ins row
             Row(
               children: [
                 Text(
@@ -272,9 +271,9 @@ class _SpotCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 const Icon(
-                  Icons.favorite_rounded,
+                  Icons.check_circle_rounded,
                   size: 11,
-                  color: SpontiColors.primary,
+                  color: SpontiColors.secondary,
                 ),
                 const SizedBox(width: 3),
                 Text(
