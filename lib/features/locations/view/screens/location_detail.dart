@@ -143,12 +143,12 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
       });
     }
 
-    final extraPhotoUrls = location.photoUrls.skip(1).toList(growable: false);
+    final extraPhotoUrls = sourceLocation.photoUrls.skip(1).toList(growable: false);
     final hasQuickInfo =
-        location.hasWifi ||
-        location.isPetFriendly ||
-        location.hasParking ||
-        location.distanceKm != null;
+        sourceLocation.hasWifi ||
+        sourceLocation.isPetFriendly ||
+        sourceLocation.hasParking ||
+        sourceLocation.distanceKm != null;
 
     return NotificationListener<ScrollNotification>(
       onNotification: (_) => true,
@@ -161,7 +161,7 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
         slivers: [
           SliverToBoxAdapter(
             child: LocationDetailHero(
-              location: location,
+              location: sourceLocation,
               actionButtons: LocationDetailHeroActions(
                 locationId: location.id,
                 checkInCount: displayedCheckInCount,
@@ -195,38 +195,38 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
                     top: 16,
                     child: ReviewActionButton(
                       locationId: location.id,
-                      locationName: location.name,
+                      locationName: sourceLocation.name,
                     ),
                   ),
                   LocationDetailReviewsSection(locationId: location.id),
                   if (hasQuickInfo)
                     LocationDetailInset(
                       top: 20,
-                      child: QuickInfoRow(location: location),
+                      child: QuickInfoRow(location: sourceLocation),
                     ),
                   if (extraPhotoUrls.isNotEmpty)
                     LocationPhotoGallerySection(
                       photoUrls: extraPhotoUrls,
-                      category: location.category,
+                      category: sourceLocation.category,
                     ),
                   const LocationDetailDivider(top: 24),
-                  if (location.description.isNotEmpty) ...[
-                    LocationAboutSection(description: location.description),
+                  if (sourceLocation.description.isNotEmpty) ...[
+                    LocationAboutSection(description: sourceLocation.description),
                     const LocationDetailDivider(top: 20),
                   ],
-                  if (location.operatingHours case final hours?) ...[
+                  if (sourceLocation.operatingHours case final hours?) ...[
                     LocationDetailInset(
                       top: 20,
                       child: LocationHoursDropdownCard(hours: hours),
                     ),
                     const LocationDetailDivider(top: 20),
                   ],
-                  if (location.hasContact) ...[
-                    LocationContactSection(location: location),
+                  if (sourceLocation.hasContact) ...[
+                    LocationContactSection(location: sourceLocation),
                     const LocationDetailDivider(top: 20),
                   ],
-                  if (location.tags.isNotEmpty)
-                    LocationTagsSection(tags: location.tags),
+                  if (sourceLocation.tags.isNotEmpty)
+                    LocationTagsSection(tags: sourceLocation.tags),
                 ],
               ),
             ),

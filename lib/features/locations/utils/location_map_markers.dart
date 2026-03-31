@@ -14,8 +14,11 @@ List<Marker> buildLocationMarkers({
   required double zoom,
   required String keyPrefix,
   required LocationMarkerTapCallback onTap,
+  LocationRankingSnapshot? rankingSnapshot,
+  LocationRanking? activeRankingFilter,
+  PriceRange? activePriceFilter,
 }) {
-  final rankingSnapshot = locations.createRankingSnapshot();
+  final effectiveRankingSnapshot = rankingSnapshot ?? locations.createRankingSnapshot();
   final markerData = locations.map((location) {
     final isSelected = location.id == selectedId;
     final zIndex =
@@ -29,7 +32,7 @@ List<Marker> buildLocationMarkers({
         location.coordinates.latitude,
         location.coordinates.longitude,
       ),
-      ranking: rankingSnapshot.rankingFor(location),
+      ranking: effectiveRankingSnapshot.rankingFor(location),
     );
   }).toList()
     ..sort((a, b) => a.zIndex.compareTo(b.zIndex));
@@ -60,7 +63,10 @@ List<Marker> buildLocationMarkers({
             category: data.location.category,
             isSelected: data.isSelected,
             locationName: shouldHideLabel ? null : data.location.name,
+            priceRange: data.location.priceRange,
             ranking: data.ranking,
+            activeRankingFilter: activeRankingFilter,
+            activePriceFilter: activePriceFilter,
           ),
         ),
       ),

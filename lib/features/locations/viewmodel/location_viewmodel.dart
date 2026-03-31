@@ -60,6 +60,44 @@ class LocationFilter {
   static const _sentinel = Object();
 }
 
+class FilteredLocationsResult {
+  const FilteredLocationsResult({
+    required this.visibleLocations,
+    required this.rankingSnapshot,
+  });
+
+  final List<Location> visibleLocations;
+  final LocationRankingSnapshot? rankingSnapshot;
+}
+
+FilteredLocationsResult applyLocationFilters({
+  required List<Location> locations,
+  required LocationFilter filter,
+}) {
+  final rankingSnapshot = locations.isEmpty ? null : locations.createRankingSnapshot();
+  var filtered = locations;
+
+  if (filter.selectedRanking != null && rankingSnapshot != null) {
+    filtered = filtered
+        .where(
+          (location) =>
+              rankingSnapshot.rankingFor(location) == filter.selectedRanking,
+        )
+        .toList(growable: false);
+  }
+
+  if (filter.selectedPrice != null) {
+    filtered = filtered
+        .where((location) => location.priceRange == filter.selectedPrice)
+        .toList(growable: false);
+  }
+
+  return FilteredLocationsResult(
+    visibleLocations: List.unmodifiable(filtered),
+    rankingSnapshot: rankingSnapshot,
+  );
+}
+
 class LocationFilterViewModel extends Notifier<LocationFilter> {
   @override
   LocationFilter build() => const LocationFilter();

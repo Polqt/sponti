@@ -22,6 +22,7 @@ class LocationDetailSheet extends StatefulWidget {
 class _LocationDetailSheetState extends State<LocationDetailSheet> {
   static const double _midSize = 0.76;
   static const double _maxSize = 0.96;
+  static const double _minVisibleSheetHeight = 28;
 
   late final DraggableScrollableController _controller;
   late final ScrollController _scrollController;
@@ -111,54 +112,65 @@ class _LocationDetailSheetState extends State<LocationDetailSheet> {
         snapSizes: const [_midSize, _maxSize],
         snapAnimationDuration: const Duration(milliseconds: 300),
         builder: (context, sheetScrollController) {
-          return DecoratedBox(
-            decoration: const BoxDecoration(
-              color: SpontiColors.surface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onVerticalDragUpdate: (details) {
-                    if (!_controller.isAttached) return;
-                    final delta = -details.delta.dy / screenHeight;
-                    _controller.jumpTo(
-                      (_controller.size + delta).clamp(0.0, _maxSize),
-                    );
-                  },
-                  onVerticalDragEnd: (details) =>
-                      _snapToNearest(velocity: details.primaryVelocity ?? 0),
-                  child: const _SheetHandle(),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxHeight <= _minVisibleSheetHeight) {
+                return const SizedBox.shrink();
+              }
+
+              return DecoratedBox(
+                decoration: const BoxDecoration(
+                  color: SpontiColors.surface,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      SizedBox.shrink(
-                        child: ListView(
-                          controller: sheetScrollController,
-                          physics: const NeverScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onVerticalDragUpdate: (details) {
+                        if (!_controller.isAttached) return;
+                        final delta = -details.delta.dy / screenHeight;
+                        _controller.jumpTo(
+                          (_controller.size + delta).clamp(0.0, _maxSize),
+                        );
+                      },
+                      onVerticalDragEnd: (details) =>
+                          _snapToNearest(velocity: details.primaryVelocity ?? 0),
+                      child: const _SheetHandle(),
+                    ),
+                    Expanded(
+                      child: ClipRect(
+                        child: Stack(
+                          children: [
+                            SizedBox.shrink(
+                              child: ListView(
+                                controller: sheetScrollController,
+                                physics: const NeverScrollableScrollPhysics(),
+                              ),
+                            ),
+                            Consumer(
+                              builder: (context, ref, _) {
+                                final liveLocation =
+                                    ref
+                                        .watch(locationDetailProvider(widget.location.id))
+                                        .valueOrNull ??
+                                    widget.location;
+
+                                return LocationDetail(
+                                  location: liveLocation,
+                                  scrollController: _scrollController,
+                                  bottomPadding: bottomPadding + 28,
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ),
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final liveLocation =
-                              ref.watch(locationDetailProvider(widget.location.id)).valueOrNull ??
-                              widget.location;
-
-                          return LocationDetail(
-                            location: liveLocation,
-                            scrollController: _scrollController,
-                            bottomPadding: bottomPadding + 28,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),

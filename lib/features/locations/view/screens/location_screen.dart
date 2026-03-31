@@ -1,23 +1,21 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
-import 'package:sponti/core/widgets/glass_container.dart';
 import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/utils/location_map_markers.dart';
 import 'package:sponti/features/locations/utils/location_ranking.dart';
-import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
+import 'package:sponti/features/locations/view/widgets/location_map_atmosphere_overlay.dart';
+import 'package:sponti/features/locations/view/widgets/location_map_floating_controls.dart';
+import 'package:sponti/features/locations/view/widgets/location_map_header.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
+import 'package:sponti/features/locations/viewmodel/map_zoom_provider.dart';
 
 class LocationScreen extends ConsumerStatefulWidget {
   const LocationScreen({super.key});
@@ -46,6 +44,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     super.initState();
     _shellBarHiddenController = ref.read(shellBarHiddenProvider.notifier);
     _shellChromeProgressController = ref.read(shellChromeProgressProvider.notifier);
+    ref.read(mapZoomProvider.notifier).updateZoom(15.5);
     WidgetsBinding.instance.addPostFrameCallback((_) => _consumePending());
   }
 
@@ -141,23 +140,15 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   Widget build(BuildContext context) {
     final locationsAsync = ref.watch(locationsProvider);
     final filter = ref.watch(locationFilterProvider);
-    var locations = locationsAsync.valueOrNull ?? const <Location>[];
+    final mapZoom = ref.watch(mapZoomProvider);
+    final allLocations = locationsAsync.valueOrNull ?? const <Location>[];
+    final filteredResult = applyLocationFilters(
+      locations: allLocations,
+      filter: filter,
+    );
+    final locations = filteredResult.visibleLocations;
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final rankingSnapshot = locations.isEmpty
-        ? null
-        : locations.createRankingSnapshot();
-
-    if (filter.selectedRanking != null && rankingSnapshot != null) {
-      locations = locations
-          .where((loc) => rankingSnapshot.rankingFor(loc) == filter.selectedRanking)
-          .toList();
-    }
-
-    if (filter.selectedPrice != null) {
-      locations = locations
-          .where((loc) => loc.priceRange == filter.selectedPrice)
-          .toList();
-    }
+    final rankingSnapshot = filteredResult.rankingSnapshot;
 
     if (!_didAutoCenter && locations.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -184,13 +175,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
         : (locations.isNotEmpty ? locations.first.id : null);
     final selectedIndex =
         selectedId != null ? locations.indexWhere((l) => l.id == selectedId) : 0;
-    final currentZoom = (() {
-      try {
-        return _mapController.camera.zoom;
-      } catch (_) {
-        return 15.5;
-      }
-    })();
+    final currentZoom = mapZoom.zoom;
 
     // Build an ExploreFilter that reflects the current locationFilterProvider
     // state so the panel pills show the correct active selection.
@@ -227,6 +212,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                   if (_detailLocation != null) return;
                   _hidePanel();
                 },
+                onPositionChanged: (camera, _) {
+                  ref.read(mapZoomProvider.notifier).updateZoom(camera.zoom);
+                },
               ),
               children: [
                 TileLayer(
@@ -247,35 +235,18 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                     zoom: currentZoom,
                     keyPrefix: 'location_marker',
                     onTap: _showLocationDetails,
+                    rankingSnapshot: rankingSnapshot,
+                    activeRankingFilter: filter.selectedRanking,
+                    activePriceFilter: filter.selectedPrice,
                   ),
                 ),
               ],
             ),
           ),
-          SafeArea(
-            child: ValueListenableBuilder<double>(
-              valueListenable: _sheetProgress,
-              builder: (context, progress, child) {
-                final clamped = progress.clamp(0.0, 1.0);
-                return Opacity(
-                  opacity: 1.0 - clamped,
-                  child: Transform.translate(
-                    offset: Offset(-18 * clamped, 0),
-                    child: child,
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: const Column(
-                  children: [
-                    _GlassSearchBar(),
-                    SizedBox(height: 10),
-                  ],
-                ),
-              ),
-            ),
+          const Positioned.fill(
+            child: IgnorePointer(child: LocationMapAtmosphereOverlay()),
           ),
+          LocationMapHeader(sheetProgress: _sheetProgress),
           if (locationsAsync.isLoading)
             const Center(
               child: CircularProgressIndicator(color: SpontiColors.primary),
@@ -298,24 +269,17 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               bottom: bottomInset,
               child: SafeArea(
                 top: false,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (filter.selectedRanking != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _RankingFilterChip(
-                          ranking: filter.selectedRanking!,
-                          onClear: () {
-                            ref.read(locationFilterProvider.notifier).setRanking(null);
-                          },
-                        ),
-                      ),
-                    _FloatingCategoryRow(
-                      selectedCategory: filter.selectedCategory,
-                      onChanged: _onCategoryChanged,
-                    ),
-                  ],
+                child: LocationMapFloatingControls(
+                  selectedCategory: filter.selectedCategory,
+                  selectedRanking: filter.selectedRanking,
+                  selectedPrice: filter.selectedPrice,
+                  onCategoryChanged: _onCategoryChanged,
+                  onClearRanking: () {
+                    ref.read(locationFilterProvider.notifier).setRanking(null);
+                  },
+                  onClearPrice: () {
+                    ref.read(locationFilterProvider.notifier).setPrice(null);
+                  },
                 ),
               ),
             ),
@@ -358,146 +322,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _GlassSearchBar extends StatelessWidget {
-  const _GlassSearchBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push(RouteName.search),
-        child: GlassContainer(
-          child: Row(
-            children: [
-              const Icon(
-                Icons.search_rounded,
-                size: 20,
-                color: SpontiColors.textSecondary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Search spots, cafes, parks',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: SpontiColors.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.tune_rounded,
-                size: 18,
-                color: SpontiColors.textSecondary.withValues(alpha: 0.9),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FloatingCategoryRow extends StatelessWidget {
-  const _FloatingCategoryRow({
-    required this.selectedCategory,
-    required this.onChanged,
-  });
-
-  final LocationCategory? selectedCategory;
-  final ValueChanged<LocationCategory?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-          decoration: BoxDecoration(
-            color: SpontiColors.surface.withValues(alpha: 0.74),
-          ),
-          padding: const EdgeInsets.all(10),
-          child: LocationCategoryRow(
-            selectedCategory: selectedCategory,
-            onChanged: onChanged,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RankingFilterChip extends StatelessWidget {
-  const _RankingFilterChip({
-    required this.ranking,
-    required this.onClear,
-  });
-
-  final LocationRanking ranking;
-  final VoidCallback onClear;
-
-  String get _label => switch (ranking) {
-        LocationRanking.trending => 'Trending',
-        LocationRanking.popular => 'Popular',
-        LocationRanking.lowkey => 'Lowkey',
-        LocationRanking.newest => 'New',
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-          decoration: BoxDecoration(
-            color: SpontiColors.surface.withValues(alpha: 0.74),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: ranking.indicatorColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _label.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: SpontiColors.textPrimary,
-                  letterSpacing: 0.3,
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onClear,
-                child: const Icon(
-                  Icons.close_rounded,
-                  size: 18,
-                  color: SpontiColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
