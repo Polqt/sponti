@@ -66,6 +66,14 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.userProfile,
+      builder: (context, state) {
+        final userId = state.pathParameters['id'] ?? '';
+        return ProfileScreen(userId: userId);
+      },
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
       path: RouteName.surprise,
       builder: (context, state) => const SurpriseMeModal(),
     ),

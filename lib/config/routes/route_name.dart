@@ -9,6 +9,7 @@ abstract final class RouteName {
   static const String favorites = '/favorites';
   static const String myCheckIns = '/my-check-ins';
   static const String profile = '/profile';
+  static const String userProfile = '/profile/:id';
 
   static const String locationDetail = '/locations/:id';
   static const String editProfile = '/edit-profile';
@@ -18,6 +19,7 @@ abstract final class RouteName {
   static const String surprise = '/surprise';
 
   static String locationDetailPath(String id) => '/locations/$id';
+  static String userProfilePath(String id) => '/profile/$id';
 
   static const String checkIn = '/check-in';
   static String checkInPath({

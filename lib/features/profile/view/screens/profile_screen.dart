@@ -6,6 +6,7 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/core/widgets/app_shimmer.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
+import 'package:sponti/features/profile/model/user_profile.dart';
 import 'package:sponti/features/profile/view/widgets/profile_header.dart';
 import 'package:sponti/features/profile/view/widgets/profile_photo_picker.dart';
 import 'package:sponti/features/profile/view/widgets/profile_stats_card.dart';
@@ -75,12 +76,28 @@ class _AnimatedFadeInState extends State<_AnimatedFadeIn>
 }
 
 class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({
+    super.key,
+    this.userId,
+  });
+
+  final String? userId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(profileProvider);
     final authUser = ref.watch(currentUserProvider);
+    final viewedUserId = userId ?? authUser?.id;
+    final isOwnProfile = viewedUserId != null && viewedUserId == authUser?.id;
+    final profileAsync =
+        viewedUserId == null || viewedUserId.isEmpty
+            ? const AsyncValue<UserProfile?>.data(null)
+            : isOwnProfile
+            ? ref.watch(profileProvider)
+            : ref.watch(userProfileProvider(viewedUserId));
+    final statsAsync =
+        viewedUserId == null || viewedUserId.isEmpty
+            ? const AsyncValue<UserStats?>.data(null)
+            : ref.watch(userStatsProvider(viewedUserId));
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -88,15 +105,20 @@ class ProfileScreen extends ConsumerWidget {
         loading: () => const _ProfileShimmer(),
         error: (e, _) => AppErrorState(
           message: 'Could not load profile.',
-          onRetry: () => ref.invalidate(profileProvider),
+          onRetry: () => _refreshProfile(ref, viewedUserId, isOwnProfile),
         ),
         data: (profile) {
           if (profile == null) {
             return AppErrorState(
               message: 'Profile not found.',
-              onRetry: () => ref.invalidate(profileProvider),
+              onRetry: () => _refreshProfile(ref, viewedUserId, isOwnProfile),
             );
           }
+
+          final resolvedProfile = _mergeProfileStats(
+            profile,
+            statsAsync.valueOrNull,
+          );
 
           return CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -105,7 +127,15 @@ class ProfileScreen extends ConsumerWidget {
                 backgroundColor: SpontiColors.surface,
                 elevation: 0,
                 pinned: false,
-                toolbarHeight: 0,
+                automaticallyImplyLeading: !isOwnProfile,
+                leading: isOwnProfile
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        onPressed: () => context.pop(),
+                      ),
+                title: isOwnProfile ? null : const Text('Profile'),
+                toolbarHeight: isOwnProfile ? 0 : kToolbarHeight,
               ),
               SliverToBoxAdapter(
                 child: Padding(
@@ -116,8 +146,8 @@ class ProfileScreen extends ConsumerWidget {
                       _AnimatedFadeIn(
                         delay: Duration.zero,
                         child: ProfileHeader(
-                          profile: profile,
-                          onAvatarTap: authUser != null
+                          profile: resolvedProfile,
+                          onAvatarTap: isOwnProfile && authUser != null
                               ? () =>
                                     _pickAndUploadPhoto(context, ref, authUser.id)
                               : null,
@@ -126,56 +156,58 @@ class ProfileScreen extends ConsumerWidget {
                       const SizedBox(height: 20),
                       _AnimatedFadeIn(
                         delay: const Duration(milliseconds: 100),
-                        child: ProfileStatsCard(profile: profile),
+                        child: ProfileStatsCard(profile: resolvedProfile),
                       ),
-                      const SizedBox(height: 32),
-                      _AnimatedFadeIn(
-                        delay: const Duration(milliseconds: 200),
-                        child: _MenuSection(
-                          title: 'My Activity',
-                          items: [
-                            _MenuItem(
-                              icon: Icons.location_on_rounded,
-                              iconColor: SpontiColors.primary,
-                              label: 'My Check-ins',
-                              onTap: () => context.push(RouteName.myCheckIns),
-                            ),
-                            _MenuItem(
-                              icon: Icons.bookmark_rounded,
-                              iconColor: SpontiColors.primary,
-                              label: 'Saved Spots',
-                              onTap: () => context.go(RouteName.favorites),
-                            ),
-                            _MenuItem(
-                              icon: Icons.add_location_alt_rounded,
-                              iconColor: SpontiColors.secondary,
-                              label: 'Suggested Spots',
-                              onTap: () => context.push(RouteName.suggestSpot),
-                            ),
-                          ],
+                      if (isOwnProfile) ...[
+                        const SizedBox(height: 32),
+                        _AnimatedFadeIn(
+                          delay: const Duration(milliseconds: 200),
+                          child: _MenuSection(
+                            title: 'My Activity',
+                            items: [
+                              _MenuItem(
+                                icon: Icons.location_on_rounded,
+                                iconColor: SpontiColors.primary,
+                                label: 'My Check-ins',
+                                onTap: () => context.push(RouteName.myCheckIns),
+                              ),
+                              _MenuItem(
+                                icon: Icons.bookmark_rounded,
+                                iconColor: SpontiColors.primary,
+                                label: 'Saved Spots',
+                                onTap: () => context.go(RouteName.favorites),
+                              ),
+                              _MenuItem(
+                                icon: Icons.add_location_alt_rounded,
+                                iconColor: SpontiColors.secondary,
+                                label: 'Suggested Spots',
+                                onTap: () => context.push(RouteName.suggestSpot),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      _AnimatedFadeIn(
-                        delay: const Duration(milliseconds: 300),
-                        child: _MenuSection(
-                          title: 'Settings',
-                          items: [
-                            _MenuItem(
-                              icon: Icons.edit_rounded,
-                              iconColor: SpontiColors.secondary,
-                              label: 'Edit Profile',
-                              onTap: () => context.push(RouteName.editProfile),
-                            ),
-                            _MenuItem(
-                              icon: Icons.logout_rounded,
-                              iconColor: SpontiColors.error,
-                              label: 'Sign Out',
-                              onTap: () => _confirmSignOut(context, ref),
-                            ),
-                          ],
+                        const SizedBox(height: 24),
+                        _AnimatedFadeIn(
+                          delay: const Duration(milliseconds: 300),
+                          child: _MenuSection(
+                            title: 'Settings',
+                            items: [
+                              _MenuItem(
+                                icon: Icons.edit_rounded,
+                                iconColor: SpontiColors.secondary,
+                                label: 'Edit Profile',
+                                onTap: () => context.push(RouteName.editProfile),
+                              ),
+                              _MenuItem(
+                                icon: Icons.logout_rounded,
+                                iconColor: SpontiColors.error,
+                                label: 'Sign Out',
+                                onTap: () => _confirmSignOut(context, ref),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -185,6 +217,30 @@ class ProfileScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+}
+
+UserProfile _mergeProfileStats(UserProfile profile, UserStats? stats) {
+  if (stats == null) {
+    return profile;
+  }
+
+  return profile.copyWith(
+    checkInCount: stats.checkInCount,
+    favoritesCount: stats.favoritesCount,
+    spotsSuggested: stats.spotsSuggested,
+  );
+}
+
+void _refreshProfile(WidgetRef ref, String? userId, bool isOwnProfile) {
+  if (isOwnProfile) {
+    ref.invalidate(profileProvider);
+  } else if (userId != null && userId.isNotEmpty) {
+    ref.invalidate(userProfileProvider(userId));
+  }
+
+  if (userId != null && userId.isNotEmpty) {
+    ref.invalidate(userStatsProvider(userId));
   }
 }
 

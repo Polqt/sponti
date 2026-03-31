@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_network_image.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
@@ -123,6 +125,14 @@ class _CuratorLane extends StatelessWidget {
                 rank: index + 1,
                 kind: kind,
                 isCurrentUser: curators[index].id == currentUserId,
+                onTap: () {
+                  if (curators[index].id == currentUserId) {
+                    context.go(RouteName.profile);
+                    return;
+                  }
+
+                  context.push(RouteName.userProfilePath(curators[index].id));
+                },
               ),
             ),
           ),
@@ -139,12 +149,14 @@ class _CuratorAvatarTile extends StatelessWidget {
     required this.rank,
     required this.kind,
     required this.isCurrentUser,
+    required this.onTap,
   });
 
   final DiscoveryCurator curator;
   final int rank;
   final _CuratorLaneKind kind;
   final bool isCurrentUser;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -172,89 +184,99 @@ class _CuratorAvatarTile extends StatelessWidget {
       },
       child: SizedBox(
         width: 112,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 78,
-                  height: 78,
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: accentColor,
-                      width: rank == 1 ? 3 : 2,
-                    ),
-                  ),
-                  child: AppNetworkImage.circle(
-                    url: curator.avatarUrl,
-                    size: 72,
-                  ),
-                ),
-                Positioned(
-                  right: -2,
-                  bottom: -2,
-                  child: Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      color: accentColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '$rank',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 78,
+                        height: 78,
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: accentColor,
+                            width: rank == 1 ? 3 : 2,
+                          ),
+                        ),
+                        child: AppNetworkImage.circle(
+                          url: curator.avatarUrl,
+                          size: 72,
+                        ),
                       ),
+                      Positioned(
+                        right: -2,
+                        bottom: -2,
+                        child: Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: accentColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '$rank',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    curator.handle ?? curator.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: isCurrentUser
+                          ? SpontiColors.primary
+                          : SpontiColors.textPrimary,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              curator.handle ?? curator.displayName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: isCurrentUser
-                    ? SpontiColors.primary
-                    : SpontiColors.textPrimary,
-                fontWeight: FontWeight.w800,
+                  const SizedBox(height: 4),
+                  Text(
+                    _label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: accentColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _metric,
+                    maxLines: kind == _CuratorLaneKind.overall ? 2 : 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: SpontiColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              _label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: accentColor,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _metric,
-              maxLines: kind == _CuratorLaneKind.overall ? 2 : 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: SpontiColors.textSecondary,
-                fontWeight: FontWeight.w600,
-                height: 1.2,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -360,7 +382,7 @@ class _CuratorLaneLoading extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: 4,
             separatorBuilder: (_, _) => const SizedBox(width: 16),
-            itemBuilder: (_, __) => const _CuratorLoadingTile(),
+            itemBuilder: (_, _) => const _CuratorLoadingTile(),
           ),
         ),
       ],
