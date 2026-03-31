@@ -36,10 +36,10 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   late final StateController<double> _shellChromeProgressController;
 
   String? _selectedLocationId;
+  Location? _detailLocation;
   bool _didAutoCenter = false;
   bool _isExplorePanelVisible = false;
   bool _isExplorePanelExpanded = false;
-  bool _isLocationDetailOpen = false;
 
   @override
   void initState() {
@@ -94,25 +94,26 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _focusLocation(location);
   }
 
-  Future<void> _showLocationDetails(Location location) async {
-    if (_isLocationDetailOpen) return;
-
+  void _showLocationDetails(Location location) {
     setState(() {
       _selectedLocationId = location.id;
+      _detailLocation = location;
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
     });
     _focusLocation(location);
-    _setSheetProgress(0.0);
+    _setSheetProgress(1.0);
     _setShellHidden(true);
-    _isLocationDetailOpen = true;
+  }
 
-    try {
-      await showLocationDetailSheet(context, location: location);
-    } finally {
-      _isLocationDetailOpen = false;
-      _setShellHidden(false);
-    }
+  void _restorePanelFromDetails() {
+    setState(() {
+      _detailLocation = null;
+      _isExplorePanelVisible = true;
+      _isExplorePanelExpanded = true;
+    });
+    _setSheetProgress(1.0);
+    _setShellHidden(true);
   }
 
   void _setPanelExpanded(bool expanded) {
@@ -222,7 +223,10 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                   pinchZoomThreshold: 0.4,
                   pinchMoveThreshold: 30.0,
                 ),
-                onTap: (_, _) => _hidePanel(),
+                onTap: (_, _) {
+                  if (_detailLocation != null) return;
+                  _hidePanel();
+                },
               ),
               children: [
                 TileLayer(
@@ -315,7 +319,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 ),
               ),
             ),
-          if (_isExplorePanelVisible)
+          if (_isExplorePanelVisible && _detailLocation == null)
             ExploreBottomPanel(
               locationsAsync: locationsAsync,
               locations: locations,
@@ -344,6 +348,14 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               onSheetProgressChanged: _setSheetProgress,
               onSelectLocation: _selectLocation,
               onLocationTap: _showLocationDetails,
+            ),
+          if (_detailLocation != null)
+            Positioned.fill(
+              child: LocationDetailSheet(
+                key: ValueKey(_detailLocation!.id),
+                location: _detailLocation!,
+                onDismissed: _restorePanelFromDetails,
+              ),
             ),
         ],
       ),

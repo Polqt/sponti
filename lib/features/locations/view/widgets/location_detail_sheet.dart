@@ -5,27 +5,6 @@ import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/screens/location_detail.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
-Future<void> showLocationDetailSheet(
-  BuildContext context, {
-  required Location location,
-}) {
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    // Use the sheet's own context to pop so we don't accidentally pop a
-    // go_router page when the outer context belongs to a shell route.
-    builder: (sheetContext) => LocationDetailSheet(
-      location: location,
-      onDismissed: () {
-        if (Navigator.of(sheetContext).canPop()) {
-          Navigator.of(sheetContext).pop();
-        }
-      },
-    ),
-  );
-}
-
 class LocationDetailSheet extends StatefulWidget {
   const LocationDetailSheet({
     super.key,
