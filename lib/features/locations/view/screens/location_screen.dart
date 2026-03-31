@@ -35,6 +35,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   String? _selectedLocationId;
   Location? _detailLocation;
+  DateTime? _ignoreMapTapUntil;
+  bool _panelWasVisibleBeforeDetails = false;
+  bool _panelWasExpandedBeforeDetails = false;
   bool _didAutoCenter = false;
   bool _isExplorePanelVisible = false;
   bool _isExplorePanelExpanded = false;
@@ -69,6 +72,11 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _shellChromeProgressController.state = progress;
   }
 
+  bool get _shouldIgnoreMapTap {
+    final until = _ignoreMapTapUntil;
+    return until != null && DateTime.now().isBefore(until);
+  }
+
   void _focusLocation(Location location) {
     final currentZoom = _mapController.camera.zoom;
     final optimalZoom = currentZoom < 15.0 ? 15.5 : currentZoom;
@@ -79,6 +87,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   }
 
   void _openPanel() {
+    _ignoreMapTapUntil = null;
     setState(() {
       _isExplorePanelVisible = true;
       _isExplorePanelExpanded = true;
@@ -94,6 +103,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   }
 
   void _showLocationDetails(Location location) {
+    _ignoreMapTapUntil = null;
+    _panelWasVisibleBeforeDetails = _isExplorePanelVisible;
+    _panelWasExpandedBeforeDetails = _isExplorePanelExpanded;
     setState(() {
       _selectedLocationId = location.id;
       _detailLocation = location;
@@ -106,13 +118,17 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   }
 
   void _restorePanelFromDetails() {
+    _ignoreMapTapUntil = DateTime.now().add(
+      const Duration(milliseconds: 260),
+    );
     setState(() {
       _detailLocation = null;
-      _isExplorePanelVisible = true;
-      _isExplorePanelExpanded = true;
+      _isExplorePanelVisible = _panelWasVisibleBeforeDetails;
+      _isExplorePanelExpanded = _panelWasExpandedBeforeDetails;
     });
-    _setSheetProgress(1.0);
-    _setShellHidden(true);
+    final shellVisible = _panelWasVisibleBeforeDetails;
+    _setSheetProgress(shellVisible ? 1.0 : 0.0);
+    _setShellHidden(shellVisible);
   }
 
   void _setPanelExpanded(bool expanded) {
@@ -120,6 +136,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   }
 
   void _hidePanel() {
+    _ignoreMapTapUntil = null;
     setState(() {
       _isExplorePanelVisible = false;
       _isExplorePanelExpanded = false;
@@ -149,6 +166,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     final locations = filteredResult.visibleLocations;
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final rankingSnapshot = filteredResult.rankingSnapshot;
+    final floatingControlsBottom = bottomInset + kShellBottomBarClearance + 14;
 
     if (!_didAutoCenter && locations.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -209,7 +227,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                   pinchMoveThreshold: 30.0,
                 ),
                 onTap: (_, _) {
-                  if (_detailLocation != null) return;
+                  if (_detailLocation != null || _shouldIgnoreMapTap) return;
                   _hidePanel();
                 },
                 onPositionChanged: (camera, _) {
@@ -262,25 +280,22 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 color: SpontiColors.error,
               ),
             ),
-          if (!_isExplorePanelVisible)
+          if (!_isExplorePanelVisible && _detailLocation == null)
             Positioned(
               left: 16,
               right: 16,
-              bottom: bottomInset,
-              child: SafeArea(
-                top: false,
-                child: LocationMapFloatingControls(
-                  selectedCategory: filter.selectedCategory,
-                  selectedRanking: filter.selectedRanking,
-                  selectedPrice: filter.selectedPrice,
-                  onCategoryChanged: _onCategoryChanged,
-                  onClearRanking: () {
-                    ref.read(locationFilterProvider.notifier).setRanking(null);
-                  },
-                  onClearPrice: () {
-                    ref.read(locationFilterProvider.notifier).setPrice(null);
-                  },
-                ),
+              bottom: floatingControlsBottom,
+              child: LocationMapFloatingControls(
+                selectedCategory: filter.selectedCategory,
+                selectedRanking: filter.selectedRanking,
+                selectedPrice: filter.selectedPrice,
+                onCategoryChanged: _onCategoryChanged,
+                onClearRanking: () {
+                  ref.read(locationFilterProvider.notifier).setRanking(null);
+                },
+                onClearPrice: () {
+                  ref.read(locationFilterProvider.notifier).setPrice(null);
+                },
               ),
             ),
           if (_isExplorePanelVisible && _detailLocation == null)

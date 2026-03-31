@@ -23,6 +23,7 @@ class _LocationDetailSheetState extends State<LocationDetailSheet> {
   static const double _midSize = 0.76;
   static const double _maxSize = 0.96;
   static const double _minVisibleSheetHeight = 28;
+  static const double _dismissedSizeThreshold = 0.08;
 
   late final DraggableScrollableController _controller;
   late final ScrollController _scrollController;
@@ -42,23 +43,35 @@ class _LocationDetailSheetState extends State<LocationDetailSheet> {
     super.dispose();
   }
 
+  void _handleSheetExtentChanged(double extent) {
+    if (_isDismissing || extent > _dismissedSizeThreshold) return;
+
+    _dismissSheet();
+  }
+
+  void _dismissSheet() {
+    if (_isDismissing) return;
+    _isDismissing = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.onDismissed?.call();
+    });
+  }
+
   void _snapToNearest({double velocity = 0}) {
     if (!_controller.isAttached || _isDismissing) return;
     final size = _controller.size;
     final shouldDismiss = velocity > 500 || size < _midSize * 0.65;
 
     if (shouldDismiss) {
-      _isDismissing = true;
+      _dismissSheet();
       _controller
           .animateTo(
             0,
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeInCubic,
           )
-          .whenComplete(() {
-            if (!mounted) return;
-            widget.onDismissed?.call();
-          });
+          .whenComplete(() {});
       return;
     }
 
@@ -102,77 +115,84 @@ class _LocationDetailSheetState extends State<LocationDetailSheet> {
 
     return Padding(
       padding: EdgeInsets.only(top: topPadding + 12),
-      child: DraggableScrollableSheet(
-        controller: _controller,
-        expand: false,
-        initialChildSize: _midSize,
-        minChildSize: 0.0,
-        maxChildSize: _maxSize,
-        snap: true,
-        snapSizes: const [_midSize, _maxSize],
-        snapAnimationDuration: const Duration(milliseconds: 300),
-        builder: (context, sheetScrollController) {
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxHeight <= _minVisibleSheetHeight) {
-                return const SizedBox.shrink();
-              }
+      child: NotificationListener<DraggableScrollableNotification>(
+        onNotification: (notification) {
+          _handleSheetExtentChanged(notification.extent);
+          return false;
+        },
+        child: DraggableScrollableSheet(
+          controller: _controller,
+          expand: false,
+          initialChildSize: _midSize,
+          minChildSize: 0.0,
+          maxChildSize: _maxSize,
+          snap: true,
+          snapSizes: const [0.0, _midSize, _maxSize],
+          snapAnimationDuration: const Duration(milliseconds: 300),
+          builder: (context, sheetScrollController) {
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxHeight <= _minVisibleSheetHeight) {
+                  _dismissSheet();
+                  return const SizedBox.shrink();
+                }
 
-              return DecoratedBox(
-                decoration: const BoxDecoration(
-                  color: SpontiColors.surface,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                ),
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onVerticalDragUpdate: (details) {
-                        if (!_controller.isAttached) return;
-                        final delta = -details.delta.dy / screenHeight;
-                        _controller.jumpTo(
-                          (_controller.size + delta).clamp(0.0, _maxSize),
-                        );
-                      },
-                      onVerticalDragEnd: (details) =>
-                          _snapToNearest(velocity: details.primaryVelocity ?? 0),
-                      child: const _SheetHandle(),
-                    ),
-                    Expanded(
-                      child: ClipRect(
-                        child: Stack(
-                          children: [
-                            SizedBox.shrink(
-                              child: ListView(
-                                controller: sheetScrollController,
-                                physics: const NeverScrollableScrollPhysics(),
+                return DecoratedBox(
+                  decoration: const BoxDecoration(
+                    color: SpontiColors.surface,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  ),
+                  child: Column(
+                    children: [
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onVerticalDragUpdate: (details) {
+                          if (!_controller.isAttached) return;
+                          final delta = -details.delta.dy / screenHeight;
+                          _controller.jumpTo(
+                            (_controller.size + delta).clamp(0.0, _maxSize),
+                          );
+                        },
+                        onVerticalDragEnd: (details) =>
+                            _snapToNearest(velocity: details.primaryVelocity ?? 0),
+                        child: const _SheetHandle(),
+                      ),
+                      Expanded(
+                        child: ClipRect(
+                          child: Stack(
+                            children: [
+                              SizedBox.shrink(
+                                child: ListView(
+                                  controller: sheetScrollController,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                ),
                               ),
-                            ),
-                            Consumer(
-                              builder: (context, ref, _) {
-                                final liveLocation =
-                                    ref
-                                        .watch(locationDetailProvider(widget.location.id))
-                                        .valueOrNull ??
-                                    widget.location;
+                              Consumer(
+                                builder: (context, ref, _) {
+                                  final liveLocation =
+                                      ref
+                                          .watch(locationDetailProvider(widget.location.id))
+                                          .valueOrNull ??
+                                      widget.location;
 
-                                return LocationDetail(
-                                  location: liveLocation,
-                                  scrollController: _scrollController,
-                                  bottomPadding: bottomPadding + 28,
-                                );
-                              },
-                            ),
-                          ],
+                                  return LocationDetail(
+                                    location: liveLocation,
+                                    scrollController: _scrollController,
+                                    bottomPadding: bottomPadding + 28,
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

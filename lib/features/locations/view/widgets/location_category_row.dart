@@ -18,21 +18,24 @@ class LocationCategoryRow extends StatelessWidget {
     final selected = selectedCategory;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Row(
         children: [
-          _CategoryIconButton(
+          _CategoryPill(
+            label: 'All',
             isSelected: selected == null,
-            color: SpontiColors.primary,
+            accent: SpontiColors.primary,
             onTap: () => onChanged(null),
-            child: const Icon(Icons.grid_view_rounded),
+            icon: const Icon(Icons.grid_view_rounded),
           ),
           for (final category in LocationCategory.values) ...[
             const SizedBox(width: 10),
-            _CategoryIconButton(
+            _CategoryPill(
+              label: category.label,
               isSelected: selected == category,
-              color: Color(category.colorValue),
+              accent: Color(category.colorValue),
               onTap: () => onChanged(selected == category ? null : category),
-              child: LocationCategoryIcon(
+              icon: LocationCategoryIcon(
                 category: category,
                 color: Color(category.colorValue),
                 size: 18,
@@ -45,34 +48,62 @@ class LocationCategoryRow extends StatelessWidget {
   }
 }
 
-class _CategoryIconButton extends StatelessWidget {
-  const _CategoryIconButton({
+class _CategoryPill extends StatelessWidget {
+  const _CategoryPill({
+    required this.label,
     required this.isSelected,
-    required this.color,
+    required this.accent,
     required this.onTap,
-    required this.child,
+    required this.icon,
   });
 
+  final String label;
   final bool isSelected;
-  final Color color;
+  final Color accent;
   final VoidCallback onTap;
-  final Widget child;
+  final Widget icon;
 
   @override
   Widget build(BuildContext context) {
-    final foreground = isSelected ? color : SpontiColors.textSecondary;
-
+    final foreground = isSelected ? accent : SpontiColors.textSecondary;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        child: SizedBox(
-          width: 42,
-          height: 42,
-          child: IconTheme(
-            data: IconThemeData(size: 18, color: foreground),
-            child: Center(child: child),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          height: 48,
+          padding: EdgeInsets.symmetric(
+            horizontal: isSelected ? 14 : 8,
+            vertical: 6,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? accent.withValues(alpha: 0.14)
+                      : Colors.white.withValues(alpha: 0.72),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected
+                        ? accent.withValues(alpha: 0.22)
+                        : Colors.white.withValues(alpha: 0.78),
+                  ),
+                ),
+                child: IconTheme(
+                  data: IconThemeData(size: 18, color: foreground),
+                  child: Center(child: icon),
+                ),
+              ),
+            ],
           ),
         ),
       ),

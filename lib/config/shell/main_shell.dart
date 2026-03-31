@@ -106,14 +106,19 @@ class _SpontiBottomBar extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      minimum: EdgeInsets.fromLTRB(horizontalMargin, 0, horizontalMargin, 8),
+      minimum: EdgeInsets.fromLTRB(
+        horizontalMargin,
+        0,
+        horizontalMargin,
+        kShellBottomBarBottomGap,
+      ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(30),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            height: 78,
+            height: kShellBottomBarHeight,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               color: const Color(0xFFF8F6F1).withValues(alpha: 0.92),

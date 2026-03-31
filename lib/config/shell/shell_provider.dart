@@ -1,6 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/config/routes/route_name.dart';
 
+const double kShellBottomBarHeight = 78.0;
+const double kShellBottomBarBottomGap = 8.0;
+const double kShellBottomBarClearance =
+    kShellBottomBarHeight + kShellBottomBarBottomGap;
+
 /// The shell tabs in order, index must match the bottom nav order.
 enum ShellTab {
   discovery(0, RouteName.discovery),
