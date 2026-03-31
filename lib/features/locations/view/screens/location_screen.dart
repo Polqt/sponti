@@ -343,6 +343,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               edgeToEdge: true,
               onSheetProgressChanged: _setSheetProgress,
               onSelectLocation: _selectLocation,
+              onLocationTap: _showLocationDetails,
             ),
         ],
       ),

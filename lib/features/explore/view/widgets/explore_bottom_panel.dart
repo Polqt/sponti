@@ -354,8 +354,13 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
                 isSaved: favoriteIds.contains(location.id),
                 showShadow: false,
                 onTap: () {
+                  final onLocationTap = widget.onLocationTap;
+                  if (onLocationTap != null) {
+                    onLocationTap(location);
+                    return;
+                  }
+
                   widget.onSelectLocation(location);
-                  widget.onLocationTap?.call(location);
                 },
                 onSaveToggle: () =>
                     ref.read(favoriteIdsProvider.notifier).toggle(location.id),
