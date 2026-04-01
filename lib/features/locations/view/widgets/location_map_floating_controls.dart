@@ -12,7 +12,11 @@ class LocationMapFloatingControls extends StatelessWidget {
     required this.selectedCategory,
     required this.selectedRanking,
     required this.selectedPrice,
+    required this.currentLocationTitle,
+    required this.currentLocationSubtitle,
+    required this.isLocating,
     required this.onCategoryChanged,
+    required this.onLocateMe,
     required this.onClearRanking,
     required this.onClearPrice,
   });
@@ -20,7 +24,11 @@ class LocationMapFloatingControls extends StatelessWidget {
   final LocationCategory? selectedCategory;
   final LocationRanking? selectedRanking;
   final PriceRange? selectedPrice;
+  final String currentLocationTitle;
+  final String currentLocationSubtitle;
+  final bool isLocating;
   final ValueChanged<LocationCategory?> onCategoryChanged;
+  final VoidCallback onLocateMe;
   final VoidCallback onClearRanking;
   final VoidCallback onClearPrice;
 
@@ -50,6 +58,15 @@ class LocationMapFloatingControls extends StatelessWidget {
               ],
             ),
           ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _CurrentLocationButton(
+            title: currentLocationTitle,
+            subtitle: currentLocationSubtitle,
+            isLoading: isLocating,
+            onTap: onLocateMe,
+          ),
+        ),
         _GlassSurface(
           padding: const EdgeInsets.all(10),
           child: LocationCategoryRow(
@@ -58,6 +75,107 @@ class LocationMapFloatingControls extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CurrentLocationButton extends StatelessWidget {
+  const _CurrentLocationButton({
+    required this.title,
+    required this.subtitle,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _GlassSurface(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: isLoading ? null : onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        SpontiColors.secondary.withValues(alpha: 0.20),
+                        SpontiColors.secondary.withValues(alpha: 0.08),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: isLoading
+                      ? const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.0,
+                            color: SpontiColors.secondary,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.my_location_rounded,
+                          color: SpontiColors.secondary,
+                          size: 20,
+                        ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: SpontiColors.textPrimary,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: SpontiColors.textSecondary,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Icon(
+                  Icons.arrow_outward_rounded,
+                  color: SpontiColors.textSecondary.withValues(alpha: 0.9),
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

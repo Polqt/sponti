@@ -100,43 +100,39 @@ class _SpontiBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final isLargeScreen = width >= 840;
-    final horizontalMargin = isLargeScreen ? 24.0 : 12.0;
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final dockBottomInset = bottomInset > 0 ? bottomInset : 6.0;
+    final dockHeight = kShellBottomBarHeight + dockBottomInset;
 
-    return SafeArea(
-      top: false,
-      minimum: EdgeInsets.fromLTRB(
-        horizontalMargin,
-        0,
-        horizontalMargin,
-        kShellBottomBarBottomGap,
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: kShellBottomBarBottomGap),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            height: kShellBottomBarHeight,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F6F1).withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.85),
-                width: 0.5,
+            height: dockHeight,
+            padding: EdgeInsets.fromLTRB(8, 9, 8, dockBottomInset),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8F6F1),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              border: Border(
+                top: BorderSide(
+                  color: Colors.white,
+                  width: 0.5,
+                ),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
+                  color: Color(0x0F000000),
                   blurRadius: 20,
-                  offset: const Offset(0, 4),
+                  offset: Offset(0, -4),
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
+                  color: Color(0x05000000),
                   blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  offset: Offset(0, -2),
                 ),
               ],
             ),

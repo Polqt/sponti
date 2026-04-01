@@ -29,7 +29,7 @@ class LocationCategoryRow extends StatelessWidget {
             icon: const Icon(Icons.grid_view_rounded),
           ),
           for (final category in LocationCategory.values) ...[
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             _CategoryPill(
               label: category.label,
               isSelected: selected == category,
@@ -48,7 +48,7 @@ class LocationCategoryRow extends StatelessWidget {
   }
 }
 
-class _CategoryPill extends StatelessWidget {
+class _CategoryPill extends StatefulWidget {
   const _CategoryPill({
     required this.label,
     required this.isSelected,
@@ -64,46 +64,93 @@ class _CategoryPill extends StatelessWidget {
   final Widget icon;
 
   @override
+  State<_CategoryPill> createState() => _CategoryPillState();
+}
+
+class _CategoryPillState extends State<_CategoryPill>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 120),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    _scaleController.forward();
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    _scaleController.reverse();
+  }
+
+  void _handleTapCancel() {
+    _scaleController.reverse();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final foreground = isSelected ? accent : SpontiColors.textSecondary;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          height: 48,
-          padding: EdgeInsets.symmetric(
-            horizontal: isSelected ? 14 : 8,
-            vertical: 6,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? accent.withValues(alpha: 0.14)
-                      : Colors.white.withValues(alpha: 0.72),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isSelected
-                        ? accent.withValues(alpha: 0.22)
-                        : Colors.white.withValues(alpha: 0.78),
+    final foreground = widget.isSelected ? widget.accent : SpontiColors.textSecondary;
+    
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onTap,
+          onTapDown: _handleTapDown,
+          onTapUp: _handleTapUp,
+          onTapCancel: _handleTapCancel,
+          borderRadius: BorderRadius.circular(22),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            height: 44,
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.isSelected ? 14 : 8,
+              vertical: 4,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: widget.isSelected
+                        ? widget.accent.withValues(alpha: 0.14)
+                        : Colors.white.withValues(alpha: 0.75),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: widget.isSelected
+                          ? widget.accent.withValues(alpha: 0.25)
+                          : Colors.white.withValues(alpha: 0.85),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: IconTheme(
+                    data: IconThemeData(size: 18, color: foreground),
+                    child: Center(child: widget.icon),
                   ),
                 ),
-                child: IconTheme(
-                  data: IconThemeData(size: 18, color: foreground),
-                  child: Center(child: icon),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

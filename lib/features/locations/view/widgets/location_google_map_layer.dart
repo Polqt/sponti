@@ -21,6 +21,7 @@ class LocationGoogleMapLayer extends StatefulWidget {
     required this.initialCameraPosition,
     required this.mapPadding,
     required this.labelViewportPadding,
+    required this.showUserLocation,
     required this.onMapTap,
     required this.onLocationTap,
     required this.onCameraPositionChanged,
@@ -35,6 +36,7 @@ class LocationGoogleMapLayer extends StatefulWidget {
   final gmaps.CameraPosition initialCameraPosition;
   final EdgeInsets mapPadding;
   final EdgeInsets labelViewportPadding;
+  final bool showUserLocation;
   final VoidCallback onMapTap;
   final ValueChanged<Location> onLocationTap;
   final ValueChanged<gmaps.CameraPosition> onCameraPositionChanged;
@@ -422,6 +424,7 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
               buildingsEnabled: true,
               compassEnabled: false,
               mapToolbarEnabled: false,
+              myLocationEnabled: widget.showUserLocation,
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
               indoorViewEnabled: false,

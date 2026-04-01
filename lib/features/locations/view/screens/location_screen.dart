@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
+import 'package:sponti/core/constants/app_constants.dart';
 import 'package:sponti/core/constants/map_constants.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
@@ -13,6 +15,7 @@ import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dar
 import 'package:sponti/features/locations/view/widgets/location_map_floating_controls.dart';
 import 'package:sponti/features/locations/view/widgets/location_google_map_layer.dart';
 import 'package:sponti/features/locations/view/widgets/location_map_header.dart';
+import 'package:sponti/features/locations/viewmodel/current_location_viewmodel.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
 class LocationScreen extends ConsumerStatefulWidget {
@@ -52,10 +55,13 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   void initState() {
     super.initState();
     _shellBarHiddenController = ref.read(shellBarHiddenProvider.notifier);
-    _shellChromeProgressController = ref.read(shellChromeProgressProvider.notifier);
+    _shellChromeProgressController = ref.read(
+      shellChromeProgressProvider.notifier,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _consumePending();
+      _autoInitializeLocation();
     });
   }
 
@@ -64,6 +70,25 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     if (pending == null) return;
     ref.read(pendingLocationProvider.notifier).state = null;
     _showLocationDetails(pending);
+  }
+
+  Future<void> _autoInitializeLocation() async {
+    try {
+      final box = await Hive.openBox(AppConstants.hiveBoxUserPrefs);
+      final hasAutoInitialized = box.get(
+        'map_auto_initialized',
+        defaultValue: false,
+      ) as bool;
+
+      if (!hasAutoInitialized) {
+        await box.put('map_auto_initialized', true);
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (!mounted) return;
+        await _moveToCurrentLocation();
+      }
+    } catch (_) {
+      // Silent fail - not critical
+    }
   }
 
   void _setShellHidden(bool hidden) => _shellBarHiddenController.state = hidden;
@@ -165,9 +190,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   }
 
   void _restorePanelFromDetails() {
-    _ignoreMapTapUntil = DateTime.now().add(
-      const Duration(milliseconds: 260),
-    );
+    _ignoreMapTapUntil = DateTime.now().add(const Duration(milliseconds: 260));
     setState(() {
       _detailLocation = null;
       _isExplorePanelVisible = _panelWasVisibleBeforeDetails;
@@ -192,6 +215,30 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _setShellHidden(false);
   }
 
+  Future<void> _moveToCurrentLocation() async {
+    await ref.read(currentLocationProvider.notifier).locate();
+    if (!mounted) return;
+
+    final currentLocation = ref.read(currentLocationProvider);
+    if (!currentLocation.hasCoordinates || _mapController == null) return;
+
+    await _mapController!.animateCamera(
+      gmaps.CameraUpdate.newCameraPosition(
+        gmaps.CameraPosition(
+          target: gmaps.LatLng(
+            currentLocation.latitude!,
+            currentLocation.longitude!,
+          ),
+          zoom: _cameraPosition.zoom < 16.3 ? 16.3 : _cameraPosition.zoom,
+          tilt: _cameraPosition.tilt < MapConstants.defaultTilt
+              ? MapConstants.defaultTilt
+              : _cameraPosition.tilt,
+          bearing: _cameraPosition.bearing,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     final shellChromeController = _shellChromeProgressController;
@@ -209,6 +256,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   Widget build(BuildContext context) {
     final locationsAsync = ref.watch(locationsProvider);
     final filter = ref.watch(locationFilterProvider);
+    final currentLocation = ref.watch(currentLocationProvider);
     final allLocations = locationsAsync.valueOrNull ?? const <Location>[];
     final filteredResult = applyLocationFilters(
       locations: allLocations,
@@ -223,19 +271,21 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       10,
       topInset + 92,
       10,
-      bottomInset + 146,
+      bottomInset + 200, // Increased to hide Google logo and terms
     );
     final labelViewportPadding = MapConstants.defaultLabelViewportPadding(
       topInset: topInset,
       bottomInset: bottomInset,
     );
 
-    final selectedId = _selectedLocationId != null &&
+    final selectedId =
+        _selectedLocationId != null &&
             locations.any((l) => l.id == _selectedLocationId)
         ? _selectedLocationId
         : null;
-    final selectedIndex =
-        selectedId != null ? locations.indexWhere((l) => l.id == selectedId) : 0;
+    final selectedIndex = selectedId != null
+        ? locations.indexWhere((l) => l.id == selectedId)
+        : 0;
 
     // Build an ExploreFilter that reflects the current locationFilterProvider
     // state so the panel pills show the correct active selection.
@@ -266,13 +316,12 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               ),
               mapPadding: mapPadding,
               labelViewportPadding: labelViewportPadding,
+              showUserLocation: currentLocation.isPermissionGranted,
               rankingSnapshot: rankingSnapshot,
               activeRankingFilter: filter.selectedRanking,
               activePriceFilter: filter.selectedPrice,
-              onMapCreated: (controller) => _handleMapCreated(
-                controller,
-                locations,
-              ),
+              onMapCreated: (controller) =>
+                  _handleMapCreated(controller, locations),
               onMapTap: () {
                 if (_detailLocation != null || _shouldIgnoreMapTap) return;
                 _hidePanel();
@@ -308,7 +357,11 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 selectedCategory: filter.selectedCategory,
                 selectedRanking: filter.selectedRanking,
                 selectedPrice: filter.selectedPrice,
+                currentLocationTitle: currentLocation.title,
+                currentLocationSubtitle: currentLocation.subtitle,
+                isLocating: currentLocation.isLoading,
                 onCategoryChanged: _onCategoryChanged,
+                onLocateMe: _moveToCurrentLocation,
                 onClearRanking: () {
                   ref.read(locationFilterProvider.notifier).setRanking(null);
                 },
@@ -328,14 +381,16 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               onCategoryChanged: _onCategoryChanged,
               filter: panelFilter,
               onRankingChanged: (ranking) {
-                ref.read(locationFilterProvider.notifier).setRanking(
-                  ranking == null
-                      ? null
-                      : LocationRanking.values.firstWhere(
-                          (value) => value.name == ranking.name,
-                          orElse: () => LocationRanking.trending,
-                        ),
-                );
+                ref
+                    .read(locationFilterProvider.notifier)
+                    .setRanking(
+                      ranking == null
+                          ? null
+                          : LocationRanking.values.firstWhere(
+                              (value) => value.name == ranking.name,
+                              orElse: () => LocationRanking.trending,
+                            ),
+                    );
               },
               onPriceChanged: (price) {
                 ref.read(locationFilterProvider.notifier).setPrice(price);
