@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/constants/app_constants.dart';
 import 'package:sponti/core/constants/map_constants.dart';
+import 'package:sponti/core/providers/connectivity_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
 import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
@@ -75,10 +76,8 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   Future<void> _autoInitializeLocation() async {
     try {
       final box = await Hive.openBox(AppConstants.hiveBoxUserPrefs);
-      final hasAutoInitialized = box.get(
-        'map_auto_initialized',
-        defaultValue: false,
-      ) as bool;
+      final hasAutoInitialized =
+          box.get('map_auto_initialized', defaultValue: false) as bool;
 
       if (!hasAutoInitialized) {
         await box.put('map_auto_initialized', true);
@@ -255,8 +254,27 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   @override
   Widget build(BuildContext context) {
     final locationsAsync = ref.watch(locationsProvider);
-    final filter = ref.watch(locationFilterProvider);
+    // Use select to only rebuild when specific filter fields change
+    final selectedCategory = ref.watch(
+      locationFilterProvider.select((f) => f.selectedCategory),
+    );
+    final selectedRanking = ref.watch(
+      locationFilterProvider.select((f) => f.selectedRanking),
+    );
+    final selectedPrice = ref.watch(
+      locationFilterProvider.select((f) => f.selectedPrice),
+    );
+    final filter = LocationFilter(
+      selectedCategory: selectedCategory,
+      selectedRanking: selectedRanking,
+      selectedPrice: selectedPrice,
+    );
+    // Only watch location permission status, not the full object
+    ref.watch(
+      currentLocationProvider.select((loc) => loc.isPermissionGranted),
+    );
     final currentLocation = ref.watch(currentLocationProvider);
+    final isOnline = ref.watch(connectivityProvider).valueOrNull ?? true;
     final allLocations = locationsAsync.valueOrNull ?? const <Location>[];
     final filteredResult = applyLocationFilters(
       locations: allLocations,
@@ -302,7 +320,11 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
-      body: Stack(
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(locationsProvider.notifier).refresh(),
+        color: SpontiColors.primary,
+        backgroundColor: Colors.white,
+        child: Stack(
         children: [
           Positioned.fill(
             child: LocationGoogleMapLayer(
@@ -318,8 +340,8 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               labelViewportPadding: labelViewportPadding,
               showUserLocation: currentLocation.isPermissionGranted,
               rankingSnapshot: rankingSnapshot,
-              activeRankingFilter: filter.selectedRanking,
-              activePriceFilter: filter.selectedPrice,
+              activeRankingFilter: selectedRanking,
+              activePriceFilter: selectedPrice,
               onMapCreated: (controller) =>
                   _handleMapCreated(controller, locations),
               onMapTap: () {
@@ -354,9 +376,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               right: 16,
               bottom: floatingControlsBottom,
               child: LocationMapFloatingControls(
-                selectedCategory: filter.selectedCategory,
-                selectedRanking: filter.selectedRanking,
-                selectedPrice: filter.selectedPrice,
+                selectedCategory: selectedCategory,
+                selectedRanking: selectedRanking,
+                selectedPrice: selectedPrice,
                 currentLocationTitle: currentLocation.title,
                 currentLocationSubtitle: currentLocation.subtitle,
                 isLocating: currentLocation.isLoading,
@@ -377,7 +399,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
               isExpanded: _isExplorePanelExpanded,
               bottomInset: bottomInset,
-              selectedCategory: filter.selectedCategory,
+              selectedCategory: selectedCategory,
               onCategoryChanged: _onCategoryChanged,
               filter: panelFilter,
               onRankingChanged: (ranking) {
@@ -410,7 +432,19 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 onDismissed: _restorePanelFromDetails,
               ),
             ),
+          if (!isOnline)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: floatingControlsBottom + 64,
+              child: FloatingMessage(
+                text: 'You\'re offline. Showing cached spots.',
+                icon: Icons.wifi_off_rounded,
+                color: SpontiColors.warning,
+              ),
+            ),
         ],
+      ),
       ),
     );
   }

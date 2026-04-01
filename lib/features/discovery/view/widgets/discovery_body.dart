@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_category_accordions_section.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_column_switcher.dart';
@@ -16,8 +17,11 @@ class DiscoveryBody extends ConsumerWidget {
     final state = ref.watch(discoveryViewModelProvider);
     final notifier = ref.read(discoveryViewModelProvider.notifier);
 
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final bottomPadding = bottomInset + kShellBottomBarClearance;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, bottomPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -29,7 +33,7 @@ class DiscoveryBody extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          
+
           // Section header
           _SectionHeader(
             title: state.sectionTitle,
@@ -38,7 +42,7 @@ class DiscoveryBody extends ConsumerWidget {
                 : 'What your friends are exploring',
           ),
           const SizedBox(height: 14),
-          
+
           // Content
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
@@ -48,8 +52,9 @@ class DiscoveryBody extends ConsumerWidget {
                 ? const DiscoveryForYouGrid(cards: discoveryTopPicks)
                 : const DiscoveryFriendsPlaceholder(),
           ),
-          
+
           if (state.activeColumn == DiscoveryColumn.forYou) ...[
+            const SizedBox(height: 24),
             const _SectionHeader(
               title: 'Browse',
               subtitle: 'Explore by category',

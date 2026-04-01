@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/constants/api_constants.dart';
+import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:sponti/features/check_in/models/checkins.dart';
 import 'package:sponti/features/check_in/repository/checkins_remote_data_source.dart';
 import 'package:sponti/features/check_in/repository/checkins_repository.dart';
@@ -74,7 +75,7 @@ class CheckInState {
 class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
   @override
   Future<CheckInState> build(String locationId) async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final userId = ref.watch(currentUserIdProvider);
     if (userId == null) return const CheckInState();
 
     final repo = ref.read(checkinsRepositoryProvider);
@@ -112,7 +113,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
 
   /// Submit a new check-in with optional note and photos.
   Future<bool> checkIn({String? note, List<String> photos = const []}) async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final userId = ref.read(currentUserIdProvider);
     if (userId == null) return false;
 
     final current = state.valueOrNull ?? const CheckInState();
@@ -191,7 +192,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
         return false;
       },
       (_) {
-        final userId = Supabase.instance.client.auth.currentUser?.id;
+        final userId = ref.read(currentUserIdProvider);
         state = AsyncData(
           current.copyWith(
             isLoading: false,
@@ -210,7 +211,11 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
   }
 
   void _invalidateDependentProviders() {
-    ref.invalidate(profileProvider);
+    // Invalidate stats only - profile data hasn't changed, just the check-in count
+    final userId = ref.read(currentUserIdProvider);
+    if (userId != null) {
+      ref.invalidate(userStatsProvider(userId));
+    }
     ref.invalidate(myCheckInsProvider);
   }
 }

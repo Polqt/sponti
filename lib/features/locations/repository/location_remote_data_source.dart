@@ -33,9 +33,13 @@ const _columns = '''
 ''';
 
 class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
-  const LocationRemoteDataSourceImpl(this._client);
+  LocationRemoteDataSourceImpl(this._client);
 
   final SupabaseClient _client;
+
+  /// Cache for resolved photo URLs to avoid repeated Supabase storage calls.
+  /// Key: storage path, Value: resolved public URL
+  final Map<String, String> _photoUrlCache = {};
 
   Future<T> _executeQuery<T>(Future<T> Function() query) async {
     try {
@@ -50,13 +54,16 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
 
   List<LocationModel> _parseLocationList(dynamic response) {
     return (response as List<dynamic>)
-        .map((e) => LocationModel.fromJson(
-          resolvePhotoUrls(e as Map<String, dynamic>),
-        ))
+        .map(
+          (e) => LocationModel.fromJson(
+            resolvePhotoUrls(e as Map<String, dynamic>),
+          ),
+        )
         .toList();
   }
 
   /// Converts storage paths in [photos] JSONB to full public URLs.
+  /// Results are cached to avoid repeated Supabase storage API calls.
   @override
   Map<String, dynamic> resolvePhotoUrls(Map<String, dynamic> json) {
     final rawPhotos = json['photos'] as List<dynamic>? ?? [];
@@ -65,9 +72,14 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
     final resolved = rawPhotos.map((path) {
       final p = path.toString();
       if (p.startsWith('http')) return p;
-      return _client.storage
-          .from(ApiConstants.locationPhotosBucket)
-          .getPublicUrl(p);
+
+      // Check cache first
+      return _photoUrlCache.putIfAbsent(
+        p,
+        () => _client.storage
+            .from(ApiConstants.locationPhotosBucket)
+            .getPublicUrl(p),
+      );
     }).toList();
 
     return {...json, 'photos': resolved};
@@ -115,65 +127,66 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   });
 
   @override
-  Future<List<LocationModel>> filterByCategory(
-    LocationCategory category,
-  ) => _executeQuery(() async {
-    final response = await _client
-        .from(ApiConstants.locationsTable)
-        .select(_columns)
-        .eq('category', category.name)
-        .order('rating', ascending: false);
+  Future<List<LocationModel>> filterByCategory(LocationCategory category) =>
+      _executeQuery(() async {
+        final response = await _client
+            .from(ApiConstants.locationsTable)
+            .select(_columns)
+            .eq('category', category.name)
+            .order('rating', ascending: false);
 
-    return _parseLocationList(response);
-  });
-
-  @override
-  Future<List<LocationModel>> fetchByCategories(
-    List<String> categories,
-  ) => _executeQuery(() async {
-    final response = await _client
-        .from(ApiConstants.locationsTable)
-        .select(_columns)
-        .inFilter('category', categories)
-        .order('created_at', ascending: false);
-
-    return _parseLocationList(response);
-  });
+        return _parseLocationList(response);
+      });
 
   @override
-  Future<List<LocationModel>> searchLocations(String query) => _executeQuery(() async {
-    final response = await _client.rpc(
-      ApiConstants.rpcSearchLocations,
-      params: {'search_query': query.trim()},
-    );
+  Future<List<LocationModel>> fetchByCategories(List<String> categories) =>
+      _executeQuery(() async {
+        final response = await _client
+            .from(ApiConstants.locationsTable)
+            .select(_columns)
+            .inFilter('category', categories)
+            .order('created_at', ascending: false);
 
-    return _parseLocationList(response);
-  });
-
-  @override
-  Future<LocationModel> createLocation(LocationModel model) => _executeQuery(() async {
-    final response = await _client
-        .from(ApiConstants.locationsTable)
-        .insert(model.toJson())
-        .select(_columns)
-        .single();
-
-    return LocationModel.fromJson(resolvePhotoUrls(response));
-  });
+        return _parseLocationList(response);
+      });
 
   @override
-  Future<LocationModel> updateLocation(LocationModel model) => _executeQuery(() async {
-    final response = await _client
-        .from(ApiConstants.locationsTable)
-        .update(
-          model.toJson()..['updated_at'] = DateTime.now().toIso8601String(),
-        )
-        .eq('id', model.id)
-        .select(_columns)
-        .single();
+  Future<List<LocationModel>> searchLocations(String query) =>
+      _executeQuery(() async {
+        final response = await _client.rpc(
+          ApiConstants.rpcSearchLocations,
+          params: {'search_query': query.trim()},
+        );
 
-    return LocationModel.fromJson(resolvePhotoUrls(response));
-  });
+        return _parseLocationList(response);
+      });
+
+  @override
+  Future<LocationModel> createLocation(LocationModel model) =>
+      _executeQuery(() async {
+        final response = await _client
+            .from(ApiConstants.locationsTable)
+            .insert(model.toJson())
+            .select(_columns)
+            .single();
+
+        return LocationModel.fromJson(resolvePhotoUrls(response));
+      });
+
+  @override
+  Future<LocationModel> updateLocation(LocationModel model) =>
+      _executeQuery(() async {
+        final response = await _client
+            .from(ApiConstants.locationsTable)
+            .update(
+              model.toJson()..['updated_at'] = DateTime.now().toIso8601String(),
+            )
+            .eq('id', model.id)
+            .select(_columns)
+            .single();
+
+        return LocationModel.fromJson(resolvePhotoUrls(response));
+      });
 
   @override
   Future<void> deleteLocation(String id) => _executeQuery(() async {

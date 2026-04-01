@@ -49,10 +49,11 @@ class FavoritesRemoteDataSourceImpl implements FavoritesRemoteDataSource {
 
   @override
   Future<void> addFavorite(String locationId) => _executeQuery(() async {
-        await _client.from(ApiConstants.favoritesTable).upsert({
-          'location_id': locationId,
-          'user_id': _userId,
-        }, onConflict: 'location_id,user_id');
+        await _client.from(ApiConstants.favoritesTable).upsert(
+          {'location_id': locationId, 'user_id': _userId},
+          onConflict: 'location_id,user_id',
+          ignoreDuplicates: true,
+        );
       });
 
   @override
