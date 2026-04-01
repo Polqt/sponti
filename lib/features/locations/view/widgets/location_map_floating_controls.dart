@@ -12,32 +12,50 @@ class LocationMapFloatingControls extends StatelessWidget {
     required this.selectedCategory,
     required this.selectedRanking,
     required this.selectedPrice,
-    required this.currentLocationTitle,
-    required this.currentLocationSubtitle,
     required this.isLocating,
     required this.onCategoryChanged,
     required this.onLocateMe,
     required this.onClearRanking,
     required this.onClearPrice,
+    this.hasWifiFilter = false,
+    this.hasPetFriendlyFilter = false,
+    this.hasParkingFilter = false,
+    this.onWifiFilterChanged,
+    this.onPetFriendlyFilterChanged,
+    this.onParkingFilterChanged,
   });
 
   final LocationCategory? selectedCategory;
   final LocationRanking? selectedRanking;
   final PriceRange? selectedPrice;
-  final String currentLocationTitle;
-  final String currentLocationSubtitle;
   final bool isLocating;
   final ValueChanged<LocationCategory?> onCategoryChanged;
   final VoidCallback onLocateMe;
   final VoidCallback onClearRanking;
   final VoidCallback onClearPrice;
+  
+  // Quick filters
+  final bool hasWifiFilter;
+  final bool hasPetFriendlyFilter;
+  final bool hasParkingFilter;
+  final ValueChanged<bool>? onWifiFilterChanged;
+  final ValueChanged<bool>? onPetFriendlyFilterChanged;
+  final ValueChanged<bool>? onParkingFilterChanged;
 
   @override
   Widget build(BuildContext context) {
+    final hasActiveFilters = selectedRanking != null || 
+        selectedPrice != null || 
+        hasWifiFilter || 
+        hasPetFriendlyFilter || 
+        hasParkingFilter;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        if (selectedRanking != null || selectedPrice != null)
+        // Active filter chips
+        if (hasActiveFilters)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Wrap(
@@ -55,18 +73,54 @@ class LocationMapFloatingControls extends StatelessWidget {
                     price: selectedPrice!,
                     onClear: onClearPrice,
                   ),
+                if (hasWifiFilter)
+                  _QuickFilterChip(
+                    icon: Icons.wifi_rounded,
+                    label: 'WiFi',
+                    color: SpontiColors.info,
+                    onClear: () => onWifiFilterChanged?.call(false),
+                  ),
+                if (hasPetFriendlyFilter)
+                  _QuickFilterChip(
+                    icon: Icons.pets_rounded,
+                    label: 'Pet Friendly',
+                    color: SpontiColors.warning,
+                    onClear: () => onPetFriendlyFilterChanged?.call(false),
+                  ),
+                if (hasParkingFilter)
+                  _QuickFilterChip(
+                    icon: Icons.local_parking_rounded,
+                    label: 'Parking',
+                    color: SpontiColors.secondary,
+                    onClear: () => onParkingFilterChanged?.call(false),
+                  ),
               ],
             ),
           ),
+        // Quick filter buttons row + locate me button
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: _CurrentLocationButton(
-            title: currentLocationTitle,
-            subtitle: currentLocationSubtitle,
-            isLoading: isLocating,
-            onTap: onLocateMe,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Quick filter toggle buttons
+              _QuickFiltersRow(
+                hasWifi: hasWifiFilter,
+                hasPetFriendly: hasPetFriendlyFilter,
+                hasParking: hasParkingFilter,
+                onWifiTap: () => onWifiFilterChanged?.call(!hasWifiFilter),
+                onPetFriendlyTap: () => onPetFriendlyFilterChanged?.call(!hasPetFriendlyFilter),
+                onParkingTap: () => onParkingFilterChanged?.call(!hasParkingFilter),
+              ),
+              // Locate me button
+                _CurrentLocationButton(
+                  isLoading: isLocating,
+                  onTap: onLocateMe,
+                ),
+            ],
           ),
         ),
+        // Category row
         _GlassSurface(
           padding: const EdgeInsets.all(10),
           child: LocationCategoryRow(
@@ -79,122 +133,227 @@ class LocationMapFloatingControls extends StatelessWidget {
   }
 }
 
-class _CurrentLocationButton extends StatelessWidget {
-  const _CurrentLocationButton({
-    required this.title,
-    required this.subtitle,
-    required this.isLoading,
+/// Row of quick filter toggle buttons
+class _QuickFiltersRow extends StatelessWidget {
+  const _QuickFiltersRow({
+    required this.hasWifi,
+    required this.hasPetFriendly,
+    required this.hasParking,
+    required this.onWifiTap,
+    required this.onPetFriendlyTap,
+    required this.onParkingTap,
+  });
+
+  final bool hasWifi;
+  final bool hasPetFriendly;
+  final bool hasParking;
+  final VoidCallback onWifiTap;
+  final VoidCallback onPetFriendlyTap;
+  final VoidCallback onParkingTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _QuickFilterButton(
+          icon: Icons.wifi_rounded,
+          label: 'WiFi',
+          isActive: hasWifi,
+          activeColor: SpontiColors.info,
+          onTap: onWifiTap,
+        ),
+        const SizedBox(width: 8),
+        _QuickFilterButton(
+          icon: Icons.pets_rounded,
+          label: 'Pet Friendly',
+          isActive: hasPetFriendly,
+          activeColor: SpontiColors.warning,
+          onTap: onPetFriendlyTap,
+        ),
+        const SizedBox(width: 8),
+        _QuickFilterButton(
+          icon: Icons.local_parking_rounded,
+          label: 'Parking',
+          isActive: hasParking,
+          activeColor: SpontiColors.secondary,
+          onTap: onParkingTap,
+        ),
+      ],
+    );
+  }
+}
+
+/// Individual quick filter toggle button
+class _QuickFilterButton extends StatelessWidget {
+  const _QuickFilterButton({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.activeColor,
     required this.onTap,
   });
 
-  final String title;
-  final String subtitle;
-  final bool isLoading;
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final Color activeColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return _GlassSurface(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: isLoading ? null : onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        SpontiColors.secondary.withValues(alpha: 0.20),
-                        SpontiColors.secondary.withValues(alpha: 0.08),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: isLoading
-                      ? const Padding(
-                          padding: EdgeInsets.all(10),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.0,
-                            color: SpontiColors.secondary,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.my_location_rounded,
-                          color: SpontiColors.secondary,
-                          size: 20,
-                        ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                          color: SpontiColors.textPrimary,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: SpontiColors.textSecondary,
-                          height: 1.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Icon(
-                  Icons.arrow_outward_rounded,
-                  color: SpontiColors.textSecondary.withValues(alpha: 0.9),
-                  size: 18,
-                ),
-              ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: isActive ? activeColor : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
-          ),
+          ],
+          border: isActive 
+              ? null 
+              : Border.all(color: SpontiColors.outline.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isActive ? Colors.white : SpontiColors.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isActive ? Colors.white : SpontiColors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _RankingFilterChip extends StatelessWidget {
-  const _RankingFilterChip({
-    required this.ranking,
+/// Chip showing an active quick filter with clear button
+class _QuickFilterChip extends StatelessWidget {
+  const _QuickFilterChip({
+    required this.icon,
+    required this.label,
+    required this.color,
     required this.onClear,
   });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return _GlassSurface(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: SpontiColors.textPrimary,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: onClear,
+            child: const Icon(
+              Icons.close_rounded,
+              size: 16,
+              color: SpontiColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CurrentLocationButton extends StatelessWidget {
+  const _CurrentLocationButton({
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    // Compact circular button for current location
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: SpontiColors.secondary.withValues(alpha: 0.3),
+            width: 2,
+          ),
+        ),
+        child: isLoading
+            ? const Padding(
+                padding: EdgeInsets.all(12),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.0,
+                  color: SpontiColors.secondary,
+                ),
+              )
+            : const Icon(
+                Icons.person_pin_circle_rounded,
+                color: SpontiColors.secondary,
+                size: 26,
+              ),
+      ),
+    );
+  }
+}
+
+class _RankingFilterChip extends StatelessWidget {
+  const _RankingFilterChip({required this.ranking, required this.onClear});
 
   final LocationRanking ranking;
   final VoidCallback onClear;
 
   String get _label => switch (ranking) {
-        LocationRanking.trending => 'Trending',
-        LocationRanking.popular => 'Popular',
-        LocationRanking.lowkey => 'Lowkey',
-        LocationRanking.newest => 'New',
-      };
+    LocationRanking.trending => 'Trending',
+    LocationRanking.popular => 'Popular',
+    LocationRanking.lowkey => 'Lowkey',
+    LocationRanking.newest => 'New',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -237,10 +396,7 @@ class _RankingFilterChip extends StatelessWidget {
 }
 
 class _PriceFilterChip extends StatelessWidget {
-  const _PriceFilterChip({
-    required this.price,
-    required this.onClear,
-  });
+  const _PriceFilterChip({required this.price, required this.onClear});
 
   final PriceRange price;
   final VoidCallback onClear;
@@ -288,10 +444,7 @@ class _PriceFilterChip extends StatelessWidget {
 }
 
 class _GlassSurface extends StatelessWidget {
-  const _GlassSurface({
-    required this.padding,
-    required this.child,
-  });
+  const _GlassSurface({required this.padding, required this.child});
 
   final EdgeInsetsGeometry padding;
   final Widget child;
@@ -313,9 +466,7 @@ class _GlassSurface extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.82),
-            ),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.82)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.08),

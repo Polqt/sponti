@@ -6,6 +6,7 @@ import 'package:sponti/features/check_in/repository/checkins_remote_data_source.
 import 'package:sponti/features/check_in/repository/checkins_repository.dart';
 import 'package:sponti/features/check_in/repository/checkins_repository_impl.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
+import 'package:sponti/features/streaks/viewmodel/checkin_streak_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final checkinsRemoteDataSourceProvider = Provider<CheckinsRemoteDataSource>((
@@ -217,6 +218,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
       ref.invalidate(userStatsProvider(userId));
     }
     ref.invalidate(myCheckInsProvider);
+    ref.invalidate(checkInStreakProvider);
   }
 }
 

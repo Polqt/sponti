@@ -9,6 +9,8 @@ import 'package:sponti/features/check_in/models/checkins.dart';
 import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
+import 'package:sponti/features/streaks/view/widgets/checkin_streak_card.dart';
+import 'package:sponti/features/streaks/viewmodel/checkin_streak_viewmodel.dart';
 
 class MyCheckInsScreen extends ConsumerWidget {
   const MyCheckInsScreen({super.key});
@@ -16,6 +18,7 @@ class MyCheckInsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final checkInsAsync = ref.watch(myCheckInsProvider);
+    final streakAsync = ref.watch(checkInStreakProvider);
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -33,22 +36,45 @@ class MyCheckInsScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(myCheckInsProvider),
         ),
         data: (checkIns) {
+          final streakWidget = streakAsync.maybeWhen(
+            data: (streak) => Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: CheckInStreakCard(streak: streak),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          );
+
           if (checkIns.isEmpty) {
-            return const AppEmptyState(
-              emoji: '📍',
-              title: 'No check-ins yet',
-              subtitle: 'Places you mark as visited will show up here.',
+            return Column(
+              children: [
+                streakWidget,
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: AppEmptyState(
+                    emoji: '📍',
+                    title: 'No check-ins yet',
+                    subtitle: 'Places you mark as visited will show up here.',
+                  ),
+                ),
+              ],
             );
           }
 
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            itemCount: checkIns.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 14),
-            itemBuilder: (context, index) => _MyCheckInItem(
-              key: ValueKey(checkIns[index].id),
-              checkIn: checkIns[index],
-            ),
+          return Column(
+            children: [
+              streakWidget,
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  itemCount: checkIns.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) => _MyCheckInItem(
+                    key: ValueKey(checkIns[index].id),
+                    checkIn: checkIns[index],
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),

@@ -22,6 +22,7 @@ class LocationGoogleMapLayer extends StatefulWidget {
     required this.mapPadding,
     required this.labelViewportPadding,
     required this.showUserLocation,
+    this.currentLocationCoordinates,
     required this.onMapTap,
     required this.onLocationTap,
     required this.onCameraPositionChanged,
@@ -37,6 +38,7 @@ class LocationGoogleMapLayer extends StatefulWidget {
   final EdgeInsets mapPadding;
   final EdgeInsets labelViewportPadding;
   final bool showUserLocation;
+  final gmaps.LatLng? currentLocationCoordinates;
   final VoidCallback onMapTap;
   final ValueChanged<Location> onLocationTap;
   final ValueChanged<gmaps.CameraPosition> onCameraPositionChanged;
@@ -94,6 +96,7 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
     final markerInputsChanged =
         widget.locations != oldWidget.locations ||
         widget.selectedId != oldWidget.selectedId ||
+        widget.currentLocationCoordinates != oldWidget.currentLocationCoordinates ||
         widget.rankingSnapshot != oldWidget.rankingSnapshot ||
         widget.activeRankingFilter != oldWidget.activeRankingFilter ||
         widget.activePriceFilter != oldWidget.activePriceFilter;
@@ -127,14 +130,11 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
   Future<void> _rebuildMarkers() async {
     final requestId = ++_markerRequestId;
     final rankingSnapshot = _rankingSnapshot;
+    final currentLocationIcon = widget.currentLocationCoordinates == null
+        ? null
+        : await LocationGoogleMarkerIconFactory.resolveCurrentLocationPin();
 
-    if (widget.locations.isEmpty) {
-      if (!mounted) return;
-      setState(() => _markers = const <gmaps.Marker>{});
-      return;
-    }
-
-    final markers = await Future.wait(
+    final locationMarkers = await Future.wait(
       widget.locations.map((location) async {
         final isSelected = location.id == widget.selectedId;
         final ranking = rankingSnapshot.rankingFor(location);
@@ -163,7 +163,25 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
       return;
     }
 
-    setState(() => _markers = markers.toSet());
+    final markers = <gmaps.Marker>{...locationMarkers};
+    if (widget.currentLocationCoordinates case final myLocation?) {
+      markers.add(
+        gmaps.Marker(
+          markerId: const gmaps.MarkerId(_myLocationMarkerId),
+          position: myLocation,
+          icon:
+              currentLocationIcon ??
+              gmaps.BitmapDescriptor.defaultMarkerWithHue(
+                gmaps.BitmapDescriptor.hueAzure,
+              ),
+          zIndexInt: 12000,
+          anchor: const Offset(0.5, 1.0),
+          infoWindow: const gmaps.InfoWindow(title: 'You are here'),
+        ),
+      );
+    }
+
+    setState(() => _markers = markers);
     _scheduleLabelSync(immediate: true);
   }
 
@@ -454,6 +472,8 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
     );
   }
 }
+
+const _myLocationMarkerId = 'current_user_location_pin';
 
 gmaps.LatLng _toGoogleLatLng(Location location) => gmaps.LatLng(
   location.coordinates.latitude,

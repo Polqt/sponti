@@ -264,10 +264,22 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     final selectedPrice = ref.watch(
       locationFilterProvider.select((f) => f.selectedPrice),
     );
+    final hasWifiFilter = ref.watch(
+      locationFilterProvider.select((f) => f.hasWifi),
+    );
+    final hasPetFriendlyFilter = ref.watch(
+      locationFilterProvider.select((f) => f.isPetFriendly),
+    );
+    final hasParkingFilter = ref.watch(
+      locationFilterProvider.select((f) => f.hasParking),
+    );
     final filter = LocationFilter(
       selectedCategory: selectedCategory,
       selectedRanking: selectedRanking,
       selectedPrice: selectedPrice,
+      hasWifi: hasWifiFilter,
+      isPetFriendly: hasPetFriendlyFilter,
+      hasParking: hasParkingFilter,
     );
     // Only watch location permission status, not the full object
     ref.watch(
@@ -339,6 +351,12 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               mapPadding: mapPadding,
               labelViewportPadding: labelViewportPadding,
               showUserLocation: currentLocation.isPermissionGranted,
+              currentLocationCoordinates: currentLocation.hasCoordinates
+                  ? gmaps.LatLng(
+                      currentLocation.latitude!,
+                      currentLocation.longitude!,
+                    )
+                  : null,
               rankingSnapshot: rankingSnapshot,
               activeRankingFilter: selectedRanking,
               activePriceFilter: selectedPrice,
@@ -379,11 +397,23 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 selectedCategory: selectedCategory,
                 selectedRanking: selectedRanking,
                 selectedPrice: selectedPrice,
-                currentLocationTitle: currentLocation.title,
-                currentLocationSubtitle: currentLocation.subtitle,
                 isLocating: currentLocation.isLoading,
+                hasWifiFilter: hasWifiFilter,
+                hasPetFriendlyFilter: hasPetFriendlyFilter,
+                hasParkingFilter: hasParkingFilter,
                 onCategoryChanged: _onCategoryChanged,
                 onLocateMe: _moveToCurrentLocation,
+                onWifiFilterChanged: (enabled) {
+                  ref.read(locationFilterProvider.notifier).setWifi(enabled);
+                },
+                onPetFriendlyFilterChanged: (enabled) {
+                  ref
+                      .read(locationFilterProvider.notifier)
+                      .setPetFriendly(enabled);
+                },
+                onParkingFilterChanged: (enabled) {
+                  ref.read(locationFilterProvider.notifier).setParking(enabled);
+                },
                 onClearRanking: () {
                   ref.read(locationFilterProvider.notifier).setRanking(null);
                 },

@@ -35,16 +35,25 @@ class LocationFilter {
     this.selectedCategory,
     this.selectedRanking,
     this.selectedPrice,
+    this.hasWifi = false,
+    this.isPetFriendly = false,
+    this.hasParking = false,
   });
 
   final LocationCategory? selectedCategory;
   final LocationRanking? selectedRanking;
   final PriceRange? selectedPrice;
+  final bool hasWifi;
+  final bool isPetFriendly;
+  final bool hasParking;
 
   LocationFilter copyWith({
     Object? selectedCategory = _sentinel,
     Object? selectedRanking = _sentinel,
     Object? selectedPrice = _sentinel,
+    bool? hasWifi,
+    bool? isPetFriendly,
+    bool? hasParking,
   }) => LocationFilter(
     selectedCategory: selectedCategory == _sentinel
         ? this.selectedCategory
@@ -55,6 +64,9 @@ class LocationFilter {
     selectedPrice: selectedPrice == _sentinel
         ? this.selectedPrice
         : selectedPrice as PriceRange?,
+    hasWifi: hasWifi ?? this.hasWifi,
+    isPetFriendly: isPetFriendly ?? this.isPetFriendly,
+    hasParking: hasParking ?? this.hasParking,
   );
 
   static const _sentinel = Object();
@@ -74,7 +86,9 @@ FilteredLocationsResult applyLocationFilters({
   required List<Location> locations,
   required LocationFilter filter,
 }) {
-  final rankingSnapshot = locations.isEmpty ? null : locations.createRankingSnapshot();
+  final rankingSnapshot = locations.isEmpty
+      ? null
+      : locations.createRankingSnapshot();
   var filtered = locations;
 
   if (filter.selectedRanking != null && rankingSnapshot != null) {
@@ -90,6 +104,24 @@ FilteredLocationsResult applyLocationFilters({
     filtered = filtered
         .where((location) => location.priceRange == filter.selectedPrice)
         .toList(growable: false);
+  }
+
+  if (filter.hasWifi) {
+    filtered = filtered.where((location) => location.hasWifi).toList(
+      growable: false,
+    );
+  }
+
+  if (filter.isPetFriendly) {
+    filtered = filtered.where((location) => location.isPetFriendly).toList(
+      growable: false,
+    );
+  }
+
+  if (filter.hasParking) {
+    filtered = filtered.where((location) => location.hasParking).toList(
+      growable: false,
+    );
   }
 
   return FilteredLocationsResult(
@@ -110,6 +142,13 @@ class LocationFilterViewModel extends Notifier<LocationFilter> {
 
   void setPrice(PriceRange? price) =>
       state = state.copyWith(selectedPrice: price);
+
+  void setWifi(bool enabled) => state = state.copyWith(hasWifi: enabled);
+
+  void setPetFriendly(bool enabled) =>
+      state = state.copyWith(isPetFriendly: enabled);
+
+  void setParking(bool enabled) => state = state.copyWith(hasParking: enabled);
 
   void clearFilters() => state = const LocationFilter();
 }
@@ -195,8 +234,10 @@ final pendingLocationProvider = StateProvider<Location?>((ref) => null);
 /// NOT autoDispose — keeps the WebSocket alive during navigation (e.g. when
 /// the check-in page is pushed on top of the detail sheet) so the count
 /// updates are received and reflected immediately on return.
-final locationStreamProvider =
-    StreamProvider.family<Location, String>((ref, locationId) {
+final locationStreamProvider = StreamProvider.family<Location, String>((
+  ref,
+  locationId,
+) {
   final client = Supabase.instance.client;
   final remote = ref.read(locationRemoteDataSourceProvider);
 

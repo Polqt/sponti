@@ -54,6 +54,93 @@ class LocationGoogleMarkerIconFactory {
     );
   }
 
+  static Future<gmaps.BitmapDescriptor> resolveCurrentLocationPin() {
+    return _cache.putIfAbsent('current-location-person-pin', () async {
+      const pixelRatio = 3.0;
+      const logicalSize = 56.0;
+      final imageSize = (logicalSize * pixelRatio).round();
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      canvas.scale(pixelRatio, pixelRatio);
+
+      final center = const Offset(logicalSize / 2, logicalSize / 2);
+      const pinColor = Color(0xFF3B82F6);
+      const white = Colors.white;
+
+      final pinPath = Path()
+        ..moveTo(center.dx, logicalSize - 6)
+        ..cubicTo(
+          center.dx + 15,
+          logicalSize - 24,
+          logicalSize - 8,
+          logicalSize * 0.54,
+          logicalSize - 8,
+          logicalSize * 0.34,
+        )
+        ..arcToPoint(
+          Offset(8, logicalSize * 0.34),
+          radius: const Radius.circular(20),
+          clockwise: false,
+        )
+        ..cubicTo(
+          8,
+          logicalSize * 0.54,
+          center.dx - 15,
+          logicalSize - 24,
+          center.dx,
+          logicalSize - 6,
+        )
+        ..close();
+
+      canvas.drawPath(
+        pinPath,
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.14)
+          ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 5),
+      );
+      canvas.drawPath(pinPath, Paint()..color = pinColor);
+
+      canvas.drawCircle(center.translate(0, -8), 11, Paint()..color = white);
+
+      final iconPainter = TextPainter(
+        text: TextSpan(
+          text: String.fromCharCode(Icons.person_rounded.codePoint),
+          style: const TextStyle(
+            fontFamily: 'MaterialIcons',
+            fontSize: 12,
+            color: pinColor,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      iconPainter.paint(
+        canvas,
+        Offset(
+          center.dx - (iconPainter.width / 2),
+          center.dy - 14 - (iconPainter.height / 2),
+        ),
+      );
+
+      final image = await recorder.endRecording().toImage(imageSize, imageSize);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      final bytes = byteData?.buffer.asUint8List();
+      if (bytes == null) {
+        return gmaps.BitmapDescriptor.defaultMarkerWithHue(
+          gmaps.BitmapDescriptor.hueAzure,
+        );
+      }
+
+      return gmaps.BitmapDescriptor.bytes(
+        Uint8List.fromList(bytes),
+        imagePixelRatio: pixelRatio,
+        width: logicalSize,
+        height: logicalSize,
+      );
+    });
+  }
+
   static Future<gmaps.BitmapDescriptor> _build({
     required LocationCategory category,
     required PriceRange priceRange,
