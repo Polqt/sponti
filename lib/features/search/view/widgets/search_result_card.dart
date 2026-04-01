@@ -5,84 +5,101 @@ import 'package:flutter/material.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/utils/formatters.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/search/view/widgets/search_glass_panel.dart';
 
 class SearchResultCard extends StatelessWidget {
   const SearchResultCard({
     super.key,
     required this.location,
     required this.index,
+    required this.isPrimary,
     required this.onTap,
   });
 
   final Location location;
   final int index;
+  final bool isPrimary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final delayIndex = index > 5 ? 5 : index;
+
+    return RepaintBoundary(
+      child: TweenAnimationBuilder<double>(
+        key: ValueKey(location.id),
+        tween: Tween(begin: 0, end: 1),
+        duration: Duration(milliseconds: 260 + (delayIndex * 45)),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) {
+          return Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 18 * (1 - value)),
+              child: child,
+            ),
+          );
+        },
+        child: isPrimary
+            ? _PrimarySearchResultCard(
+                location: location,
+                onTap: onTap,
+              )
+            : _CompactSearchResultCard(
+                location: location,
+                onTap: onTap,
+              ),
+      ),
+    );
+  }
+}
+
+class _PrimarySearchResultCard extends StatelessWidget {
+  const _PrimarySearchResultCard({
+    required this.location,
+    required this.onTap,
+  });
+
+  final Location location;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final categoryColor = Color(location.category.colorValue);
 
-    return TweenAnimationBuilder<double>(
-      key: ValueKey(location.id),
-      tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 280 + (index * 50)),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 18 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.78),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.88)),
-            boxShadow: [
-              BoxShadow(
-                color: SpontiColors.shadow.withValues(alpha: 0.045),
-                blurRadius: 26,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
+    return SearchGlassPanel(
+      radius: 34,
+      padding: EdgeInsets.zero,
+      gradientColors: [
+        Colors.white.withValues(alpha: 0.74),
+        const Color(0xFFF5EEE6).withValues(alpha: 0.48),
+      ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(34),
+          onTap: onTap,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                height: 210,
+                height: 228,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (location.hasPhotos)
-                      CachedNetworkImage(
-                        imageUrl: location.primaryPhoto,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, _, _) => _SearchImageFallback(
-                          color: categoryColor,
-                          icon: location.category.icon,
-                        ),
-                      )
-                    else
-                      _SearchImageFallback(
-                        color: categoryColor,
-                        icon: location.category.icon,
-                      ),
+                    _SearchPhoto(
+                      location: location,
+                      categoryColor: categoryColor,
+                    ),
                     DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withValues(alpha: 0.06),
-                            Colors.black.withValues(alpha: 0.10),
-                            Colors.black.withValues(alpha: 0.52),
+                            Colors.black.withValues(alpha: 0.04),
+                            Colors.black.withValues(alpha: 0.12),
+                            Colors.black.withValues(alpha: 0.54),
                           ],
                         ),
                       ),
@@ -99,7 +116,7 @@ class SearchResultCard extends StatelessWidget {
                         icon: location.isOpenNow
                             ? Icons.radio_button_checked_rounded
                             : Icons.schedule_rounded,
-                        label: location.isOpenNow ? 'Open' : 'Closed',
+                        label: location.isOpenNow ? 'Open now' : 'Closed',
                         foreground: location.isOpenNow
                             ? const Color(0xFF1E9E61)
                             : Colors.white,
@@ -132,7 +149,7 @@ class SearchResultCard extends StatelessWidget {
                               _GlassTag(
                                 icon: Icons.star_rounded,
                                 label:
-                                    '${SpontiFormatter.rating(location.rating)} (${SpontiFormatter.reviewCount(location.reviewCount)})',
+                                    '${SpontiFormatter.rating(location.rating)} | ${SpontiFormatter.reviewCount(location.reviewCount)}',
                               ),
                               _GlassTag(
                                 icon: Icons.payments_rounded,
@@ -158,16 +175,7 @@ class SearchResultCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      location.address,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: SpontiColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        height: 1.35,
-                      ),
-                    ),
+                    _AddressLine(location: location),
                     if (location.description.trim().isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
@@ -183,45 +191,9 @@ class SearchResultCard extends StatelessWidget {
                     const SizedBox(height: 14),
                     Row(
                       children: [
-                        Expanded(
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              if (location.isHiddenGem)
-                                _MetaPill(
-                                  icon: Icons.auto_awesome_rounded,
-                                  label: 'Hidden gem',
-                                  color: SpontiColors.accent,
-                                ),
-                              if (location.hasWifi)
-                                const _MetaPill(
-                                  icon: Icons.wifi_rounded,
-                                  label: 'Wi-Fi',
-                                  color: SpontiColors.secondary,
-                                ),
-                              if (location.isPetFriendly)
-                                const _MetaPill(
-                                  icon: Icons.pets_rounded,
-                                  label: 'Pet friendly',
-                                  color: Color(0xFF7B4F2E),
-                                ),
-                            ],
-                          ),
-                        ),
+                        Expanded(child: _MetaWrap(location: location)),
                         const SizedBox(width: 12),
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: categoryColor.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.arrow_outward_rounded,
-                            color: categoryColor,
-                          ),
-                        ),
+                        _ActionOrb(color: categoryColor),
                       ],
                     ),
                   ],
@@ -232,6 +204,134 @@ class SearchResultCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _CompactSearchResultCard extends StatelessWidget {
+  const _CompactSearchResultCard({
+    required this.location,
+    required this.onTap,
+  });
+
+  final Location location;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryColor = Color(location.category.colorValue);
+
+    return SearchGlassPanel(
+      radius: 30,
+      padding: EdgeInsets.zero,
+      gradientColors: [
+        Colors.white.withValues(alpha: 0.70),
+        const Color(0xFFF7F0E8).withValues(alpha: 0.52),
+      ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(30),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: SizedBox(
+                    width: 112,
+                    height: 112,
+                    child: _SearchPhoto(
+                      location: location,
+                      categoryColor: categoryColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              location.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    color: SpontiColors.textPrimary,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.5,
+                                  ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _ActionOrb(color: categoryColor, compact: true),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      _AddressLine(location: location),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _TintedMetaPill(
+                            icon: Icons.star_rounded,
+                            label: SpontiFormatter.rating(location.rating),
+                            color: SpontiColors.warning,
+                          ),
+                          _TintedMetaPill(
+                            icon: location.category.icon,
+                            label: location.category.label,
+                            color: categoryColor,
+                          ),
+                          if (location.distanceKm != null)
+                            _TintedMetaPill(
+                              icon: Icons.near_me_rounded,
+                              label: SpontiFormatter.distance(location.distanceKm!),
+                              color: SpontiColors.secondary,
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchPhoto extends StatelessWidget {
+  const _SearchPhoto({
+    required this.location,
+    required this.categoryColor,
+  });
+
+  final Location location;
+  final Color categoryColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return location.hasPhotos
+        ? CachedNetworkImage(
+            imageUrl: location.primaryPhoto,
+            fit: BoxFit.cover,
+            errorWidget: (_, _, _) => _SearchImageFallback(
+              color: categoryColor,
+              icon: location.category.icon,
+            ),
+          )
+        : _SearchImageFallback(
+            color: categoryColor,
+            icon: location.category.icon,
+          );
   }
 }
 
@@ -261,9 +361,102 @@ class _SearchImageFallback extends StatelessWidget {
       child: Center(
         child: Icon(
           icon,
-          size: 72,
-          color: Colors.white.withValues(alpha: 0.82),
+          size: 64,
+          color: Colors.white.withValues(alpha: 0.84),
         ),
+      ),
+    );
+  }
+}
+
+class _AddressLine extends StatelessWidget {
+  const _AddressLine({required this.location});
+
+  final Location location;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.place_rounded,
+          size: 16,
+          color: SpontiColors.textSecondary.withValues(alpha: 0.85),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            location.address,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: SpontiColors.textSecondary,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetaWrap extends StatelessWidget {
+  const _MetaWrap({required this.location});
+
+  final Location location;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (location.isHiddenGem)
+          const _TintedMetaPill(
+            icon: Icons.auto_awesome_rounded,
+            label: 'Hidden gem',
+            color: SpontiColors.accent,
+          ),
+        if (location.hasWifi)
+          const _TintedMetaPill(
+            icon: Icons.wifi_rounded,
+            label: 'Wi-Fi',
+            color: SpontiColors.secondary,
+          ),
+        if (location.isPetFriendly)
+          const _TintedMetaPill(
+            icon: Icons.pets_rounded,
+            label: 'Pet friendly',
+            color: Color(0xFF7B4F2E),
+          ),
+      ],
+    );
+  }
+}
+
+class _ActionOrb extends StatelessWidget {
+  const _ActionOrb({
+    required this.color,
+    this.compact = false,
+  });
+
+  final Color color;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: compact ? 40 : 42,
+      height: compact ? 40 : 42,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        Icons.arrow_outward_rounded,
+        color: color,
       ),
     );
   }
@@ -360,8 +553,8 @@ class _GlassTag extends StatelessWidget {
   }
 }
 
-class _MetaPill extends StatelessWidget {
-  const _MetaPill({
+class _TintedMetaPill extends StatelessWidget {
+  const _TintedMetaPill({
     required this.icon,
     required this.label,
     required this.color,

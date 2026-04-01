@@ -45,8 +45,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 280), () {
       if (!mounted) return;
-      ref.read(searchQueryProvider.notifier).state = value;
+      final normalizedQuery = normalizeSearchQuery(value);
+      final queryNotifier = ref.read(searchQueryProvider.notifier);
+      if (queryNotifier.state == normalizedQuery) return;
+      queryNotifier.state = normalizedQuery;
     });
+  }
+
+  void _commitQueryNow(String value) {
+    _debounce?.cancel();
+    final normalizedQuery = normalizeSearchQuery(value);
+    ref.read(searchQueryProvider.notifier).state = normalizedQuery;
+  }
+
+  void _applySuggestion(String query) {
+    _controller.value = TextEditingValue(
+      text: query,
+      selection: TextSelection.collapsed(offset: query.length),
+    );
+    _draftQuery.value = query;
+    _commitQueryNow(query);
   }
 
   void _clearQuery() {
@@ -85,6 +103,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           isLoading: resultsAsync.isLoading,
                           onBack: () => context.pop(),
                           onChanged: _onQueryChanged,
+                          onSubmitted: _commitQueryNow,
                           onClear: _clearQuery,
                         ),
                       ),
@@ -119,10 +138,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             return AnimatedSwitcher(
                               duration: const Duration(milliseconds: 220),
                               child: SearchResultsContent(
+                                key: ValueKey<String>(
+                                  '${normalizeSearchQuery(draftQuery)}|$committedQuery|${results.length}|${resultsAsync.hasError}|${resultsAsync.isLoading}',
+                                ),
                                 draftQuery: draftQuery,
                                 committedQuery: committedQuery,
                                 resultsAsync: resultsAsync,
                                 results: results,
+                                onSuggestionTap: _applySuggestion,
                                 onLocationTap: (location) {
                                   context.push(
                                     RouteName.locationDetailPath(location.id),
