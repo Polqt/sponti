@@ -17,8 +17,10 @@ class DiscoveryBody extends ConsumerWidget {
     final state = ref.watch(discoveryViewModelProvider);
     final notifier = ref.read(discoveryViewModelProvider.notifier);
 
+    // Match the bottom bar's dynamic height calculation
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final bottomPadding = bottomInset + kShellBottomBarClearance;
+    final dockBottomInset = bottomInset > 0 ? bottomInset : 6.0;
+    final bottomPadding = kShellBottomBarHeight + dockBottomInset;
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(16, 12, 16, bottomPadding),
@@ -34,14 +36,14 @@ class DiscoveryBody extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
-          // Section header
+          // Top Picks section
           _SectionHeader(
             title: state.sectionTitle,
             subtitle: state.activeColumn == DiscoveryColumn.forYou
                 ? 'Curated spots just for you'
                 : 'What your friends are exploring',
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
           // Content
           AnimatedSwitcher(
@@ -54,19 +56,19 @@ class DiscoveryBody extends ConsumerWidget {
           ),
 
           if (state.activeColumn == DiscoveryColumn.forYou) ...[
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             const _SectionHeader(
               title: 'Browse',
               subtitle: 'Explore by category',
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             const DiscoveryCategoryAccordionsSection(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             const _SectionHeader(
               title: 'Leaderboards',
               subtitle: 'Top community members',
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             const DiscoveryTopCuratorsSection(),
           ],
         ],
