@@ -25,14 +25,20 @@ class _VideoOnboardingScreenState extends ConsumerState<VideoOnboardingScreen> {
 
   Future<void> _initializeVideo() async {
     _videoController =
-        VideoPlayerController.asset('assets/videos/onboarding.mp4')
-          ..initialize()
-              .then((_) {
-                if (!mounted) return;
-                setState(() {});
-                _videoController.play();
-              })
-              .catchError((error) {});
+        VideoPlayerController.asset('assets/videos/onboarding.mp4');
+    
+    try {
+      await _videoController.initialize();
+      if (!mounted) return;
+      setState(() {});
+      await _videoController.play();
+    } catch (error) {
+      debugPrint('Video initialization failed: $error');
+      // Navigate to login on video error so user isn't stuck
+      if (mounted) {
+        _goToLogin();
+      }
+    }
 
     _videoController.addListener(_onVideoStatusChanged);
   }
@@ -51,7 +57,7 @@ class _VideoOnboardingScreenState extends ConsumerState<VideoOnboardingScreen> {
     }
   }
 
-  void _goToLogin() async {
+  Future<void> _goToLogin() async {
     await ref.read(onboardingViewModelProvider.notifier).markCompleted();
 
     if (mounted) {

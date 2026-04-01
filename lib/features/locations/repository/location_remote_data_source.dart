@@ -39,7 +39,19 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
 
   /// Cache for resolved photo URLs to avoid repeated Supabase storage calls.
   /// Key: storage path, Value: resolved public URL
+  /// Limited to 500 entries to prevent unbounded memory growth.
+  static const _maxCacheSize = 500;
   final Map<String, String> _photoUrlCache = {};
+
+  void _trimCacheIfNeeded() {
+    if (_photoUrlCache.length > _maxCacheSize) {
+      // Remove oldest entries (first 100)
+      final keysToRemove = _photoUrlCache.keys.take(100).toList();
+      for (final key in keysToRemove) {
+        _photoUrlCache.remove(key);
+      }
+    }
+  }
 
   Future<T> _executeQuery<T>(Future<T> Function() query) async {
     try {
@@ -68,6 +80,8 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   Map<String, dynamic> resolvePhotoUrls(Map<String, dynamic> json) {
     final rawPhotos = json['photos'] as List<dynamic>? ?? [];
     if (rawPhotos.isEmpty) return json;
+
+    _trimCacheIfNeeded();
 
     final resolved = rawPhotos.map((path) {
       final p = path.toString();

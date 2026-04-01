@@ -106,12 +106,16 @@ class _ProfileBody extends StatelessWidget {
             pinned: false,
             title: const Text('Profile'),
           ),
-        SliverToBoxAdapter(
+        // Use SliverFillRemaining to push content to bottom
+        SliverFillRemaining(
+          hasScrollBody: false,
           child: Padding(
             padding: EdgeInsets.only(bottom: bottomPadding),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const SizedBox(height: 12),
+                // Spacer pushes content down, but allows scrolling when content is tall
+                const Spacer(),
                 FadeSlideIn(
                   child: ProfileHeader(
                     profile: profile,

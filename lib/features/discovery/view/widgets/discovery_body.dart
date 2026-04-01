@@ -56,14 +56,14 @@ class DiscoveryBody extends ConsumerWidget {
           ),
 
           if (state.activeColumn == DiscoveryColumn.forYou) ...[
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
             const _SectionHeader(
               title: 'Browse',
               subtitle: 'Explore by category',
             ),
             const SizedBox(height: 12),
             const DiscoveryCategoryAccordionsSection(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
             const _SectionHeader(
               title: 'Leaderboards',
               subtitle: 'Top community members',
