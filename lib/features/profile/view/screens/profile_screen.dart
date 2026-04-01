@@ -13,10 +13,7 @@ import 'package:sponti/features/profile/view/widgets/profile_stats_card.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 
 class _AnimatedFadeIn extends StatefulWidget {
-  const _AnimatedFadeIn({
-    required this.child,
-    required this.delay,
-  });
+  const _AnimatedFadeIn({required this.child, required this.delay});
 
   final Widget child;
   final Duration delay;
@@ -47,10 +44,7 @@ class _AnimatedFadeInState extends State<_AnimatedFadeIn>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.15),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     Future.delayed(widget.delay, () {
       if (mounted) _controller.forward();
@@ -67,19 +61,13 @@ class _AnimatedFadeInState extends State<_AnimatedFadeIn>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _opacityAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: widget.child,
-      ),
+      child: SlideTransition(position: _slideAnimation, child: widget.child),
     );
   }
 }
 
 class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({
-    super.key,
-    this.userId,
-  });
+  const ProfileScreen({super.key, this.userId});
 
   final String? userId;
 
@@ -88,16 +76,14 @@ class ProfileScreen extends ConsumerWidget {
     final authUser = ref.watch(currentUserProvider);
     final viewedUserId = userId ?? authUser?.id;
     final isOwnProfile = viewedUserId != null && viewedUserId == authUser?.id;
-    final profileAsync =
-        viewedUserId == null || viewedUserId.isEmpty
-            ? const AsyncValue<UserProfile?>.data(null)
-            : isOwnProfile
-            ? ref.watch(profileProvider)
-            : ref.watch(userProfileProvider(viewedUserId));
-    final statsAsync =
-        viewedUserId == null || viewedUserId.isEmpty
-            ? const AsyncValue<UserStats?>.data(null)
-            : ref.watch(userStatsProvider(viewedUserId));
+    final profileAsync = viewedUserId == null || viewedUserId.isEmpty
+        ? const AsyncValue<UserProfile?>.data(null)
+        : isOwnProfile
+        ? ref.watch(profileProvider)
+        : ref.watch(userProfileProvider(viewedUserId));
+    final statsAsync = viewedUserId == null || viewedUserId.isEmpty
+        ? const AsyncValue<UserStats?>.data(null)
+        : ref.watch(userStatsProvider(viewedUserId));
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -148,8 +134,11 @@ class ProfileScreen extends ConsumerWidget {
                         child: ProfileHeader(
                           profile: resolvedProfile,
                           onAvatarTap: isOwnProfile && authUser != null
-                              ? () =>
-                                    _pickAndUploadPhoto(context, ref, authUser.id)
+                              ? () => _pickAndUploadPhoto(
+                                  context,
+                                  ref,
+                                  authUser.id,
+                                )
                               : null,
                         ),
                       ),
@@ -181,7 +170,8 @@ class ProfileScreen extends ConsumerWidget {
                                 icon: Icons.add_location_alt_rounded,
                                 iconColor: SpontiColors.secondary,
                                 label: 'Suggested Spots',
-                                onTap: () => context.push(RouteName.suggestSpot),
+                                onTap: () =>
+                                    context.push(RouteName.suggestSpot),
                               ),
                             ],
                           ),
@@ -196,7 +186,8 @@ class ProfileScreen extends ConsumerWidget {
                                 icon: Icons.edit_rounded,
                                 iconColor: SpontiColors.secondary,
                                 label: 'Edit Profile',
-                                onTap: () => context.push(RouteName.editProfile),
+                                onTap: () =>
+                                    context.push(RouteName.editProfile),
                               ),
                               _MenuItem(
                                 icon: Icons.logout_rounded,
@@ -311,6 +302,7 @@ Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
     return;
   }
 
+  ref.invalidate(authProvider);
   ref.invalidate(profileProvider);
   context.go(RouteName.signin);
 }
@@ -437,9 +429,9 @@ class _MenuTile extends StatelessWidget {
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
                 ),
               ),
               Icon(

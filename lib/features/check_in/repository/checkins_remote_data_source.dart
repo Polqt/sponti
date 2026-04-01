@@ -2,7 +2,7 @@ import 'package:sponti/config/supabase_options.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/check_in/models/checkins.dart';
 import 'package:sponti/features/check_in/models/checkins_model.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 abstract interface class CheckinsRemoteDataSource {
   Future<List<CheckIn>> getCheckInsForLocation(String locationId);
@@ -82,7 +82,7 @@ class CheckinsRemoteDataSourceImpl implements CheckinsRemoteDataSource {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) {
-        return const <CheckIn>[];
+        throw const AuthException('You must be signed in to view check-ins.');
       }
 
       final response = await _client
@@ -132,10 +132,7 @@ class CheckinsRemoteDataSourceImpl implements CheckinsRemoteDataSource {
   @override
   Future<void> deleteCheckIn(String checkInId) async {
     try {
-      await _client
-          .from(SupabaseTables.checkIns)
-          .delete()
-          .eq('id', checkInId);
+      await _client.from(SupabaseTables.checkIns).delete().eq('id', checkInId);
     } on PostgrestException catch (e) {
       throw ServerException(e.message);
     } catch (e) {

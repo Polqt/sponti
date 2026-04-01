@@ -54,7 +54,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
       final authState = await _client.auth.onAuthStateChange
           .firstWhere((state) => state.event == AuthChangeEvent.signedIn)
-          .timeout(const Duration(minutes: 2));
+          .timeout(const Duration(seconds: 60));
 
       final user = authState.session?.user;
       if (user == null) {
@@ -68,6 +68,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> signOut() async {
-    await _client.auth.signOut(scope: SignOutScope.local);
+    await _client.auth.signOut();
   }
 }
