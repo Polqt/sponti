@@ -44,6 +44,9 @@ class ExploreFilter {
     this.categoryFilter,
     this.priceFilter,
     this.nowOpenOnly = false,
+    this.hasWifi = false,
+    this.petFriendly = false,
+    this.hasParking = false,
   });
 
   final ExploreRanking rankingFilter;
@@ -51,6 +54,9 @@ class ExploreFilter {
   final LocationCategory? categoryFilter;
   final PriceRange? priceFilter;
   final bool nowOpenOnly;
+  final bool hasWifi;
+  final bool petFriendly;
+  final bool hasParking;
 
   ExploreFilter copyWith({
     ExploreRanking? rankingFilter,
@@ -58,6 +64,9 @@ class ExploreFilter {
     Object? categoryFilter = _unsetExploreField,
     Object? priceFilter = _unsetExploreField,
     bool? nowOpenOnly,
+    bool? hasWifi,
+    bool? petFriendly,
+    bool? hasParking,
   }) {
     return ExploreFilter(
       rankingFilter: rankingFilter ?? this.rankingFilter,
@@ -69,6 +78,9 @@ class ExploreFilter {
           ? this.priceFilter
           : priceFilter as PriceRange?,
       nowOpenOnly: nowOpenOnly ?? this.nowOpenOnly,
+      hasWifi: hasWifi ?? this.hasWifi,
+      petFriendly: petFriendly ?? this.petFriendly,
+      hasParking: hasParking ?? this.hasParking,
     );
   }
 }
@@ -106,6 +118,18 @@ class ExploreFilterViewModel extends Notifier<ExploreFilter> {
 
   void toggleNowOpen() {
     state = state.copyWith(nowOpenOnly: !state.nowOpenOnly);
+  }
+
+  void setAmenities({
+    required bool hasWifi,
+    required bool petFriendly,
+    required bool hasParking,
+  }) {
+    state = state.copyWith(
+      hasWifi: hasWifi,
+      petFriendly: petFriendly,
+      hasParking: hasParking,
+    );
   }
 
   void clearAll() {
@@ -167,13 +191,26 @@ class ExploreViewModel extends AsyncNotifier<List<Location>> {
           .toList(growable: false);
     }
 
-    if (filter.priceFilter != null || filter.nowOpenOnly) {
+    if (filter.priceFilter != null ||
+        filter.nowOpenOnly ||
+        filter.hasWifi ||
+        filter.petFriendly ||
+        filter.hasParking) {
       return locations.where((location) {
         if (filter.priceFilter != null &&
             location.priceRange != filter.priceFilter) {
           return false;
         }
         if (filter.nowOpenOnly && !location.isOpenNow) {
+          return false;
+        }
+        if (filter.hasWifi && !location.hasWifi) {
+          return false;
+        }
+        if (filter.petFriendly && !location.isPetFriendly) {
+          return false;
+        }
+        if (filter.hasParking && !location.hasParking) {
           return false;
         }
         return true;

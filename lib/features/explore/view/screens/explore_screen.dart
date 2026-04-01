@@ -7,6 +7,7 @@ import 'package:sponti/core/constants/app_constants.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
 import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
+import 'package:sponti/features/explore/view/widgets/explore_amenities_filter_modal.dart';
 import 'package:sponti/features/explore/view/widgets/explore_filter_chips.dart';
 import 'package:sponti/features/explore/view/widgets/explore_filter_sheets.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
@@ -120,6 +121,23 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     _setPanelExpanded(true);
   }
 
+  Future<void> _onAmenitiesTap(ExploreFilter filter) async {
+    final picked = await showAmenitiesFilterModal(
+      context: context,
+      initialValue: AmenitiesFilterSelection(
+        hasWifi: filter.hasWifi,
+        petFriendly: filter.petFriendly,
+        hasParking: filter.hasParking,
+      ),
+    );
+    if (picked == null) return;
+    ref.read(exploreFilterProvider.notifier).setAmenities(
+      hasWifi: picked.hasWifi,
+      petFriendly: picked.petFriendly,
+      hasParking: picked.hasParking,
+    );
+  }
+
   void _syncPanelState(ExploreFilter filter) {
     if (filter.categoryFilter == null) {
       _lastAutoExpandedCategory = null;
@@ -225,6 +243,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   onTapPrice: () => showPriceFilterSheet(context, ref, filter),
                   onTapCategory: () => showCategoryFilterSheet(context, ref, filter),
                   onToggleNowOpen: _toggleNowOpen,
+                  onTapAmenities: () => _onAmenitiesTap(filter),
                   showCategoryChip: false,
                 ),
               ),

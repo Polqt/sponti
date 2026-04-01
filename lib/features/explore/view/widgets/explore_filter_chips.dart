@@ -13,10 +13,12 @@ class ExploreFilterChips extends StatelessWidget {
     required this.onTapPrice,
     required this.onTapCategory,
     required this.onToggleNowOpen,
+    required this.onTapAmenities,
     this.showRankingChip = true,
     this.showPriceChip = true,
     this.showCategoryChip = true,
     this.showNowOpenChip = true,
+    this.showAmenitiesChip = true,
   });
 
   final ExploreFilter filter;
@@ -24,10 +26,12 @@ class ExploreFilterChips extends StatelessWidget {
   final VoidCallback onTapPrice;
   final VoidCallback onTapCategory;
   final VoidCallback onToggleNowOpen;
+  final VoidCallback onTapAmenities;
   final bool showRankingChip;
   final bool showPriceChip;
   final bool showCategoryChip;
   final bool showNowOpenChip;
+  final bool showAmenitiesChip;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +40,9 @@ class ExploreFilterChips extends StatelessWidget {
     final category = filter.categoryFilter;
     final price = filter.priceFilter;
     final nowOpen = filter.nowOpenOnly;
+    final amenitiesCount = (filter.hasWifi ? 1 : 0) +
+        (filter.petFriendly ? 1 : 0) +
+        (filter.hasParking ? 1 : 0);
     final children = <Widget>[];
 
     void addChip(Widget chip) {
@@ -98,6 +105,22 @@ class ExploreFilterChips extends StatelessWidget {
           leading: const Icon(Icons.schedule_rounded),
           isActive: nowOpen,
           onTap: onToggleNowOpen,
+        ),
+      );
+    }
+
+    if (showAmenitiesChip) {
+      addChip(
+        _ExploreFilterChip(
+          label: amenitiesCount == 0
+              ? 'Amenities'
+              : 'Amenities ($amenitiesCount) ✓',
+          color: amenitiesCount == 0
+              ? SpontiColors.textSecondary
+              : SpontiColors.secondary,
+          leading: const Icon(Icons.tune_rounded),
+          isActive: amenitiesCount > 0,
+          onTap: onTapAmenities,
         ),
       );
     }

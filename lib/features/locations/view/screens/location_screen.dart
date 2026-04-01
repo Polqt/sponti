@@ -296,12 +296,12 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final topInset = MediaQuery.viewPaddingOf(context).top;
     final rankingSnapshot = filteredResult.rankingSnapshot;
-    final floatingControlsBottom = bottomInset + kShellBottomBarClearance + 14;
+    final floatingControlsBottom = bottomInset + kShellBottomBarClearance + 20;
     final mapPadding = EdgeInsets.fromLTRB(
       10,
       topInset + 92,
       10,
-      bottomInset + 200, // Increased to hide Google logo and terms
+      bottomInset + 188,
     );
     final labelViewportPadding = MapConstants.defaultLabelViewportPadding(
       topInset: topInset,
@@ -381,7 +381,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
             Positioned(
               left: 16,
               right: 16,
-              bottom: 194,
+              bottom: floatingControlsBottom + 74,
               child: FloatingMessage(
                 text: 'Unable to load spots. Pull refresh icon to retry.',
                 icon: Icons.error_outline_rounded,
@@ -466,7 +466,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
             Positioned(
               left: 16,
               right: 16,
-              bottom: floatingControlsBottom + 64,
+              bottom: floatingControlsBottom + 78,
               child: FloatingMessage(
                 text: 'You\'re offline. Showing cached spots.',
                 icon: Icons.wifi_off_rounded,
