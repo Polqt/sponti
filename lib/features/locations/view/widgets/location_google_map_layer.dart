@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
@@ -18,6 +19,7 @@ class LocationGoogleMapLayer extends StatefulWidget {
     required this.locations,
     required this.selectedId,
     required this.initialCameraPosition,
+    required this.mapPadding,
     required this.labelViewportPadding,
     required this.onMapTap,
     required this.onLocationTap,
@@ -31,6 +33,7 @@ class LocationGoogleMapLayer extends StatefulWidget {
   final List<Location> locations;
   final String? selectedId;
   final gmaps.CameraPosition initialCameraPosition;
+  final EdgeInsets mapPadding;
   final EdgeInsets labelViewportPadding;
   final VoidCallback onMapTap;
   final ValueChanged<Location> onLocationTap;
@@ -60,6 +63,7 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
       const <String, ScreenMapPinLabelLayout>{};
   int _markerRequestId = 0;
   int _layoutRequestId = 0;
+  int _labelRetryCount = 0;
   double _pendingZoom = MapConstants.defaultZoom;
   bool _isCameraInteracting = false;
 
@@ -98,6 +102,7 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
     }
 
     if (markerInputsChanged ||
+        widget.mapPadding != oldWidget.mapPadding ||
         widget.labelViewportPadding != oldWidget.labelViewportPadding) {
       _scheduleLabelSync(immediate: markerInputsChanged);
     }
@@ -243,12 +248,14 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
           if (_isWithinViewport(entry.value)) entry.key: entry.value,
       };
 
-      final layouts = MarkerCollisionDetector.computeScreenLabelLayouts(
+      final labelTexts = {
+        for (final entry in _labelTexts.entries)
+          if (visibleMarkerCenters.containsKey(entry.key)) entry.key: entry.value,
+      };
+
+      var layouts = MarkerCollisionDetector.computeScreenLabelLayouts(
         markerCenters: visibleMarkerCenters,
-        labelTexts: {
-          for (final entry in _labelTexts.entries)
-            if (visibleMarkerCenters.containsKey(entry.key)) entry.key: entry.value,
-        },
+        labelTexts: labelTexts,
         viewportSize: _viewportSize,
         zoom: _zoomState.zoom,
         selectedId: widget.selectedId,
@@ -260,6 +267,44 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
         return;
       }
 
+      var visibleLabelCount = layouts.values.where((layout) => layout.showLabel).length;
+      if (visibleLabelCount == 0 &&
+          visibleMarkerCenters.isNotEmpty &&
+          _zoomState.zoom >= 15.0) {
+        final relaxedPadding = EdgeInsets.fromLTRB(
+          math.max(4.0, widget.labelViewportPadding.left - 8),
+          math.max(8.0, widget.labelViewportPadding.top - 20),
+          math.max(4.0, widget.labelViewportPadding.right - 8),
+          math.max(10.0, widget.labelViewportPadding.bottom - 24),
+        );
+        final fallbackLayouts = MarkerCollisionDetector.computeScreenLabelLayouts(
+          markerCenters: visibleMarkerCenters,
+          labelTexts: labelTexts,
+          viewportSize: _viewportSize,
+          zoom: _zoomState.zoom + 0.25,
+          selectedId: widget.selectedId,
+          markerDiameter: 40,
+          viewportPadding: relaxedPadding,
+        );
+        final fallbackVisibleCount = fallbackLayouts.values
+            .where((layout) => layout.showLabel)
+            .length;
+        if (fallbackVisibleCount > visibleLabelCount) {
+          layouts = fallbackLayouts;
+          visibleLabelCount = fallbackVisibleCount;
+        }
+      }
+
+      if (visibleLabelCount == 0 &&
+          visibleMarkerCenters.isNotEmpty &&
+          _zoomState.zoom >= 15.0 &&
+          _labelRetryCount < 2) {
+        _labelRetryCount += 1;
+        _scheduleLabelSync();
+        return;
+      }
+
+      _labelRetryCount = 0;
       setState(() => _labelLayouts = layouts);
     } catch (_) {
       if (!mounted || requestId != _layoutRequestId) {
@@ -273,10 +318,13 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
 
   bool _isWithinViewport(Offset point) {
     final padding = widget.labelViewportPadding;
-    return point.dx >= padding.left - _labelVisibilitySlack &&
-        point.dx <= _viewportSize.width - padding.right + _labelVisibilitySlack &&
-        point.dy >= padding.top - _labelVisibilitySlack &&
-        point.dy <= _viewportSize.height - padding.bottom + _labelVisibilitySlack;
+    final topInset = math.max(4.0, padding.top - 28);
+    final bottomInset = math.max(8.0, padding.bottom - 32);
+
+    return point.dx >= -20.0 &&
+        point.dx <= _viewportSize.width + 20.0 &&
+        point.dy >= topInset - _labelVisibilitySlack &&
+        point.dy <= _viewportSize.height - bottomInset + _labelVisibilitySlack;
   }
 
   void _handleMapCreated(gmaps.GoogleMapController controller) {
@@ -306,16 +354,20 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
       tier: ZoomTier.fromZoom(_pendingZoom),
     );
     final shouldRefreshLabels =
-        !_isSameZoomState(_zoomState, nextZoomState) || _isCameraInteracting;
+        !_isSameZoomState(_zoomState, nextZoomState) ||
+        _isCameraInteracting ||
+        _labelLayouts.isEmpty;
 
-    if (!shouldRefreshLabels) return;
+    if (_isCameraInteracting || !_isSameZoomState(_zoomState, nextZoomState)) {
+      setState(() {
+        _zoomState = nextZoomState;
+        _isCameraInteracting = false;
+      });
+    }
 
-    setState(() {
-      _zoomState = nextZoomState;
-      _isCameraInteracting = false;
-    });
-
-    _scheduleLabelSync(immediate: true);
+    if (shouldRefreshLabels) {
+      _scheduleLabelSync(immediate: true);
+    }
   }
 
   bool _isSameZoomState(MapZoomState left, MapZoomState right) {
@@ -376,6 +428,7 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
               trafficEnabled: false,
               tiltGesturesEnabled: true,
               rotateGesturesEnabled: true,
+              padding: widget.mapPadding,
               minMaxZoomPreference: const gmaps.MinMaxZoomPreference(
                 MapConstants.minZoom,
                 MapConstants.maxZoom,

@@ -119,15 +119,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               isSearching &&
                               normalizedDraft != committedQuery;
 
-                          return Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-                            child: SearchStatusStrip(
-                              query: normalizedDraft,
-                              committedQuery: committedQuery,
-                              resultCount: results.length,
-                              isSearching: isSearching,
-                              isPendingSearch: isPendingSearch,
-                            ),
+                          return AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            child: !isSearching
+                                ? const SizedBox(height: 10)
+                                : Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      20,
+                                      14,
+                                      20,
+                                      12,
+                                    ),
+                                    child: SearchStatusStrip(
+                                      query: normalizedDraft,
+                                      committedQuery: committedQuery,
+                                      resultCount: results.length,
+                                      isSearching: isSearching,
+                                      isPendingSearch: isPendingSearch,
+                                    ),
+                                  ),
                           );
                         },
                       ),

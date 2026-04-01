@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sponti/core/theme/app_colors.dart';
-import 'package:sponti/features/search/view/widgets/search_glass_panel.dart';
 
 class SearchStatusStrip extends StatelessWidget {
   const SearchStatusStrip({
@@ -20,67 +19,46 @@ class SearchStatusStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!isSearching) {
+      return const SizedBox.shrink();
+    }
+
     final theme = Theme.of(context);
-    final title = !isSearching
-        ? 'Fresh around you'
-        : isPendingSearch
+    final title = isPendingSearch
         ? 'Searching...'
         : '$resultCount result${resultCount == 1 ? '' : 's'}';
-    final subtitle = !isSearching
-        ? 'Start with coffee, parks, hidden gems, or your favorite landmark.'
-        : isPendingSearch
+    final subtitle = isPendingSearch
         ? 'Finding the best matches for "$query".'
         : 'Showing the closest fit for "$committedQuery".';
-    final pillLabel = !isSearching
-        ? 'Fresh'
-        : isPendingSearch
+    final pillLabel = isPendingSearch
         ? 'Live'
         : 'Ready';
-    final pillColor = !isSearching
-        ? SpontiColors.dark
-        : isPendingSearch
+    final pillColor = isPendingSearch
         ? SpontiColors.primary
         : SpontiColors.secondary;
 
-    return SearchGlassPanel(
-      radius: 30,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      gradientColors: [
-        Colors.white.withValues(alpha: 0.72),
-        const Color(0xFFF6EFE8).withValues(alpha: 0.56),
-        const Color(0xFFE9F4F0).withValues(alpha: 0.46),
-      ],
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  pillColor.withValues(alpha: 0.22),
-                  pillColor.withValues(alpha: 0.10),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Icon(
-              !isSearching
-                  ? Icons.bolt_rounded
-                  : isPendingSearch
-                  ? Icons.radar_rounded
-                  : Icons.check_circle_rounded,
-              color: pillColor,
-              size: 20,
-            ),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.92),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
-          const SizedBox(width: 12),
+        ],
+      ),
+      child: Row(
+        children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   title,
@@ -90,13 +68,15 @@ class SearchStatusStrip extends StatelessWidget {
                     letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: SpontiColors.textSecondary,
                     fontWeight: FontWeight.w500,
-                    height: 1.35,
+                    height: 1.3,
                   ),
                 ),
               ],
@@ -104,22 +84,15 @@ class SearchStatusStrip extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
             decoration: BoxDecoration(
-              color: pillColor,
+              color: pillColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(999),
-              boxShadow: [
-                BoxShadow(
-                  color: pillColor.withValues(alpha: 0.20),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
             ),
             child: Text(
               pillLabel,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: pillColor,
                 fontWeight: FontWeight.w800,
                 fontSize: 11.5,
               ),

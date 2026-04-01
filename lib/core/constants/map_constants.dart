@@ -11,7 +11,7 @@ abstract final class MapConstants {
   static const double minZoom = 10.0;
   static const double maxZoom = 20.0;
 
-  static const double labelVisibilityZoom = 14.15;
+  static const double labelVisibilityZoom = 13.7;
   static const double labelViewportInset = 8.0;
 
   static EdgeInsets defaultLabelViewportPadding({
@@ -19,10 +19,10 @@ abstract final class MapConstants {
     required double bottomInset,
   }) {
     return EdgeInsets.fromLTRB(
-      16,
-      topInset + 76,
-      16,
-      bottomInset + 150,
+      12,
+      topInset + 64,
+      12,
+      bottomInset + 132,
     );
   }
 }

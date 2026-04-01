@@ -219,6 +219,12 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     final topInset = MediaQuery.viewPaddingOf(context).top;
     final rankingSnapshot = filteredResult.rankingSnapshot;
     final floatingControlsBottom = bottomInset + kShellBottomBarClearance + 14;
+    final mapPadding = EdgeInsets.fromLTRB(
+      10,
+      topInset + 92,
+      10,
+      bottomInset + 146,
+    );
     final labelViewportPadding = MapConstants.defaultLabelViewportPadding(
       topInset: topInset,
       bottomInset: bottomInset,
@@ -258,6 +264,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 tilt: MapConstants.defaultTilt,
                 bearing: MapConstants.defaultBearing,
               ),
+              mapPadding: mapPadding,
               labelViewportPadding: labelViewportPadding,
               rankingSnapshot: rankingSnapshot,
               activeRankingFilter: filter.selectedRanking,

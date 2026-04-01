@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/features/locations/model/location.dart';
-import 'package:sponti/features/search/view/widgets/search_glass_panel.dart';
 import 'package:sponti/features/search/view/widgets/search_result_card.dart';
 import 'package:sponti/features/search/view/widgets/search_welcome_state.dart';
 import 'package:sponti/features/search/viewmodel/search_viewmodel.dart';
@@ -90,13 +89,14 @@ class _SearchLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return ListView(
+      physics: const BouncingScrollPhysics(),
       children: const [
-        _SearchLoadingCard(height: 244),
-        SizedBox(height: 16),
-        _SearchLoadingCard(height: 152),
-        SizedBox(height: 16),
-        _SearchLoadingCard(height: 152),
+        _SearchLoadingCard(height: 184),
+        SizedBox(height: 14),
+        _SearchLoadingCard(height: 116),
+        SizedBox(height: 14),
+        _SearchLoadingCard(height: 116),
       ],
     );
   }
@@ -109,36 +109,30 @@ class _SearchLoadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SearchGlassPanel(
-      radius: 30,
-      padding: EdgeInsets.zero,
-      gradientColors: [
-        Colors.white.withValues(alpha: 0.64),
-        const Color(0xFFF5EEE6).withValues(alpha: 0.44),
-      ],
-      child: SizedBox(
-        width: double.infinity,
-        height: height,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.white.withValues(alpha: 0.24),
-                Colors.white.withValues(alpha: 0.08),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+    return Container(
+      width: double.infinity,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.94),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-          child: const Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.4,
-                color: SpontiColors.primary,
-              ),
-            ),
+        ],
+      ),
+      child: const Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.3,
+            color: SpontiColors.primary,
           ),
         ),
       ),

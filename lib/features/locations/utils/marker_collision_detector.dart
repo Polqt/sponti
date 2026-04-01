@@ -1,7 +1,14 @@
 import 'dart:math' as math;
-import 'dart:ui' show Offset, Rect, Size;
+import 'dart:ui' show Color, Offset, Rect, Size;
 
-import 'package:flutter/painting.dart' show EdgeInsets;
+import 'package:flutter/painting.dart'
+    show
+        EdgeInsets,
+        FontWeight,
+        TextDirection,
+        TextPainter,
+        TextSpan,
+        TextStyle;
 import 'package:latlong2/latlong.dart';
 import 'package:sponti/core/constants/map_constants.dart';
 import 'package:sponti/features/locations/utils/map_label_layout.dart';
@@ -11,6 +18,12 @@ class MarkerCollisionDetector {
   static const _geoDensityMultiplier = 2.45;
   static const _geoPinRadiusMultiplier = 0.56;
   static const _geoBaseGapMultiplier = 0.86;
+  static const _screenLabelTextStyle = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w600,
+    color: Color(0xFF171717),
+    height: 1.14,
+  );
 
   static Map<String, MapPinLabelLayout> computeLabelLayouts({
     required Map<String, LatLng> markerPositions,
@@ -24,7 +37,8 @@ class MarkerCollisionDetector {
 
     if (zoom < MapConstants.labelVisibilityZoom) {
       return {
-        for (final id in markerPositions.keys) id: const MapPinLabelLayout.hidden(),
+        for (final id in markerPositions.keys)
+          id: const MapPinLabelLayout.hidden(),
       };
     }
 
@@ -54,7 +68,8 @@ class MarkerCollisionDetector {
       );
 
       final shouldShow =
-          id == selectedId || placement.cost < _geoHideThreshold(zoom, labelText.lineCount);
+          id == selectedId ||
+          placement.cost < _geoHideThreshold(zoom, labelText.lineCount);
 
       if (shouldShow && placement.rect != null) {
         occupiedRects[id] = placement.rect!;
@@ -95,6 +110,10 @@ class MarkerCollisionDetector {
     final layouts = <String, ScreenMapPinLabelLayout>{};
     final occupiedRects = <String, Rect>{};
     final densityRadius = _screenDensityRadius(zoom);
+    final labelSizes = {
+      for (final entry in labelTexts.entries)
+        entry.key: _estimateScreenLabelSize(entry.value),
+    };
     final markerRects = {
       for (final entry in markerCenters.entries)
         entry.key: Rect.fromCenter(
@@ -120,13 +139,15 @@ class MarkerCollisionDetector {
         viewportSize: viewportSize,
         viewportPadding: viewportPadding,
         labelText: labelText,
+        labelSize:
+            labelSizes[id] ?? _estimateScreenLabelSize(labelText),
         zoom: zoom,
       );
 
       final shouldShow =
           id == selectedId ||
+          (zoom >= 15.1 && placement.rect != Rect.zero) ||
           placement.isCollisionFree ||
-          (zoom >= 16.15 && placement.rect != Rect.zero) ||
           placement.cost < _screenHideThreshold(zoom, labelText.lineCount);
 
       if (shouldShow && placement.rect != Rect.zero) {
@@ -183,15 +204,12 @@ class MarkerCollisionDetector {
       if (left == selectedId) return -1;
       if (right == selectedId) return 1;
 
-      final densityDiff =
-          (densities[right] ?? 0).compareTo(densities[left] ?? 0);
+      final densityDiff = (densities[right] ?? 0).compareTo(
+        densities[left] ?? 0,
+      );
       if (densityDiff != 0) return densityDiff;
 
-      return _compareLabelPriority(
-        left,
-        right,
-        labelTexts: labelTexts,
-      );
+      return _compareLabelPriority(left, right, labelTexts: labelTexts);
     });
     return orderedIds;
   }
@@ -218,15 +236,12 @@ class MarkerCollisionDetector {
       if (left == selectedId) return -1;
       if (right == selectedId) return 1;
 
-      final densityDiff =
-          (densities[right] ?? 0).compareTo(densities[left] ?? 0);
+      final densityDiff = (densities[right] ?? 0).compareTo(
+        densities[left] ?? 0,
+      );
       if (densityDiff != 0) return densityDiff;
 
-      return _compareLabelPriority(
-        left,
-        right,
-        labelTexts: labelTexts,
-      );
+      return _compareLabelPriority(left, right, labelTexts: labelTexts);
     });
     return orderedIds;
   }
@@ -236,10 +251,9 @@ class MarkerCollisionDetector {
     String right, {
     required Map<String, MapPinLabelText> labelTexts,
   }) {
-    final lineCountDiff =
-        (labelTexts[right]?.lineCount ?? 0).compareTo(
-          labelTexts[left]?.lineCount ?? 0,
-        );
+    final lineCountDiff = (labelTexts[right]?.lineCount ?? 0).compareTo(
+      labelTexts[left]?.lineCount ?? 0,
+    );
     if (lineCountDiff != 0) return lineCountDiff;
 
     return (labelTexts[right]?.maxLineLength ?? 0).compareTo(
@@ -279,7 +293,10 @@ class MarkerCollisionDetector {
 
         for (final otherEntry in markerPositions.entries) {
           if (otherEntry.key == id) continue;
-          if (rect.containsPoint(otherEntry.value, padding: separation * 0.46)) {
+          if (rect.containsPoint(
+            otherEntry.value,
+            padding: separation * 0.46,
+          )) {
             cost += 7.5;
           }
         }
@@ -328,9 +345,9 @@ class MarkerCollisionDetector {
     required Size viewportSize,
     required EdgeInsets viewportPadding,
     required MapPinLabelText labelText,
+    required Size labelSize,
     required double zoom,
   }) {
-    final maxLineLength = math.min(labelText.maxLineLength, 24);
     final lineCount = math.max(1, labelText.lineCount);
 
     var bestPlacement = MapPinLabelPlacement.right;
@@ -343,20 +360,21 @@ class MarkerCollisionDetector {
 
     for (final placement in MapPinLabelPlacement.values) {
       for (final distance in _screenDistancesForZoom(zoom)) {
-        final rect = _clampRectToViewport(
+        final fit = _fitRectToViewport(
           _buildScreenLabelRect(
             center: center,
             placement: placement,
-            labelSize: _estimateScreenLabelSize(
-              placement: placement,
-              maxLineLength: maxLineLength,
-              lineCount: lineCount,
-            ),
+            labelSize: labelSize,
             distance: distance,
           ),
           viewportSize,
           viewportPadding,
         );
+        final rect = fit.rect;
+
+        if (fit.shiftDistance > 44) {
+          continue;
+        }
 
         final ownMarkerRect = markerRects[id]!;
         if (rect.overlaps(ownMarkerRect.inflate(4))) {
@@ -364,16 +382,25 @@ class MarkerCollisionDetector {
         }
 
         final overlapsOtherMarker = markerRects.entries.any(
-          (entry) => entry.key != id && rect.overlaps(entry.value.inflate(6)),
+          (entry) => entry.key != id && rect.overlaps(entry.value.inflate(3)),
         );
         final overlapsOtherLabel = occupiedRects.any(
-          (occupiedRect) => rect.overlaps(occupiedRect.inflate(4)),
+          (occupiedRect) => rect.overlaps(occupiedRect.inflate(1.5)),
         );
 
         var cost = _placementBias(placement) + (distance / 100.0 * 0.22);
         cost += _offsetDistance(rect.center, center) / 14.0;
-        cost += overlapsOtherMarker ? (zoom >= 16.0 ? 180.0 : 54.0) : 0.0;
-        cost += overlapsOtherLabel ? (zoom >= 16.0 ? 220.0 : 72.0) : 0.0;
+        cost += fit.shiftDistance * 0.95;
+        cost += _edgeSpacePenalty(
+          placement: placement,
+          center: center,
+          viewportSize: viewportSize,
+          viewportPadding: viewportPadding,
+          labelSize: labelSize,
+          distance: distance,
+        );
+        cost += overlapsOtherMarker ? (zoom >= 16.0 ? 140.0 : 40.0) : 0.0;
+        cost += overlapsOtherLabel ? (zoom >= 16.0 ? 168.0 : 54.0) : 0.0;
 
         if (lineCount > 2 &&
             (placement == MapPinLabelPlacement.left ||
@@ -420,7 +447,8 @@ class MarkerCollisionDetector {
     required double separation,
     required double gap,
   }) {
-    final labelWidth = placement == MapPinLabelPlacement.top ||
+    final labelWidth =
+        placement == MapPinLabelPlacement.top ||
             placement == MapPinLabelPlacement.bottom
         ? separation * (1.58 + (maxLineLength / 8.8))
         : separation * (1.18 + (maxLineLength / 10.1));
@@ -461,25 +489,53 @@ class MarkerCollisionDetector {
         MapPinLabelPlacement.bottom => 0.32,
       };
 
+  static double _edgeSpacePenalty({
+    required MapPinLabelPlacement placement,
+    required Offset center,
+    required Size viewportSize,
+    required EdgeInsets viewportPadding,
+    required Size labelSize,
+    required double distance,
+  }) {
+    final availableSpace = switch (placement) {
+      MapPinLabelPlacement.right =>
+        viewportSize.width - viewportPadding.right - center.dx,
+      MapPinLabelPlacement.left => center.dx - viewportPadding.left,
+      MapPinLabelPlacement.top => center.dy - viewportPadding.top,
+      MapPinLabelPlacement.bottom =>
+        viewportSize.height - viewportPadding.bottom - center.dy,
+    };
+
+    final neededSpace = switch (placement) {
+      MapPinLabelPlacement.right => labelSize.width + distance,
+      MapPinLabelPlacement.left => labelSize.width + distance,
+      MapPinLabelPlacement.top => labelSize.height + distance,
+      MapPinLabelPlacement.bottom => labelSize.height + distance,
+    };
+
+    if (availableSpace >= neededSpace) {
+      return 0;
+    }
+
+    return (neededSpace - availableSpace) * 2.1;
+  }
+
   static double _offsetDistance(Offset left, Offset right) {
     final delta = left - right;
     return delta.distance;
   }
 
-  static Size _estimateScreenLabelSize({
-    required MapPinLabelPlacement placement,
-    required int maxLineLength,
-    required int lineCount,
-  }) {
-    final isVertical =
-        placement == MapPinLabelPlacement.top ||
-        placement == MapPinLabelPlacement.bottom;
-    final width = ((maxLineLength * 5.9) + (isVertical ? 8.0 : 4.0))
-        .clamp(52.0, isVertical ? 156.0 : 144.0)
-        .toDouble();
-    final height =
-        (14.0 + ((lineCount - 1) * 12.0)).clamp(16.0, 52.0).toDouble();
-    return Size(width, height);
+  static Size _estimateScreenLabelSize(MapPinLabelText labelText) {
+    final painter = TextPainter(
+      text: TextSpan(text: labelText.displayText, style: _screenLabelTextStyle),
+      textDirection: TextDirection.ltr,
+      maxLines: labelText.lineCount,
+    )..layout();
+
+    return Size(
+      painter.width.ceilToDouble() + 2,
+      painter.height.ceilToDouble() + 2,
+    );
   }
 
   static Rect _buildScreenLabelRect({
@@ -519,7 +575,7 @@ class MarkerCollisionDetector {
     };
   }
 
-  static Rect _clampRectToViewport(
+  static _ViewportFit _fitRectToViewport(
     Rect rect,
     Size viewportSize,
     EdgeInsets viewportPadding,
@@ -540,7 +596,10 @@ class MarkerCollisionDetector {
         ? bottomBound - rect.bottom
         : 0.0;
 
-    return rect.shift(Offset(shiftX, shiftY));
+    return _ViewportFit(
+      rect: rect.shift(Offset(shiftX, shiftY)),
+      shiftDistance: math.sqrt((shiftX * shiftX) + (shiftY * shiftY)),
+    );
   }
 
   static double _screenDensityRadius(double zoom) {
@@ -551,11 +610,11 @@ class MarkerCollisionDetector {
   }
 
   static List<double> _screenDistancesForZoom(double zoom) {
-    if (zoom < 15.0) return const [20.0];
-    if (zoom < 15.8) return const [20.0, 30.0, 42.0];
-    if (zoom < 16.5) return const [20.0, 32.0, 46.0, 60.0];
-    if (zoom < 17.2) return const [20.0, 34.0, 50.0, 66.0, 82.0];
-    return const [20.0, 36.0, 54.0, 72.0, 92.0, 114.0];
+    if (zoom < 15.0) return const [14.0, 22.0, 30.0];
+    if (zoom < 15.8) return const [14.0, 22.0, 32.0, 44.0];
+    if (zoom < 16.5) return const [14.0, 24.0, 36.0, 50.0, 64.0];
+    if (zoom < 17.2) return const [14.0, 24.0, 38.0, 54.0, 70.0, 88.0];
+    return const [14.0, 26.0, 42.0, 60.0, 80.0, 102.0];
   }
 
   static List<double> _geoDistanceFactorsForZoom(double zoom) {
@@ -672,4 +731,11 @@ class _ScreenPlacementResult {
   final Rect rect;
   final double cost;
   final bool isCollisionFree;
+}
+
+class _ViewportFit {
+  const _ViewportFit({required this.rect, required this.shiftDistance});
+
+  final Rect rect;
+  final double shiftDistance;
 }
