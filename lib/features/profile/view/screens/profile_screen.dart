@@ -24,6 +24,18 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authUser = ref.watch(currentUserProvider);
+    final viewingOwnProfile = userId == null;
+    if (viewingOwnProfile && authUser == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        context.go(RouteName.signin);
+      });
+      return const Scaffold(
+        backgroundColor: SpontiColors.surface,
+        body: SizedBox.shrink(),
+      );
+    }
+
     final viewedUserId = userId ?? authUser?.id;
     final isOwnProfile = viewedUserId != null && viewedUserId == authUser?.id;
 
