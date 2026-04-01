@@ -47,6 +47,7 @@ dependencies:
   crypto: ^3.0.7
   latlong2: ^0.9.1
   flutter_map: ^8.2.2
+  google_maps_flutter: ^2.15.0
 
   # Image Handling
   image_picker: ^1.2.1
