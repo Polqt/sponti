@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/utils/map_label_layout.dart';
+import 'package:sponti/features/locations/utils/map_pin_label_text.dart';
+import 'package:sponti/features/locations/utils/marker_collision_detector.dart';
 import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/map_pin.dart';
-import 'package:sponti/features/locations/view/widgets/marker_collision_detector.dart';
 
 typedef LocationMarkerTapCallback = void Function(Location location);
 
@@ -40,34 +42,38 @@ List<Marker> buildLocationMarkers({
   final markerPositions = {
     for (final data in markerData) data.location.id: data.point,
   };
-
-  final collidingIds = MarkerCollisionDetector.getCollidingMarkerIds(
+  final labelTexts = {
+    for (final data in markerData)
+      data.location.id: MapPinLabelText.fromName(data.location.name),
+  };
+  final labelLayouts = MarkerCollisionDetector.computeLabelLayouts(
     markerPositions: markerPositions,
+    labelTexts: labelTexts,
     zoom: zoom,
+    selectedId: selectedId,
   );
 
   return markerData.map((data) {
-    final shouldHideLabel =
-        zoom < 16.0 && collidingIds.contains(data.location.id) && !data.isSelected;
+    final labelLayout = labelLayouts[data.location.id] ?? const MapPinLabelLayout.hidden();
 
     return Marker(
       point: data.point,
-      width: 100,
-      height: 50,
+      width: MapPin.canvasWidth,
+      height: MapPin.canvasHeight,
       alignment: Alignment.center,
       child: RepaintBoundary(
-        child: GestureDetector(
+        child: MapPin(
           key: ValueKey('${keyPrefix}_${data.location.id}'),
+          category: data.location.category,
+          isSelected: data.isSelected,
           onTap: () => onTap(data.location),
-          child: MapPin(
-            category: data.location.category,
-            isSelected: data.isSelected,
-            locationName: shouldHideLabel ? null : data.location.name,
-            priceRange: data.location.priceRange,
-            ranking: data.ranking,
-            activeRankingFilter: activeRankingFilter,
-            activePriceFilter: activePriceFilter,
-          ),
+          labelText: labelLayout.showLabel ? labelTexts[data.location.id] : null,
+          priceRange: data.location.priceRange,
+          ranking: data.ranking,
+          activeRankingFilter: activeRankingFilter,
+          activePriceFilter: activePriceFilter,
+          labelPlacement: labelLayout.placement,
+          labelDistanceFactor: labelLayout.distanceFactor,
         ),
       ),
     );
