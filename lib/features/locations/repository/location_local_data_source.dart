@@ -19,6 +19,7 @@ class LocationLocalDataSourceImpl implements LocationLocalDataSource {
       : Hive.openBox(AppConstants.hiveBoxLocations);
 
   static const String _locationsKey = 'locations_list';
+  static const String _indexKey = 'locations_index';
   static const String _cachedAtKey = 'cached_at';
 
   @override
@@ -51,7 +52,15 @@ class LocationLocalDataSourceImpl implements LocationLocalDataSource {
     try {
       final box = await _box;
       final jsonList = locations.map((l) => l.toJson()).toList();
+
+      // Build index map for O(1) lookups: {id: position}
+      final index = <String, int>{};
+      for (var i = 0; i < locations.length; i++) {
+        index[locations[i].id] = i;
+      }
+
       await box.put(_locationsKey, jsonList);
+      await box.put(_indexKey, index);
       await box.put(_cachedAtKey, DateTime.now());
     } catch (e) {
       throw CacheException(e.toString());
@@ -61,14 +70,28 @@ class LocationLocalDataSourceImpl implements LocationLocalDataSource {
   @override
   Future<LocationModel?> getCachedLocationById(String id) async {
     try {
-      final locations = await getCachedLocations();
-      return locations.firstWhere(
-        (l) => l.id == id,
-        orElse: () => throw const NotFoundException(),
+      final box = await _box;
+
+      final cachedAt = box.get(_cachedAtKey) as DateTime?;
+      if (cachedAt == null) return null;
+
+      final isStale =
+          DateTime.now().difference(cachedAt) > AppConstants.cacheExpiry;
+      if (isStale) return null;
+
+      // Use index for O(1) lookup
+      final index = box.get(_indexKey) as Map<dynamic, dynamic>?;
+      final raw = box.get(_locationsKey) as List<dynamic>?;
+
+      if (index == null || raw == null) return null;
+
+      final position = index[id] as int?;
+      if (position == null || position >= raw.length) return null;
+
+      return LocationModel.fromJson(
+        Map<String, dynamic>.from(raw[position] as Map),
       );
-    } on CacheException {
-      return null;
-    } on NotFoundException {
+    } catch (_) {
       return null;
     }
   }
@@ -78,6 +101,7 @@ class LocationLocalDataSourceImpl implements LocationLocalDataSource {
     try {
       final box = await _box;
       await box.delete(_locationsKey);
+      await box.delete(_indexKey);
       await box.delete(_cachedAtKey);
     } catch (e) {
       throw CacheException(e.toString());

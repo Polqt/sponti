@@ -85,14 +85,10 @@ class LocationGoogleMarkerIconFactory {
       center,
       radius,
       Paint()
-        ..shader = ui.Gradient.radial(
-          center,
-          radius,
-          [
-            Colors.white,
-            const Color(0xFFF8F4EE),
-          ],
-        ),
+        ..shader = ui.Gradient.radial(center, radius, [
+          Colors.white,
+          const Color(0xFFF8F4EE),
+        ]),
     );
 
     canvas.drawCircle(
@@ -107,7 +103,8 @@ class LocationGoogleMarkerIconFactory {
     canvas.drawCircle(
       center,
       radius * 0.72,
-      Paint()..color = accentColor.withValues(alpha: accent == null ? 0.05 : 0.1),
+      Paint()
+        ..color = accentColor.withValues(alpha: accent == null ? 0.05 : 0.1),
     );
 
     await _paintCategoryIcon(
@@ -125,11 +122,7 @@ class LocationGoogleMarkerIconFactory {
         center.dx + (radius * 0.78),
         center.dy - (radius * 0.78),
       );
-      canvas.drawCircle(
-        indicatorCenter,
-        5.8,
-        Paint()..color = Colors.white,
-      );
+      canvas.drawCircle(indicatorCenter, 5.8, Paint()..color = Colors.white);
       canvas.drawCircle(
         indicatorCenter,
         4.2,
@@ -150,7 +143,7 @@ class LocationGoogleMarkerIconFactory {
         badgeRect,
         const Radius.circular(999),
       );
-      final badgeColor = locationPriceAccentColor(priceRange);
+      final badgeColor = priceRange.accentColor;
       canvas.drawRRect(badgeRRect, Paint()..color = badgeColor);
       canvas.drawRRect(
         badgeRRect,
@@ -207,29 +200,17 @@ class LocationGoogleMarkerIconFactory {
 
     final bytes = resolved.bytes;
     if (bytes != null) {
-      await _paintRasterIcon(
-        canvas: canvas,
-        bounds: bounds,
-        bytes: bytes,
-      );
+      await _paintRasterIcon(canvas: canvas, bounds: bounds, bytes: bytes);
       return;
     }
 
     final rawSvg = resolved.svg;
     if (rawSvg != null) {
-      await _paintSvgIcon(
-        canvas: canvas,
-        bounds: bounds,
-        rawSvg: rawSvg,
-      );
+      await _paintSvgIcon(canvas: canvas, bounds: bounds, rawSvg: rawSvg);
       return;
     }
 
-    _paintFallbackIcon(
-      canvas: canvas,
-      bounds: bounds,
-      category: category,
-    );
+    _paintFallbackIcon(canvas: canvas, bounds: bounds, category: category);
   }
 
   static Future<void> _paintRasterIcon({
@@ -337,9 +318,6 @@ class LocationGoogleMarkerIconFactory {
       return 1.0;
     }
 
-    return math.min(
-      targetWidth / sourceWidth,
-      targetHeight / sourceHeight,
-    );
+    return math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
   }
 }

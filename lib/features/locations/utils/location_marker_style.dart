@@ -1,14 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/utils/location_ranking.dart';
-
-Color locationPriceAccentColor(PriceRange price) => switch (price) {
-  PriceRange.free => SpontiColors.secondary,
-  PriceRange.budget => SpontiColors.primary,
-  PriceRange.moderate => SpontiColors.warning,
-  PriceRange.expensive => const Color(0xFF7B4F2E),
-};
 
 LocationRanking? resolveLocationMarkerRanking({
   required LocationRanking? ranking,
@@ -28,9 +20,5 @@ Color? resolveLocationMarkerAccent({
     return rankingIndicator.indicatorColor;
   }
 
-  if (activePriceFilter != null) {
-    return locationPriceAccentColor(activePriceFilter);
-  }
-
-  return null;
+  return activePriceFilter?.accentColor;
 }

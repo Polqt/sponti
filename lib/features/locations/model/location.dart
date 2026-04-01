@@ -3,27 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:sponti/features/locations/model/coordinates.dart';
 
 enum LocationCategory {
-  food('Munch', '🍴', 0xFFE8612C),
-  coffee('Cafés', '☕', 0xFF7B4F2E),
-  nature('Stroll', '🌿', 0xFF3A7D44),
-  nightlife('Nightlife', '🌙', 0xFF4A3B8C),
-  arts('Arts', '🎨', 0xFFD4458C),
-  activities('Fun', '⚡', 0xFF2C8C8E);
+  food('Munch', '🍴', 0xFFE8612C, Icons.restaurant_rounded),
+  coffee('Cafés', '☕', 0xFF7B4F2E, Icons.local_cafe_rounded),
+  nature('Stroll', '🌿', 0xFF3A7D44, Icons.park_rounded),
+  nightlife('Nightlife', '🌙', 0xFF4A3B8C, Icons.nightlife_rounded),
+  arts('Arts', '🎨', 0xFFD4458C, Icons.palette_rounded),
+  activities('Fun', '⚡', 0xFF2C8C8E, Icons.sports_esports_rounded);
 
-  const LocationCategory(this.label, this.emoji, this.colorValue);
+  const LocationCategory(this.label, this.emoji, this.colorValue, this.icon);
 
   final String label;
   final String emoji;
   final int colorValue;
-
-  IconData get icon => switch (this) {
-    LocationCategory.food => Icons.restaurant_rounded,
-    LocationCategory.coffee => Icons.local_cafe_rounded,
-    LocationCategory.nature => Icons.park_rounded,
-    LocationCategory.nightlife => Icons.nightlife_rounded,
-    LocationCategory.arts => Icons.palette_rounded,
-    LocationCategory.activities => Icons.sports_esports_rounded,
-  };
+  final IconData icon;
 
   static LocationCategory fromString(String category) =>
       LocationCategory.values.firstWhere(
@@ -33,16 +25,19 @@ enum LocationCategory {
 }
 
 enum PriceRange {
-  free(0, 'Free', '✦'),
-  budget(1, 'Budget', '₱'),
-  moderate(2, 'Moderate', '₱₱'),
-  expensive(3, 'Premium', '₱₱₱');
+  free(0, 'Free', '✦', 0xFF2C8C8E),
+  budget(1, 'Budget', '₱', 0xFFE8612C),
+  moderate(2, 'Moderate', '₱₱', 0xFFFFB830),
+  expensive(3, 'Premium', '₱₱₱', 0xFF7B4F2E);
 
-  const PriceRange(this.level, this.label, this.symbol);
+  const PriceRange(this.level, this.label, this.symbol, this.accentColorValue);
 
   final int level;
   final String label;
   final String symbol;
+  final int accentColorValue;
+
+  Color get accentColor => Color(accentColorValue);
 
   static PriceRange fromString(String price) => PriceRange.values.firstWhere(
     (p) => p.name == price,
@@ -150,9 +145,7 @@ class Location extends Equatable {
   String get primaryPhoto => photoUrls.isNotEmpty ? photoUrls.first : '';
   bool get hasPhotos => photoUrls.isNotEmpty;
   bool get hasContact =>
-      contactNumber != null ||
-      websiteUrl != null ||
-      instagramHandle != null;
+      contactNumber != null || websiteUrl != null || instagramHandle != null;
 
   Location copyWith({
     String? name,
@@ -214,9 +207,30 @@ class Location extends Equatable {
   List<Object?> get props => [
     id,
     name,
+    description,
     category,
     coordinates,
+    priceRange,
+    photoUrls,
+    landmark,
+    tags,
     rating,
+    reviewCount,
+    checkInCount,
+    isHiddenGem,
+    isVerified,
+    hasWifi,
+    isPetFriendly,
+    hasParking,
+    operatingHours,
+    contactNumber,
+    websiteUrl,
+    instagramHandle,
+    submittedBy,
     distanceKm,
+    createdAt,
+    updatedAt,
+    isSeeded,
+    seededAt,
   ];
 }

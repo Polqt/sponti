@@ -50,9 +50,8 @@ class MapPin extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final zoomState = ref.watch(mapZoomProvider);
-    final showLabel = zoomState.shouldShowLabels &&
-        labelText != null &&
-        !labelText!.isEmpty;
+    final showLabel =
+        zoomState.shouldShowLabels && labelText != null && !labelText!.isEmpty;
     final labelOpacity = zoomState.labelOpacity;
     final labelScale = zoomState.labelScale;
     final iconScale = zoomState.iconScale * (isSelected ? 1.15 : 1.0);
@@ -149,7 +148,7 @@ class MapPin extends ConsumerWidget {
                           bottom: -4,
                           child: _PinPriceBadge(
                             symbol: priceRange.symbol,
-                            color: locationPriceAccentColor(priceRange),
+                            color: priceRange.accentColor,
                           ),
                         ),
                     ],
@@ -215,20 +214,18 @@ class MapPin extends ConsumerWidget {
     return Positioned.fill(
       child: Padding(
         padding: _labelPadding(placement, labelDistanceFactor),
-        child: Align(
-          alignment: _labelAlignment(placement),
-          child: label,
-        ),
+        child: Align(alignment: _labelAlignment(placement), child: label),
       ),
     );
   }
 
-  Alignment _labelAlignment(MapPinLabelPlacement placement) => switch (placement) {
-    MapPinLabelPlacement.right => Alignment.centerLeft,
-    MapPinLabelPlacement.left => Alignment.centerRight,
-    MapPinLabelPlacement.top => Alignment.bottomCenter,
-    MapPinLabelPlacement.bottom => Alignment.topCenter,
-  };
+  Alignment _labelAlignment(MapPinLabelPlacement placement) =>
+      switch (placement) {
+        MapPinLabelPlacement.right => Alignment.centerLeft,
+        MapPinLabelPlacement.left => Alignment.centerRight,
+        MapPinLabelPlacement.top => Alignment.bottomCenter,
+        MapPinLabelPlacement.bottom => Alignment.topCenter,
+      };
 
   bool _isVerticalPlacement(MapPinLabelPlacement placement) =>
       placement == MapPinLabelPlacement.top ||
@@ -271,10 +268,7 @@ class MapPin extends ConsumerWidget {
 }
 
 class _PinPriceBadge extends StatelessWidget {
-  const _PinPriceBadge({
-    required this.symbol,
-    required this.color,
-  });
+  const _PinPriceBadge({required this.symbol, required this.color});
 
   final String symbol;
   final Color color;

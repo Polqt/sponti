@@ -60,66 +60,76 @@ class CurrentLocationNotifier extends Notifier<CurrentLocationState> {
     );
 
     try {
-      final isServiceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!isServiceEnabled) {
-        state = previous.copyWith(
-          isLoading: false,
-          isPermissionGranted: false,
-          title: 'Location is off',
-          subtitle: 'Turn on location services to jump back to your spot.',
-          errorMessage: 'Location services are off.',
-        );
-        return;
-      }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      final isGranted =
-          permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always;
-
-      if (!isGranted) {
-        final isDeniedForever = permission == LocationPermission.deniedForever;
-        state = previous.copyWith(
-          isLoading: false,
-          isPermissionGranted: false,
-          title: isDeniedForever ? 'Location locked' : 'Location access needed',
-          subtitle: isDeniedForever
-              ? 'Enable location access in settings to center the map on you.'
-              : 'Allow location access to jump to where you are.',
-          errorMessage: isDeniedForever
-              ? 'Location permission is permanently denied.'
-              : 'Location permission was denied.',
-        );
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.best,
-        ),
-      );
-
+      await _ensureLocationServiceEnabled();
+      await _ensureLocationPermission();
+      final position = await _fetchCurrentPosition();
       final label = await _resolveLocationLabel(position);
+
       state = CurrentLocationState(
         latitude: position.latitude,
         longitude: position.longitude,
         title: label,
         subtitle: 'Tap again anytime to recenter on your live spot.',
-        isLoading: false,
         isPermissionGranted: true,
+      );
+    } on _LocationServiceDisabledException {
+      state = previous.copyWith(
+        isLoading: false,
+        isPermissionGranted: false,
+        title: 'Location is off',
+        subtitle: 'Turn on location services to jump back to your spot.',
+        errorMessage: 'Location services are off.',
+      );
+    } on _LocationPermissionDeniedException catch (e) {
+      state = previous.copyWith(
+        isLoading: false,
+        isPermissionGranted: false,
+        title: e.isPermanent ? 'Location locked' : 'Location access needed',
+        subtitle: e.isPermanent
+            ? 'Enable location access in settings to center the map on you.'
+            : 'Allow location access to jump to where you are.',
+        errorMessage: e.isPermanent
+            ? 'Location permission is permanently denied.'
+            : 'Location permission was denied.',
       );
     } catch (_) {
       state = previous.copyWith(
         isLoading: false,
-        title: previous.hasCoordinates ? previous.title : 'Could not locate you',
+        title: previous.hasCoordinates
+            ? previous.title
+            : 'Could not locate you',
         subtitle: 'Try again in a moment.',
         errorMessage: 'We could not fetch your live location right now.',
       );
     }
+  }
+
+  Future<void> _ensureLocationServiceEnabled() async {
+    final isEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!isEnabled) throw _LocationServiceDisabledException();
+  }
+
+  Future<void> _ensureLocationPermission() async {
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    final isGranted =
+        permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
+
+    if (!isGranted) {
+      throw _LocationPermissionDeniedException(
+        isPermanent: permission == LocationPermission.deniedForever,
+      );
+    }
+  }
+
+  Future<Position> _fetchCurrentPosition() {
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.best),
+    );
   }
 
   Future<String> _resolveLocationLabel(Position position) async {
@@ -128,28 +138,38 @@ class CurrentLocationNotifier extends Notifier<CurrentLocationState> {
         position.latitude,
         position.longitude,
       );
-      if (placemarks.isEmpty) {
-        return 'Near your current spot';
-      }
+      if (placemarks.isEmpty) return 'Near your current spot';
 
       final placemark = placemarks.first;
-      final primary = [
+      final candidates = [
         placemark.thoroughfare,
         placemark.subLocality,
         placemark.locality,
         placemark.administrativeArea,
-      ].where((value) => value != null && value.trim().isNotEmpty).map((value) => value!.trim()).toList(growable: false);
+      ];
 
-      if (primary.isEmpty) {
+      final label = candidates
+          .where((v) => v != null && v.trim().isNotEmpty)
+          .map((v) => v!.trim())
+          .firstOrNull;
+
+      if (label == null || label.toLowerCase() == 'unnamed road') {
         return 'Near your current spot';
       }
-
-      final label = primary.first;
-      return label.toLowerCase() == 'unnamed road' ? 'Near your current spot' : 'Near $label';
+      return 'Near $label';
     } catch (_) {
       return 'Near your current spot';
     }
   }
+}
+
+/// Internal exception for location service disabled
+class _LocationServiceDisabledException implements Exception {}
+
+/// Internal exception for permission denied
+class _LocationPermissionDeniedException implements Exception {
+  const _LocationPermissionDeniedException({required this.isPermanent});
+  final bool isPermanent;
 }
 
 final currentLocationProvider =

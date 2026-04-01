@@ -42,7 +42,7 @@ class DiscoveryTopCuratorsSection extends ConsumerWidget {
               kind: _CuratorLaneKind.overall,
               currentUserId: currentUserId,
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
             _CuratorLane(
               title: 'Top reviewers',
               subtitle: 'People writing the most reviews.',
@@ -50,7 +50,7 @@ class DiscoveryTopCuratorsSection extends ConsumerWidget {
               kind: _CuratorLaneKind.reviewers,
               currentUserId: currentUserId,
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
             _CuratorLane(
               title: 'Top visitors',
               subtitle: 'People checking in the most.',
@@ -89,21 +89,23 @@ class _CuratorLane extends StatelessWidget {
       children: [
         Text(
           title.toUpperCase(),
-          style: theme.textTheme.titleSmall?.copyWith(
+          style: theme.textTheme.labelMedium?.copyWith(
             color: SpontiColors.textPrimary,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.4,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            fontSize: 11,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           subtitle,
           style: theme.textTheme.bodySmall?.copyWith(
             color: SpontiColors.textSecondary,
             fontWeight: FontWeight.w500,
+            fontSize: 12,
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         if (curators.isEmpty)
           Text(
             _emptyMessage,
@@ -114,12 +116,12 @@ class _CuratorLane extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 188,
+            height: 170,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               itemCount: curators.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 16),
+              separatorBuilder: (_, _) => const SizedBox(width: 14),
               itemBuilder: (context, index) => _CuratorAvatarTile(
                 curator: curators[index],
                 rank: index + 1,
@@ -171,23 +173,23 @@ class _CuratorAvatarTile extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       key: ValueKey<String>('${kind.name}-${curator.id}'),
       tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 220 + (rank * 40)),
+      duration: Duration(milliseconds: 200 + (rank * 30)),
       curve: Curves.easeOutCubic,
       builder: (context, value, child) {
         return Opacity(
           opacity: value,
           child: Transform.translate(
-            offset: Offset(0, 14 * (1 - value)),
+            offset: Offset(0, 10 * (1 - value)),
             child: child,
           ),
         );
       },
       child: SizedBox(
-        width: 112,
+        width: 100,
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -198,27 +200,27 @@ class _CuratorAvatarTile extends StatelessWidget {
                     clipBehavior: Clip.none,
                     children: [
                       Container(
-                        width: 78,
-                        height: 78,
-                        padding: const EdgeInsets.all(3),
+                        width: 68,
+                        height: 68,
+                        padding: const EdgeInsets.all(2.5),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: accentColor,
-                            width: rank == 1 ? 3 : 2,
+                            width: rank == 1 ? 2.5 : 2,
                           ),
                         ),
                         child: AppNetworkImage.circle(
                           url: curator.avatarUrl,
-                          size: 72,
+                          size: 63,
                         ),
                       ),
                       Positioned(
                         right: -2,
                         bottom: -2,
                         child: Container(
-                          width: 26,
-                          height: 26,
+                          width: 22,
+                          height: 22,
                           decoration: BoxDecoration(
                             color: accentColor,
                             shape: BoxShape.circle,
@@ -230,27 +232,28 @@ class _CuratorAvatarTile extends StatelessWidget {
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
-                              fontSize: 11,
+                              fontSize: 10,
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Text(
                     curator.handle ?? curator.displayName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.labelLarge?.copyWith(
+                    style: theme.textTheme.labelMedium?.copyWith(
                       color: isCurrentUser
                           ? SpontiColors.primary
                           : SpontiColors.textPrimary,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     _label,
                     maxLines: 1,
@@ -258,10 +261,11 @@ class _CuratorAvatarTile extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: accentColor,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 10,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     _metric,
                     maxLines: kind == _CuratorLaneKind.overall ? 2 : 1,
@@ -269,7 +273,8 @@ class _CuratorAvatarTile extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: SpontiColors.textSecondary,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 10,
                       height: 1.2,
                     ),
                   ),
@@ -336,9 +341,9 @@ class _CuratorSectionsLoading extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _CuratorLaneLoading(title: 'TOP CURATORS'),
-        SizedBox(height: 28),
+        SizedBox(height: 20),
         _CuratorLaneLoading(title: 'TOP REVIEWERS'),
-        SizedBox(height: 28),
+        SizedBox(height: 20),
         _CuratorLaneLoading(title: 'TOP VISITORS'),
       ],
     );
@@ -359,29 +364,30 @@ class _CuratorLaneLoading extends StatelessWidget {
       children: [
         Text(
           title,
-          style: theme.textTheme.titleSmall?.copyWith(
+          style: theme.textTheme.labelMedium?.copyWith(
             color: SpontiColors.textPrimary,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.4,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            fontSize: 11,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Container(
-          width: 180,
+          width: 160,
           height: 10,
           decoration: BoxDecoration(
             color: SpontiColors.surfaceVariant,
             borderRadius: BorderRadius.circular(999),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         SizedBox(
-          height: 188,
+          height: 170,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: 4,
-            separatorBuilder: (_, _) => const SizedBox(width: 16),
+            separatorBuilder: (_, _) => const SizedBox(width: 14),
             itemBuilder: (_, _) => const _CuratorLoadingTile(),
           ),
         ),
@@ -396,41 +402,41 @@ class _CuratorLoadingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 112,
+      width: 100,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 78,
-            height: 78,
+            width: 68,
+            height: 68,
             decoration: BoxDecoration(
               color: SpontiColors.surfaceVariant,
               shape: BoxShape.circle,
               border: Border.all(color: SpontiColors.outline),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Container(
-            width: 72,
-            height: 12,
+            width: 64,
+            height: 11,
             decoration: BoxDecoration(
               color: SpontiColors.surfaceVariant,
               borderRadius: BorderRadius.circular(999),
             ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 5),
+          Container(
+            width: 56,
+            height: 9,
+            decoration: BoxDecoration(
+              color: SpontiColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          const SizedBox(height: 4),
           Container(
             width: 70,
-            height: 10,
-            decoration: BoxDecoration(
-              color: SpontiColors.surfaceVariant,
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            width: 82,
-            height: 10,
+            height: 9,
             decoration: BoxDecoration(
               color: SpontiColors.surfaceVariant,
               borderRadius: BorderRadius.circular(999),

@@ -1,7 +1,10 @@
 class MapPinLabelText {
-  const MapPinLabelText._({
-    required this.lines,
-  });
+  MapPinLabelText._({required this.lines})
+    : lineCount = lines.length,
+      maxLineLength = lines.fold<int>(
+        0,
+        (longest, line) => line.length > longest ? line.length : longest,
+      );
 
   factory MapPinLabelText.fromName(String name, {int wordsPerLine = 2}) {
     final words = name
@@ -11,7 +14,7 @@ class MapPinLabelText {
         .toList(growable: false);
 
     if (words.isEmpty) {
-      return const MapPinLabelText._(lines: <String>[]);
+      return MapPinLabelText._(lines: const <String>[]);
     }
 
     final rows = <String>[];
@@ -27,14 +30,13 @@ class MapPinLabelText {
 
   final List<String> lines;
 
+  /// Cached line count - O(1) access
+  final int lineCount;
+
+  /// Cached max line length - O(1) access
+  final int maxLineLength;
+
   bool get isEmpty => lines.isEmpty;
-
-  int get lineCount => lines.length;
-
-  int get maxLineLength => lines.fold<int>(
-    0,
-    (longest, line) => line.length > longest ? line.length : longest,
-  );
 
   String get displayText => lines.join('\n');
 }

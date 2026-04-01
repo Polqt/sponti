@@ -88,7 +88,7 @@ class DiscoveryViewState {
   final Set<LocationCategory> expandedCategories;
 
   String get sectionTitle =>
-      activeColumn == DiscoveryColumn.forYou ? 'TOP PICKS' : 'FRIENDS';
+      activeColumn == DiscoveryColumn.forYou ? 'Top Picks' : 'Friends';
 
   bool isCategoryExpanded(LocationCategory category) =>
       expandedCategories.contains(category);
@@ -191,32 +191,41 @@ List<DiscoveryCurator> _rankCurators(
 
   ranked.sort((a, b) {
     final primaryComparison = switch (ranking) {
-      DiscoveryCuratorRanking.overall =>
-        b.activityScore.compareTo(a.activityScore),
-      DiscoveryCuratorRanking.reviewers =>
-        b.totalReviews.compareTo(a.totalReviews),
-      DiscoveryCuratorRanking.visitors =>
-        b.totalCheckIns.compareTo(a.totalCheckIns),
+      DiscoveryCuratorRanking.overall => b.activityScore.compareTo(
+        a.activityScore,
+      ),
+      DiscoveryCuratorRanking.reviewers => b.totalReviews.compareTo(
+        a.totalReviews,
+      ),
+      DiscoveryCuratorRanking.visitors => b.totalCheckIns.compareTo(
+        a.totalCheckIns,
+      ),
     };
     if (primaryComparison != 0) return primaryComparison;
 
     final secondaryComparison = switch (ranking) {
-      DiscoveryCuratorRanking.overall =>
-        b.totalReviews.compareTo(a.totalReviews),
-      DiscoveryCuratorRanking.reviewers =>
-        b.totalCheckIns.compareTo(a.totalCheckIns),
-      DiscoveryCuratorRanking.visitors =>
-        b.totalReviews.compareTo(a.totalReviews),
+      DiscoveryCuratorRanking.overall => b.totalReviews.compareTo(
+        a.totalReviews,
+      ),
+      DiscoveryCuratorRanking.reviewers => b.totalCheckIns.compareTo(
+        a.totalCheckIns,
+      ),
+      DiscoveryCuratorRanking.visitors => b.totalReviews.compareTo(
+        a.totalReviews,
+      ),
     };
     if (secondaryComparison != 0) return secondaryComparison;
 
     final tertiaryComparison = switch (ranking) {
-      DiscoveryCuratorRanking.overall =>
-        b.totalCheckIns.compareTo(a.totalCheckIns),
-      DiscoveryCuratorRanking.reviewers =>
-        b.activityScore.compareTo(a.activityScore),
-      DiscoveryCuratorRanking.visitors =>
-        b.activityScore.compareTo(a.activityScore),
+      DiscoveryCuratorRanking.overall => b.totalCheckIns.compareTo(
+        a.totalCheckIns,
+      ),
+      DiscoveryCuratorRanking.reviewers => b.activityScore.compareTo(
+        a.activityScore,
+      ),
+      DiscoveryCuratorRanking.visitors => b.activityScore.compareTo(
+        a.activityScore,
+      ),
     };
     if (tertiaryComparison != 0) return tertiaryComparison;
 
@@ -245,42 +254,40 @@ DiscoveryCuratorLeaderboards _buildCuratorLeaderboards(
 /// Fetches top spots per category ordered by favorites count (popular ranking).
 final categoryTopSpotsProvider = FutureProvider.autoDispose
     .family<List<Location>, LocationCategory>((ref, category) async {
-  final client = Supabase.instance.client;
-  final remote = LocationRemoteDataSourceImpl(client);
+      final client = Supabase.instance.client;
+      final remote = LocationRemoteDataSourceImpl(client);
 
-  final response = await client.rpc(
-    ApiConstants.rpcGetTrendingLocations,
-    params: {
-      'ranking_filter': 'popular',
-      'category_filter': category.name,
-      'limit_count': 10,
-    },
-  );
+      final response = await client.rpc(
+        ApiConstants.rpcGetTrendingLocations,
+        params: {
+          'ranking_filter': 'popular',
+          'category_filter': category.name,
+          'limit_count': 10,
+        },
+      );
 
-  return _parseLocations(response as List<dynamic>, remote);
-});
+      return _parseLocations(response as List<dynamic>, remote);
+    });
 
 final curatorLeaderboardsProvider =
-    StreamProvider.autoDispose<DiscoveryCuratorLeaderboards>((
-  ref,
-) async* {
-  final client = Supabase.instance.client;
-  final responses = await Future.wait<dynamic>([
-    client.rpc(
-      ApiConstants.rpcGetTopCurators,
-      params: {'limit_count': _topCuratorsLimit},
-    ),
-    client.from(ApiConstants.profilesTable).select(_curatorProfileColumns),
-  ]);
+    StreamProvider.autoDispose<DiscoveryCuratorLeaderboards>((ref) async* {
+      final client = Supabase.instance.client;
+      final responses = await Future.wait<dynamic>([
+        client.rpc(
+          ApiConstants.rpcGetTopCurators,
+          params: {'limit_count': _topCuratorsLimit},
+        ),
+        client.from(ApiConstants.profilesTable).select(_curatorProfileColumns),
+      ]);
 
-  yield _buildCuratorLeaderboards(
-    _parseCurators(responses[1] as List<dynamic>),
-    overallCurators: _parseCurators(responses[0] as List<dynamic>),
-  );
+      yield _buildCuratorLeaderboards(
+        _parseCurators(responses[1] as List<dynamic>),
+        overallCurators: _parseCurators(responses[0] as List<dynamic>),
+      );
 
-  yield* client
-      .from(ApiConstants.profilesTable)
-      .stream(primaryKey: const ['id'])
-      .map(_parseCurators)
-      .map(_buildCuratorLeaderboards);
-});
+      yield* client
+          .from(ApiConstants.profilesTable)
+          .stream(primaryKey: const ['id'])
+          .map(_parseCurators)
+          .map(_buildCuratorLeaderboards);
+    });
