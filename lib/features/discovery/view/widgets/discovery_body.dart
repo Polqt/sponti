@@ -50,7 +50,6 @@ class DiscoveryBody extends ConsumerWidget {
           ),
           
           if (state.activeColumn == DiscoveryColumn.forYou) ...[
-            const SizedBox(height: 16),
             const _SectionHeader(
               title: 'Browse',
               subtitle: 'Explore by category',
