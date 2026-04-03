@@ -1,5 +1,10 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sponti/config/feature_flags.dart';
+import 'package:sponti/core/errors/failures.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/model/location_query.dart';
+import 'package:sponti/features/locations/viewmodel/current_location_viewmodel.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
 const int searchMinQueryLength = 2;
@@ -7,7 +12,11 @@ const int searchMinQueryLength = 2;
 String normalizeSearchQuery(String query) =>
     query.trim().replaceAll(RegExp(r'\s+'), ' ');
 
-String _searchCacheKey(String query) => normalizeSearchQuery(query).toLowerCase();
+String _searchCacheKey(String query, {required bool useRankedSearch}) {
+  final normalized = normalizeSearchQuery(query).toLowerCase();
+  final strategy = useRankedSearch ? 'ranked' : 'legacy';
+  return '$strategy::$normalized';
+}
 
 String _normalizedSearchText(String value) =>
     normalizeSearchQuery(value).toLowerCase();
@@ -15,7 +24,7 @@ String _normalizedSearchText(String value) =>
 final searchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
 
 final normalizedSearchQueryProvider = Provider.autoDispose<String>((ref) {
-  return ref.watch(searchQueryProvider);
+  return normalizeSearchQuery(ref.watch(searchQueryProvider));
 });
 
 final _searchResultsCacheProvider =
@@ -33,7 +42,7 @@ List<Location> _dedupeLocations(List<Location> locations) {
 }
 
 List<String> _queryTokens(String query) {
-  final normalized = _searchCacheKey(query);
+  final normalized = normalizeSearchQuery(query).toLowerCase();
   if (normalized.isEmpty) return const <String>[];
 
   return normalized
@@ -88,7 +97,7 @@ int _locationSearchScore(Location location, String query, List<String> tokens) {
 
 List<Location> _rankLocations(List<Location> locations, String query) {
   final uniqueLocations = _dedupeLocations(locations);
-  final normalizedQuery = _searchCacheKey(query);
+  final normalizedQuery = normalizeSearchQuery(query).toLowerCase();
   final tokens = _queryTokens(normalizedQuery);
   final rankedLocations = uniqueLocations.toList(growable: true);
   final scoreByLocationId = <String, int>{
@@ -130,7 +139,11 @@ final searchResultsProvider = FutureProvider.autoDispose<List<Location>>((
   ref,
 ) async {
   final query = ref.watch(normalizedSearchQueryProvider);
-  final cacheKey = _searchCacheKey(query);
+  final flags = ref.watch(featureFlagsProvider);
+  final cacheKey = _searchCacheKey(
+    query,
+    useRankedSearch: flags.useRankedSearch,
+  );
 
   if (query.length < searchMinQueryLength) {
     return const <Location>[];
@@ -141,14 +154,39 @@ final searchResultsProvider = FutureProvider.autoDispose<List<Location>>((
     return cachedResults;
   }
 
-  final result = await ref.read(locationRepositoryProvider).searchLocations(
-    query,
-  );
+  final repository = ref.read(locationRepositoryProvider);
+  late final Future<Either<Failure, List<Location>>> pendingResult;
+  var usedRankedSearch = false;
 
+  if (flags.useRankedSearch) {
+    final currentLocation = ref.read(currentLocationProvider);
+    final rankedResult = await repository.searchLocationsRanked(
+      RankedLocationSearchRequest(
+        query: query,
+        latitude: currentLocation.hasCoordinates ? currentLocation.latitude : null,
+        longitude: currentLocation.hasCoordinates
+            ? currentLocation.longitude
+            : null,
+      ),
+    );
+
+    if (rankedResult.isLeft()) {
+      pendingResult = repository.searchLocations(query);
+    } else {
+      usedRankedSearch = true;
+      pendingResult = Future.value(rankedResult);
+    }
+  } else {
+    pendingResult = repository.searchLocations(query);
+  }
+
+  final result = await pendingResult;
   return result.fold(
     (failure) => throw StateError(failure.message),
     (locations) {
-      final rankedLocations = _rankLocations(locations, query);
+      final rankedLocations = usedRankedSearch
+          ? _dedupeLocations(locations)
+          : _rankLocations(locations, query);
       ref.read(_searchResultsCacheProvider.notifier).update(
         (state) => <String, List<Location>>{
           ...state,

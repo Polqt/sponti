@@ -1,11 +1,19 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:sponti/core/constants/api_constants.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/model/location_model.dart';
+import 'package:sponti/features/locations/model/location_query.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract interface class LocationRemoteDataSource {
   Future<List<LocationModel>> getAllLocations({int page, int pageSize});
+  Future<LocationPage> getLocationsPage({
+    LocationPageCursor? cursor,
+    int limit,
+  });
   Future<LocationModel> getLocationById(String id);
   Future<List<LocationModel>> getNearbyLocations({
     required double latitude,
@@ -15,6 +23,9 @@ abstract interface class LocationRemoteDataSource {
   Future<List<LocationModel>> filterByCategory(LocationCategory category);
   Future<List<LocationModel>> fetchByCategories(List<String> categories);
   Future<List<LocationModel>> searchLocations(String query);
+  Future<List<LocationModel>> searchLocationsRanked(
+    RankedLocationSearchRequest request,
+  );
   Future<LocationModel> createLocation(LocationModel model);
   Future<LocationModel> updateLocation(LocationModel model);
   Future<void> deleteLocation(String id);
@@ -29,7 +40,7 @@ const _columns = '''
   check_in_count, is_hidden_gem, is_verified, has_wifi,
   is_pet_friendly, has_parking, open_time, close_time, days_open,
   special_hours_note, contact_number, website_url, instagram_handle,
-  submitted_by, created_at, updated_at
+  submitted_by, created_at, updated_at, is_seeded, seeded_at
 ''';
 
 class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
@@ -59,6 +70,12 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') throw const NotFoundException();
       throw ServerException(e.message);
+    } on TimeoutException catch (e) {
+      throw NetworkException(e.message ?? 'Request timed out.');
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
+    } on HttpException catch (e) {
+      throw NetworkException(e.message);
     } catch (e) {
       throw ServerException(e.toString());
     }
@@ -113,6 +130,44 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
         .order('created_at', ascending: false);
 
     return _parseLocationList(response);
+  });
+
+  @override
+  Future<LocationPage> getLocationsPage({
+    LocationPageCursor? cursor,
+    int limit = 30,
+  }) => _executeQuery(() async {
+    final effectiveLimit = limit.clamp(1, 100).toInt();
+    dynamic query = _client
+        .from(ApiConstants.locationsTable)
+        .select(_columns)
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
+        .limit(effectiveLimit + 1);
+
+    if (cursor != null) {
+      query = query.or(_buildCursorFilter(cursor));
+    }
+
+    final response = await query;
+    final rows = (response as List<dynamic>)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList(growable: false);
+    final hasMore = rows.length > effectiveLimit;
+    final pageRows = hasMore ? rows.take(effectiveLimit).toList() : rows;
+    final items = _parseLocationList(pageRows);
+    final nextCursor = hasMore && pageRows.isNotEmpty
+        ? LocationPageCursor(
+            createdAt: DateTime.parse(pageRows.last['created_at'] as String).toUtc(),
+            id: pageRows.last['id'] as String,
+          )
+        : null;
+
+    return LocationPage(
+      items: items,
+      hasMore: hasMore,
+      nextCursor: nextCursor,
+    );
   });
 
   @override
@@ -176,6 +231,23 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
       });
 
   @override
+  Future<List<LocationModel>> searchLocationsRanked(
+    RankedLocationSearchRequest request,
+  ) => _executeQuery(() async {
+    final response = await _client.rpc(
+      ApiConstants.rpcSearchLocationsRanked,
+      params: {
+        'search_query': request.query.trim(),
+        'viewer_lat': request.latitude,
+        'viewer_lng': request.longitude,
+        'limit_count': request.limit,
+      },
+    );
+
+    return _parseLocationList(response);
+  });
+
+  @override
   Future<LocationModel> createLocation(LocationModel model) =>
       _executeQuery(() async {
         final response = await _client
@@ -206,4 +278,9 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   Future<void> deleteLocation(String id) => _executeQuery(() async {
     await _client.from(ApiConstants.locationsTable).delete().eq('id', id);
   });
+
+  String _buildCursorFilter(LocationPageCursor cursor) {
+    final createdAt = cursor.createdAt.toUtc().toIso8601String();
+    return 'created_at.lt.$createdAt,and(created_at.eq.$createdAt,id.lt.${cursor.id})';
+  }
 }

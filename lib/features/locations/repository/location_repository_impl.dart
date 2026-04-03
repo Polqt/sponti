@@ -4,6 +4,7 @@ import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/core/errors/failures.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/model/location_model.dart';
+import 'package:sponti/features/locations/model/location_query.dart';
 import 'package:sponti/features/locations/repository/location_local_data_source.dart';
 import 'package:sponti/features/locations/repository/location_remote_data_source.dart';
 import 'package:sponti/features/locations/repository/location_repository.dart';
@@ -58,6 +59,12 @@ class LocationRepositoryImpl extends BaseRepository
   }
 
   @override
+  Future<Either<Failure, LocationPage>> getLocationsPage({
+    LocationPageCursor? cursor,
+    int limit = 30,
+  }) => guard(() => _remote.getLocationsPage(cursor: cursor, limit: limit));
+
+  @override
   Future<Either<Failure, Location>> getLocationById(String id) async {
     final cached = await _local.getCachedLocationById(id);
     if (cached != null) return Right(cached);
@@ -90,6 +97,11 @@ class LocationRepositoryImpl extends BaseRepository
   @override
   Future<Either<Failure, List<Location>>> searchLocations(String query) =>
       guard(() => _remote.searchLocations(query));
+
+  @override
+  Future<Either<Failure, List<Location>>> searchLocationsRanked(
+    RankedLocationSearchRequest request,
+  ) => guard(() => _remote.searchLocationsRanked(request));
 
   @override
   Future<Either<Failure, Location>> createLocation(Location location) =>
