@@ -18,7 +18,6 @@ import 'package:sponti/features/locations/view/widgets/location_hours_dropdown_c
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/reviews/view/widgets/review_action_button.dart';
 import 'package:sponti/features/reviews/viewmodel/reviews_viewmodel.dart';
-import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
 
 class LocationDetailPage extends ConsumerStatefulWidget {
   const LocationDetailPage({
@@ -115,9 +114,6 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
         .watch(locationStreamProvider(location.id))
         .valueOrNull;
     final liveReviews = ref.watch(reviewsStreamProvider(location.id)).valueOrNull;
-    final liveCheckInCount = ref
-        .watch(locationCheckInCountProvider(location.id))
-        .valueOrNull;
     final sourceLocation = liveLocation ?? location;
     final displayedReviewCount = liveReviews?.length ?? sourceLocation.reviewCount;
     final displayedRating = switch (liveReviews) {
@@ -130,13 +126,10 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
           reviews.length,
     };
     final displayedCheckInCount =
-        _optimisticCheckInCount ??
-        liveCheckInCount ??
-        sourceLocation.checkInCount;
+        _optimisticCheckInCount ?? sourceLocation.checkInCount;
 
     if (_optimisticCheckInCount != null &&
-        (liveCheckInCount == _optimisticCheckInCount ||
-            sourceLocation.checkInCount == _optimisticCheckInCount)) {
+        sourceLocation.checkInCount == _optimisticCheckInCount) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         setState(() => _optimisticCheckInCount = null);

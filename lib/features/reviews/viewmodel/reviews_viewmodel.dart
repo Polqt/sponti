@@ -62,14 +62,9 @@ final myReviewForLocationProvider =
 
       final result = await ref
           .read(reviewsRepositoryProvider)
-          .getReviewsForLocation(locationId);
+          .getMyReviewForLocation(locationId);
 
       return result.fold((failure) {
         throw StateError(failure.message);
-      }, (reviews) {
-        for (final review in reviews) {
-          if (review.userId == userId) return review;
-        }
-        return null;
-      });
+      }, (review) => review);
     });

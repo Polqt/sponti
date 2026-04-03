@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract interface class ReviewsRemoteDataSource {
   Future<List<ReviewModel>> getReviewsForLocation(String locationId);
+  Future<ReviewModel?> getMyReviewForLocation(String locationId);
   Future<List<ReviewModel>> getMyReviews();
   Future<ReviewModel> createReview(ReviewModel review);
   Future<ReviewModel> updateReview(ReviewModel review);
@@ -14,7 +15,6 @@ abstract interface class ReviewsRemoteDataSource {
 class ReviewsRemoteDataSourceImpl implements ReviewsRemoteDataSource {
   const ReviewsRemoteDataSourceImpl(this._client);
 
-  // ignore: unused_field
   final SupabaseClient _client;
 
   @override
@@ -29,6 +29,37 @@ class ReviewsRemoteDataSourceImpl implements ReviewsRemoteDataSource {
       return (response as List<dynamic>)
           .map((e) => ReviewModel.fromJson(e as Map<String, dynamic>))
           .toList(growable: false);
+    } on PostgrestException catch (e) {
+      throw app_exceptions.ServerException(e.message);
+    } catch (e) {
+      throw app_exceptions.ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<ReviewModel?> getMyReviewForLocation(String locationId) async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw const app_exceptions.AuthException(
+          'You must be signed in to view your review.',
+        );
+      }
+
+      final response = await _client
+          .from(SupabaseTables.reviews)
+          .select()
+          .eq('location_id', locationId)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (response == null) {
+        return null;
+      }
+
+      return ReviewModel.fromJson(response);
+    } on app_exceptions.AuthException {
+      rethrow;
     } on PostgrestException catch (e) {
       throw app_exceptions.ServerException(e.message);
     } catch (e) {
@@ -55,6 +86,8 @@ class ReviewsRemoteDataSourceImpl implements ReviewsRemoteDataSource {
       return (response as List<dynamic>)
           .map((e) => ReviewModel.fromJson(e as Map<String, dynamic>))
           .toList(growable: false);
+    } on app_exceptions.AuthException {
+      rethrow;
     } on PostgrestException catch (e) {
       throw app_exceptions.ServerException(e.message);
     } catch (e) {

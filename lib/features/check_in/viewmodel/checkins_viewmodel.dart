@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sponti/core/constants/api_constants.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:sponti/features/check_in/models/checkins.dart';
 import 'package:sponti/features/check_in/repository/checkins_remote_data_source.dart';
@@ -17,19 +16,6 @@ final checkinsRemoteDataSourceProvider = Provider<CheckinsRemoteDataSource>((
 
 final checkinsRepositoryProvider = Provider<CheckinsRepository>((ref) {
   return CheckinsRepositoryImpl(ref.watch(checkinsRemoteDataSourceProvider));
-});
-
-final locationCheckInCountProvider = StreamProvider.family<int, String>((
-  ref,
-  locationId,
-) {
-  final client = Supabase.instance.client;
-
-  return client
-      .from(ApiConstants.checkInsTable)
-      .stream(primaryKey: ['id'])
-      .eq('location_id', locationId)
-      .map((rows) => rows.length);
 });
 
 /// State for the check-in page tied to one location.

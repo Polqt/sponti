@@ -1,6 +1,7 @@
 import 'package:sponti/core/constants/api_constants.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/favorites/model/favorite_model.dart';
+import 'package:sponti/features/locations/repository/location_remote_data_source.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 abstract interface class FavoritesRemoteDataSource {
@@ -36,6 +37,7 @@ class FavoritesRemoteDataSourceImpl implements FavoritesRemoteDataSource {
 
   @override
   Future<List<FavoriteModel>> getFavorites() => _executeQuery(() async {
+        final locationRemote = LocationRemoteDataSourceImpl(_client);
         final response = await _client
             .from(ApiConstants.favoritesTable)
             .select('location_id, user_id, created_at, locations(*)')
@@ -43,7 +45,14 @@ class FavoritesRemoteDataSourceImpl implements FavoritesRemoteDataSource {
             .order('created_at', ascending: false);
 
         return (response as List<dynamic>)
-            .map((row) => FavoriteModel.fromJson(row as Map<String, dynamic>))
+            .map((row) {
+              final json = Map<String, dynamic>.from(row as Map);
+              final locationJson = json['locations'];
+              if (locationJson is Map<String, dynamic>) {
+                json['locations'] = locationRemote.resolvePhotoUrls(locationJson);
+              }
+              return FavoriteModel.fromJson(json);
+            })
             .toList(growable: false);
       });
 

@@ -16,6 +16,10 @@ class ReviewsRepositoryImpl extends BaseRepository implements ReviewsRepository 
       guard(() => _remote.getReviewsForLocation(locationId));
 
   @override
+  Future<Either<Failure, Review?>> getMyReviewForLocation(String locationId) =>
+      guard(() => _remote.getMyReviewForLocation(locationId));
+
+  @override
   Future<Either<Failure, List<Review>>> getMyReviews() =>
       guard(_remote.getMyReviews);
 
