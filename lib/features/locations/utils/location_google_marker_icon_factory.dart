@@ -15,6 +15,34 @@ class LocationGoogleMarkerIconFactory {
   static final Map<String, Future<gmaps.BitmapDescriptor>> _cache =
       <String, Future<gmaps.BitmapDescriptor>>{};
 
+  static String cacheKeyFor({
+    required LocationCategory category,
+    required PriceRange priceRange,
+    required bool isSelected,
+    required LocationRanking? ranking,
+    required LocationRanking? activeRankingFilter,
+    required PriceRange? activePriceFilter,
+  }) {
+    final rankingIndicator = resolveLocationMarkerRanking(
+      ranking: ranking,
+      activeRankingFilter: activeRankingFilter,
+    );
+    final accent = resolveLocationMarkerAccent(
+      ranking: ranking,
+      activeRankingFilter: activeRankingFilter,
+      activePriceFilter: activePriceFilter,
+    );
+
+    return [
+      category.name,
+      priceRange.name,
+      if (rankingIndicator != null) rankingIndicator.name else 'none',
+      if (activePriceFilter != null) activePriceFilter.name else 'none',
+      if (accent != null) accent.toARGB32().toRadixString(16) else 'none',
+      if (isSelected) 'selected' else 'idle',
+    ].join('|');
+  }
+
   static Future<gmaps.BitmapDescriptor> resolve({
     required LocationCategory category,
     required PriceRange priceRange,
@@ -32,14 +60,14 @@ class LocationGoogleMarkerIconFactory {
       activeRankingFilter: activeRankingFilter,
       activePriceFilter: activePriceFilter,
     );
-    final cacheKey = [
-      category.name,
-      priceRange.name,
-      if (rankingIndicator != null) rankingIndicator.name else 'none',
-      if (activePriceFilter != null) activePriceFilter.name else 'none',
-      if (accent != null) accent.toARGB32().toRadixString(16) else 'none',
-      if (isSelected) 'selected' else 'idle',
-    ].join('|');
+    final cacheKey = cacheKeyFor(
+      category: category,
+      priceRange: priceRange,
+      isSelected: isSelected,
+      ranking: ranking,
+      activeRankingFilter: activeRankingFilter,
+      activePriceFilter: activePriceFilter,
+    );
 
     return _cache.putIfAbsent(
       cacheKey,

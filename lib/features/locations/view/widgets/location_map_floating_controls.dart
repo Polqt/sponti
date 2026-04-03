@@ -13,8 +13,10 @@ class LocationMapFloatingControls extends StatelessWidget {
     required this.selectedRanking,
     required this.selectedPrice,
     required this.isLocating,
+    required this.isRefreshing,
     required this.onCategoryChanged,
     required this.onLocateMe,
+    required this.onRefresh,
     required this.onClearRanking,
     required this.onClearPrice,
     this.hasWifiFilter = false,
@@ -29,8 +31,10 @@ class LocationMapFloatingControls extends StatelessWidget {
   final LocationRanking? selectedRanking;
   final PriceRange? selectedPrice;
   final bool isLocating;
+  final bool isRefreshing;
   final ValueChanged<LocationCategory?> onCategoryChanged;
   final VoidCallback onLocateMe;
+  final VoidCallback onRefresh;
   final VoidCallback onClearRanking;
   final VoidCallback onClearPrice;
   
@@ -101,22 +105,41 @@ class LocationMapFloatingControls extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Quick filter toggle buttons
-              _QuickFiltersRow(
-                hasWifi: hasWifiFilter,
-                hasPetFriendly: hasPetFriendlyFilter,
-                hasParking: hasParkingFilter,
-                onWifiTap: () => onWifiFilterChanged?.call(!hasWifiFilter),
-                onPetFriendlyTap: () => onPetFriendlyFilterChanged?.call(!hasPetFriendlyFilter),
-                onParkingTap: () => onParkingFilterChanged?.call(!hasParkingFilter),
-              ),
-              // Locate me button
-                _CurrentLocationButton(
-                  isLoading: isLocating,
-                  onTap: onLocateMe,
+              Flexible(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: _QuickFiltersRow(
+                    hasWifi: hasWifiFilter,
+                    hasPetFriendly: hasPetFriendlyFilter,
+                    hasParking: hasParkingFilter,
+                    onWifiTap: () => onWifiFilterChanged?.call(!hasWifiFilter),
+                    onPetFriendlyTap: () => onPetFriendlyFilterChanged?.call(!hasPetFriendlyFilter),
+                    onParkingTap: () => onParkingFilterChanged?.call(!hasParkingFilter),
+                  ),
                 ),
+              ),
+              const SizedBox(width: 12),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MapActionButton(
+                    icon: Icons.refresh_rounded,
+                    accentColor: SpontiColors.primary,
+                    borderColor: SpontiColors.primary.withValues(alpha: 0.3),
+                    isLoading: isRefreshing,
+                    onTap: onRefresh,
+                  ),
+                  const SizedBox(width: 8),
+                  _MapActionButton(
+                    icon: Icons.person_pin_circle_rounded,
+                    accentColor: SpontiColors.secondary,
+                    borderColor: SpontiColors.secondary.withValues(alpha: 0.3),
+                    isLoading: isLocating,
+                    onTap: onLocateMe,
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -292,18 +315,23 @@ class _QuickFilterChip extends StatelessWidget {
   }
 }
 
-class _CurrentLocationButton extends StatelessWidget {
-  const _CurrentLocationButton({
+class _MapActionButton extends StatelessWidget {
+  const _MapActionButton({
+    required this.icon,
+    required this.accentColor,
+    required this.borderColor,
     required this.isLoading,
     required this.onTap,
   });
 
+  final IconData icon;
+  final Color accentColor;
+  final Color borderColor;
   final bool isLoading;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    // Compact circular button for current location
     return GestureDetector(
       onTap: isLoading ? null : onTap,
       child: Container(
@@ -320,21 +348,21 @@ class _CurrentLocationButton extends StatelessWidget {
             ),
           ],
           border: Border.all(
-            color: SpontiColors.secondary.withValues(alpha: 0.3),
+            color: borderColor,
             width: 2,
           ),
         ),
         child: isLoading
-            ? const Padding(
-                padding: EdgeInsets.all(12),
+            ? Padding(
+                padding: const EdgeInsets.all(12),
                 child: CircularProgressIndicator(
                   strokeWidth: 2.0,
-                  color: SpontiColors.secondary,
+                  color: accentColor,
                 ),
               )
-            : const Icon(
-                Icons.person_pin_circle_rounded,
-                color: SpontiColors.secondary,
+            : Icon(
+                icon,
+                color: accentColor,
                 size: 26,
               ),
       ),

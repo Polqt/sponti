@@ -214,6 +214,10 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _setShellHidden(false);
   }
 
+  Future<void> _refreshLocations() {
+    return ref.read(locationsProvider.notifier).refresh();
+  }
+
   Future<void> _moveToCurrentLocation() async {
     await ref.read(currentLocationProvider.notifier).locate();
     if (!mounted) return;
@@ -332,11 +336,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(locationsProvider.notifier).refresh(),
-        color: SpontiColors.primary,
-        backgroundColor: Colors.white,
-        child: Stack(
+      body: Stack(
         children: [
           Positioned.fill(
             child: LocationGoogleMapLayer(
@@ -382,10 +382,13 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               left: 16,
               right: 16,
               bottom: floatingControlsBottom + 74,
-              child: FloatingMessage(
-                text: 'Unable to load spots. Pull refresh icon to retry.',
-                icon: Icons.error_outline_rounded,
-                color: SpontiColors.error,
+              child: GestureDetector(
+                onTap: _refreshLocations,
+                child: const FloatingMessage(
+                  text: 'Unable to load spots. Tap refresh to retry.',
+                  icon: Icons.error_outline_rounded,
+                  color: SpontiColors.error,
+                ),
               ),
             ),
           if (!_isExplorePanelVisible && _detailLocation == null)
@@ -398,11 +401,13 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 selectedRanking: selectedRanking,
                 selectedPrice: selectedPrice,
                 isLocating: currentLocation.isLoading,
+                isRefreshing: locationsAsync.isLoading,
                 hasWifiFilter: hasWifiFilter,
                 hasPetFriendlyFilter: hasPetFriendlyFilter,
                 hasParkingFilter: hasParkingFilter,
                 onCategoryChanged: _onCategoryChanged,
                 onLocateMe: _moveToCurrentLocation,
+                onRefresh: _refreshLocations,
                 onWifiFilterChanged: (enabled) {
                   ref.read(locationFilterProvider.notifier).setWifi(enabled);
                 },
@@ -474,7 +479,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               ),
             ),
         ],
-      ),
       ),
     );
   }

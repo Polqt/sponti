@@ -2,11 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/config/supabase_options.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/model/location_model.dart';
-import 'package:sponti/features/locations/repository/location_remote_data_source.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _unsetExploreField = Object();
-const _exploreFetchLimit = 1000;
+const _exploreFetchLimit = 120;
+const _exploreUnrankedOpenNowFetchLimit = 200;
 
 enum ExploreRanking {
   trending(
@@ -144,9 +145,32 @@ class ExploreViewModel extends AsyncNotifier<List<Location>> {
     return _fetch(filter);
   }
 
+  List<Location> _mapRowsToLocations(dynamic response) {
+    final remote = ref.read(locationRemoteDataSourceProvider);
+    final rows = response is List<dynamic> ? response : const <dynamic>[];
+
+    return rows
+        .map(
+          (row) => LocationModel.fromJson(
+            remote.resolvePhotoUrls(
+              Map<String, dynamic>.from(row as Map),
+            ),
+          ),
+        )
+        .cast<Location>()
+        .toList(growable: false);
+  }
+
+  bool _matchesClientOnlyFilters(Location location, ExploreFilter filter) {
+    if (filter.nowOpenOnly && !location.isOpenNow) {
+      return false;
+    }
+
+    return true;
+  }
+
   Future<List<Location>> _fetch(ExploreFilter filter) async {
     final client = Supabase.instance.client;
-    final remote = LocationRemoteDataSourceImpl(client);
 
     late final List<Location> locations;
     if (filter.hasRankingFilter) {
@@ -155,69 +179,52 @@ class ExploreViewModel extends AsyncNotifier<List<Location>> {
         params: {
           'ranking_filter': filter.rankingFilter.rpcValue,
           'category_filter': filter.categoryFilter?.name,
+          'price_filter': filter.priceFilter?.name,
+          'now_open_only': filter.nowOpenOnly,
+          'has_wifi_only': filter.hasWifi,
+          'pet_friendly_only': filter.petFriendly,
+          'has_parking_only': filter.hasParking,
           'limit_count': _exploreFetchLimit,
         },
       );
 
-      final rows = response is List<dynamic> ? response : const <dynamic>[];
-      locations = rows
-          .map(
-            (row) => LocationModel.fromJson(
-              remote.resolvePhotoUrls(
-                Map<String, dynamic>.from(row as Map),
-              ),
-            ),
-          )
-          .cast<Location>()
-          .toList(growable: false);
+      locations = _mapRowsToLocations(response);
     } else {
       dynamic query = client.from(SupabaseTables.locations).select();
       if (filter.categoryFilter != null) {
         query = query.eq('category', filter.categoryFilter!.name);
       }
+      if (filter.priceFilter != null) {
+        query = query.eq('price_range', filter.priceFilter!.name);
+      }
+      if (filter.hasWifi) {
+        query = query.eq('has_wifi', true);
+      }
+      if (filter.petFriendly) {
+        query = query.eq('is_pet_friendly', true);
+      }
+      if (filter.hasParking) {
+        query = query.eq('has_parking', true);
+      }
+
       final response = await query
           .order('created_at', ascending: false)
-          .limit(_exploreFetchLimit);
-      final rows = response is List<dynamic> ? response : const <dynamic>[];
-      locations = rows
-          .map(
-            (row) => LocationModel.fromJson(
-              remote.resolvePhotoUrls(
-                Map<String, dynamic>.from(row as Map),
-              ),
-            ),
-          )
-          .cast<Location>()
-          .toList(growable: false);
+          .limit(
+            filter.nowOpenOnly
+                ? _exploreUnrankedOpenNowFetchLimit
+                : _exploreFetchLimit,
+          );
+      locations = _mapRowsToLocations(response);
     }
 
-    if (filter.priceFilter != null ||
-        filter.nowOpenOnly ||
-        filter.hasWifi ||
-        filter.petFriendly ||
-        filter.hasParking) {
-      return locations.where((location) {
-        if (filter.priceFilter != null &&
-            location.priceRange != filter.priceFilter) {
-          return false;
-        }
-        if (filter.nowOpenOnly && !location.isOpenNow) {
-          return false;
-        }
-        if (filter.hasWifi && !location.hasWifi) {
-          return false;
-        }
-        if (filter.petFriendly && !location.isPetFriendly) {
-          return false;
-        }
-        if (filter.hasParking && !location.hasParking) {
-          return false;
-        }
-        return true;
-      }).toList(growable: false);
+    if (!filter.nowOpenOnly || filter.hasRankingFilter) {
+      return locations;
     }
 
-    return locations;
+    return locations
+        .where((location) => _matchesClientOnlyFilters(location, filter))
+        .take(_exploreFetchLimit)
+        .toList(growable: false);
   }
 
   Future<void> refresh() async {
