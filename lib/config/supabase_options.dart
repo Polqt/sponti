@@ -29,5 +29,6 @@ abstract final class SupabaseRPC {
   static const String getNearbyLocations = 'get_nearby_locations';
   static const String getLocationWithStats = 'get_location_with_stats';
   static const String searchLocations = 'search_locations';
+  static const String searchLocationsRanked = 'search_locations_ranked';
   static const String getUserCheckInStreak = 'get_user_checkin_streak';
 }

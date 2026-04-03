@@ -13,6 +13,7 @@ abstract final class ApiConstants {
   static const String rpcGetNearbyLocations = 'get_nearby_locations';
   static const String rpcGetTrendingLocations = 'get_trending_locations';
   static const String rpcSearchLocations = 'search_locations';
+  static const String rpcSearchLocationsRanked = 'search_locations_ranked';
   static const String rpcGetLocationWithStats = 'get_location_with_stats';
   static const String rpcGetTopCurators = 'get_top_curators';
 
