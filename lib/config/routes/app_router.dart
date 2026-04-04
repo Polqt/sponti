@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/main_shell.dart';
@@ -7,9 +8,12 @@ import 'package:sponti/features/check_in/view/screens/check_in_page.dart';
 import 'package:sponti/features/check_in/view/screens/my_check_ins_screen.dart';
 import 'package:sponti/features/discovery/view/screens/discovery_screen.dart';
 import 'package:sponti/features/favorites/view/screens/favorites_screen.dart';
+import 'package:sponti/features/group_plans/view/screens/create_group_plan_screen.dart';
+import 'package:sponti/features/group_plans/view/screens/group_plan_detail_screen.dart';
+import 'package:sponti/features/group_plans/view/screens/group_plans_screen.dart';
+import 'package:sponti/features/location_comparison/view/screens/location_comparison_screen.dart';
 import 'package:sponti/features/locations/view/screens/location_detail.dart';
 import 'package:sponti/features/locations/view/screens/location_screen.dart';
-import 'package:sponti/features/locations/view/screens/surprise_me_modal.dart';
 import 'package:sponti/features/onboarding/repository/onboarding_local_data_source.dart';
 import 'package:sponti/features/onboarding/view/screens/video_onboarding_screen.dart';
 import 'package:sponti/features/profile/view/screens/edit_profile_screen.dart';
@@ -17,15 +21,17 @@ import 'package:sponti/features/profile/view/screens/profile_screen.dart';
 import 'package:sponti/features/reviews/view/screens/reviews_screen.dart';
 import 'package:sponti/features/search/view/screens/search_screen.dart';
 import 'package:sponti/features/suggestions/view/suggest_spot_screen.dart';
+import 'package:sponti/features/surprise_me/view/screens/surprise_me_modal.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
+final _onboardingDataSource = OnboardingLocalDataSourceImpl();
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: RouteName.location,
-  debugLogDiagnostics: true,
+  debugLogDiagnostics: kDebugMode,
   redirect: (context, state) async {
     final session = Supabase.instance.client.auth.currentSession;
     final isAuth = session != null;
@@ -34,8 +40,7 @@ final appRouter = GoRouter(
     final isOnSignIn = currentPath == RouteName.signin;
     final isOnAuthRoute = isOnSignIn || isOnVideoOnboarding;
 
-    final dataSource = OnboardingLocalDataSourceImpl();
-    final hasCompletedOnboarding = await dataSource.hasCompletedOnboarding();
+    final hasCompletedOnboarding = await _onboardingDataSource.hasCompletedOnboarding();
 
     if (!hasCompletedOnboarding && !isOnVideoOnboarding) {
       return RouteName.videoOnboarding;
@@ -85,7 +90,10 @@ final appRouter = GoRouter(
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
       path: RouteName.search,
-      builder: (context, state) => const SearchScreen(),
+      builder: (context, state) {
+        final planId = state.uri.queryParameters['planId'];
+        return SearchScreen(voteForPlanId: planId);
+      },
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
@@ -115,6 +123,29 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       path: RouteName.myCheckIns,
       builder: (context, state) => const MyCheckInsScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.locationComparison,
+      builder: (context, state) => const LocationComparisonScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.groupPlans,
+      builder: (context, state) => const GroupPlansScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.createGroupPlan,
+      builder: (context, state) => const CreateGroupPlanScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.groupPlanDetail,
+      builder: (context, state) {
+        final planId = state.pathParameters['id'] ?? '';
+        return GroupPlanDetailScreen(planId: planId);
+      },
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

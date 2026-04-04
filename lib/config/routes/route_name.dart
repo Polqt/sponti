@@ -14,6 +14,7 @@ abstract final class RouteName {
   static const String locationDetail = '/locations/:id';
   static const String editProfile = '/edit-profile';
   static const String search = '/search';
+  static String searchVotePath(String planId) => '/search?planId=$planId';
   static const String suggest = '/suggest';
   static const String suggestSpot = '/suggest-spot';
   static const String surprise = '/surprise';
@@ -29,11 +30,19 @@ abstract final class RouteName {
       '/check-in?locationId=$locationId&locationName=${Uri.encodeComponent(locationName)}';
 
   static const String reviews = '/reviews';
+  static const String locationComparison = '/location-comparison';
+  static const String groupPlans = '/group-plans';
+  static const String createGroupPlan = '/group-plans/create';
+  static const String groupPlanDetail = '/group-plans/:id';
+
   static String reviewsPath({
     required String locationId,
     required String locationName,
   }) =>
       '/reviews?locationId=$locationId&locationName=${Uri.encodeComponent(locationName)}';
+
+  static String locationComparisonPath() => locationComparison;
+  static String groupPlanDetailPath(String id) => '/group-plans/$id';
 }
 
 

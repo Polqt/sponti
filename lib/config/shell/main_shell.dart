@@ -7,8 +7,8 @@ import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
-import 'package:sponti/features/locations/view/screens/surprise_me_modal.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
+import 'package:sponti/features/surprise_me/view/screens/surprise_me_modal.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key, required this.child});
