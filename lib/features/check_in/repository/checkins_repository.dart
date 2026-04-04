@@ -6,7 +6,10 @@ abstract interface class CheckinsRepository {
   Future<Either<Failure, List<CheckIn>>> getCheckInsForLocation(
     String locationId,
   );
-  Future<Either<Failure, List<CheckIn>>> getMyCheckIns();
+  Future<Either<Failure, CheckInPage>> getMyCheckInsPage({
+    CheckInPageCursor? cursor,
+    int limit = 30,
+  });
   Future<Either<Failure, CheckIn>> createCheckIn({
     required String locationId,
     required String userId,

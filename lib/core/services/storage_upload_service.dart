@@ -138,14 +138,41 @@ class SupabaseStorageUploadService implements StorageUploadService {
             ),
           );
 
-      final url = _client.storage.from(SupabaseBuckets.locationPhotos).getPublicUrl(
-            path,
-          );
-      return (url, null);
+      final optimization = await _optimizeLocationPhoto(path);
+      final resolvedPath = optimization.$1 ?? path;
+      final url = _client.storage
+          .from(SupabaseBuckets.locationPhotos)
+          .getPublicUrl(resolvedPath);
+      return (url, optimization.$2);
     } on StorageException catch (error) {
       return (null, error.message);
     } catch (error) {
       return (null, error.toString());
+    }
+  }
+
+  Future<(String?, String?)> _optimizeLocationPhoto(String objectPath) async {
+    try {
+      final response = await _client.functions.invoke(
+        SupabaseEdgeFunctions.optimizeUploadedImage,
+        body: {
+          'bucket': SupabaseBuckets.locationPhotos,
+          'path': objectPath,
+        },
+      );
+      final data = response.data;
+      if (data is! Map) {
+        return (null, 'Image uploaded but optimization response was invalid.');
+      }
+      final optimizedPath = data['optimized_path'];
+      if (optimizedPath is String && optimizedPath.isNotEmpty) {
+        return (optimizedPath, null);
+      }
+      return (null, 'Image uploaded but optimization response was invalid.');
+    } on FunctionException catch (error) {
+      return (null, 'Image uploaded but optimization failed: ${error.details ?? error.reasonPhrase ?? 'unknown error'}');
+    } catch (error) {
+      return (null, 'Image uploaded but optimization failed: $error');
     }
   }
 }

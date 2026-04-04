@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:sponti/config/supabase_options.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract interface class AuthRemoteDataSource {
@@ -14,7 +15,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   const AuthRemoteDataSourceImpl(this._client);
 
   final SupabaseClient _client;
-  static const String _redirectTo = 'io.supabase.sponti://login-callback/';
 
   @override
   User? get currentUser => _client.auth.currentUser;
@@ -45,7 +45,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       final success = await _client.auth.signInWithOAuth(
         provider,
-        redirectTo: _redirectTo,
+        redirectTo: SupabaseOptions.authRedirectTo,
       );
 
       if (!success) {

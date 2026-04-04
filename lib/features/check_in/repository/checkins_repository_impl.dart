@@ -17,8 +17,10 @@ class CheckinsRepositoryImpl extends BaseRepository
   ) => guard(() => _remote.getCheckInsForLocation(locationId));
 
   @override
-  Future<Either<Failure, List<CheckIn>>> getMyCheckIns() =>
-      guard(_remote.getMyCheckIns);
+  Future<Either<Failure, CheckInPage>> getMyCheckInsPage({
+    CheckInPageCursor? cursor,
+    int limit = 30,
+  }) => guard(() => _remote.getMyCheckInsPage(cursor: cursor, limit: limit));
 
   @override
   Future<Either<Failure, CheckIn>> createCheckIn({

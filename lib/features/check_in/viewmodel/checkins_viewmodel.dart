@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sponti/config/feature_flags.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:sponti/features/check_in/models/checkins.dart';
 import 'package:sponti/features/check_in/repository/checkins_remote_data_source.dart';
 import 'package:sponti/features/check_in/repository/checkins_repository.dart';
 import 'package:sponti/features/check_in/repository/checkins_repository_impl.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 import 'package:sponti/features/streaks/viewmodel/checkin_streak_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,7 +17,7 @@ final checkinsRemoteDataSourceProvider = Provider<CheckinsRemoteDataSource>((
 });
 
 final checkinsRepositoryProvider = Provider<CheckinsRepository>((ref) {
-  return CheckinsRepositoryImpl(ref.watch(checkinsRemoteDataSourceProvider));
+  return CheckinsRepositoryImpl(ref.read(checkinsRemoteDataSourceProvider));
 });
 
 /// State for the check-in page tied to one location.
@@ -60,8 +62,11 @@ class CheckInState {
 /// Notifier scoped to a single location.
 /// Pass the locationId via the family parameter.
 class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
+  late final String _locationId;
+
   @override
   Future<CheckInState> build(String locationId) async {
+    _locationId = locationId;
     final userId = ref.watch(currentUserIdProvider);
     if (userId == null) return const CheckInState();
 
@@ -115,7 +120,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
     final repository = ref.read(checkinsRepositoryProvider);
     final result = current.myCheckInId == null
         ? await repository.createCheckIn(
-            locationId: arg,
+            locationId: _locationId,
             userId: userId,
             note: note,
             photos: photos,
@@ -205,6 +210,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
     }
     ref.invalidate(myCheckInsProvider);
     ref.invalidate(checkInStreakProvider);
+    ref.invalidate(locationStreamProvider(_locationId));
   }
 }
 
@@ -214,8 +220,31 @@ final checkInProvider =
     );
 
 final myCheckInsProvider = FutureProvider<List<CheckIn>>((ref) async {
-  final result = await ref.read(checkinsRepositoryProvider).getMyCheckIns();
-  return result.fold((failure) {
-    throw StateError(failure.message);
-  }, (checkIns) => checkIns);
+  final repository = ref.read(checkinsRepositoryProvider);
+  final useCursor = ref.watch(featureFlagsProvider).useCursorPagination;
+
+  if (!useCursor) {
+    final firstPageResult = await repository.getMyCheckInsPage(limit: 100);
+    return firstPageResult.fold((failure) {
+      throw StateError(failure.message);
+    }, (page) => page.items);
+  }
+
+  final items = <CheckIn>[];
+  CheckInPageCursor? cursor;
+
+  while (true) {
+    final result = await repository.getMyCheckInsPage(
+      cursor: cursor,
+      limit: 30,
+    );
+    final page = result.fold((failure) => throw StateError(failure.message), (p) => p);
+    items.addAll(page.items);
+    if (!page.hasMore || page.nextCursor == null) {
+      break;
+    }
+    cursor = page.nextCursor;
+  }
+
+  return List.unmodifiable(items);
 });

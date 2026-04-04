@@ -37,4 +37,5 @@ abstract final class AppConstants {
   static const String hiveBoxFavorites = 'favorites_cache';
   static const String hiveKeyFavoriteIds = 'favorite_ids';
   static const String hiveKeyOnboardingDone = 'onboarding_done';
+  static const String hiveKeyComparisonPinnedIds = 'comparison_pinned_ids';
 }

@@ -23,13 +23,9 @@ final suggestionsRepositoryProvider = Provider<SuggestionsRepository>((ref) {
 final mySuggestionsProvider = FutureProvider<List<SuggestionModel>>((
   ref,
 ) async {
-  final result = await ref
-      .read(suggestionsRepositoryProvider)
-      .fetchMySuggestions();
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (suggestions) => suggestions,
-  );
+  final repository = ref.read(suggestionsRepositoryProvider);
+  final result = await repository.fetchMySuggestions();
+  return result.fold((failure) => throw StateError(failure.message), (data) => data);
 });
 
 // Read — single suggestion by id
@@ -38,13 +34,9 @@ final suggestionByIdProvider = FutureProvider.family<SuggestionModel, String>((
   ref,
   id,
 ) async {
-  final result = await ref
-      .read(suggestionsRepositoryProvider)
-      .fetchSuggestionById(id);
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (suggestion) => suggestion,
-  );
+  final repository = ref.read(suggestionsRepositoryProvider);
+  final result = await repository.fetchSuggestionById(id);
+  return result.fold((failure) => throw StateError(failure.message), (data) => data);
 });
 
 // Mutation — insert

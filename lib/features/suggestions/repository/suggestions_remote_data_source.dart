@@ -1,6 +1,7 @@
 import 'package:sponti/core/constants/api_constants.dart';
+import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/suggestions/model/suggestion_model.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 abstract interface class SuggestionsRemoteDataSource {
   Future<List<SuggestionModel>> fetchMySuggestions();
@@ -17,7 +18,9 @@ class SuggestionsRemoteDataSourceImpl implements SuggestionsRemoteDataSource {
 
   String get _currentUserId {
     final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw Exception('user not authenticated');
+    if (userId == null) {
+      throw const AuthException('You must be logged in to manage suggestions.');
+    }
     return userId;
   }
 

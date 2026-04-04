@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:sponti/config/routes/app_router.dart';
 import 'package:sponti/core/theme/app_theme.dart';
@@ -48,6 +50,17 @@ void main() async {
     url: supabaseUrl,
     anonKey: supabaseKey,
   );
+
+  // Force the new Google Maps renderer on Android (no-op if already initialized)
+  final mapsImpl = GoogleMapsFlutterPlatform.instance;
+  if (mapsImpl is GoogleMapsFlutterAndroid) {
+    mapsImpl.useAndroidViewSurface = true;
+    try {
+      await mapsImpl.initializeWithRenderer(AndroidMapRenderer.latest);
+    } catch (_) {
+      // Already initialized (e.g. hot restart) — safe to ignore
+    }
+  }
 
   // Initialize Hive for local storage
   await Hive.initFlutter();

@@ -10,7 +10,7 @@ final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepositoryImpl(ref.watch(authRemoteDataSourceProvider));
+  return AuthRepositoryImpl(ref.read(authRemoteDataSourceProvider));
 });
 
 class AuthViewModel extends AsyncNotifier<AuthUser?> {
