@@ -8,14 +8,12 @@ import 'package:sponti/core/constants/map_constants.dart';
 import 'package:sponti/core/providers/connectivity_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/floating_message.dart';
-import 'package:sponti/features/explore/view/widgets/explore_bottom_panel.dart';
-import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
-import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
-import 'package:sponti/features/locations/view/widgets/location_map_floating_controls.dart';
 import 'package:sponti/features/locations/view/widgets/location_google_map_layer.dart';
 import 'package:sponti/features/locations/view/widgets/location_map_header.dart';
+import 'package:sponti/features/locations/view/widgets/location_screen_explore_panel.dart';
+import 'package:sponti/features/locations/view/widgets/location_screen_map_controls.dart';
 import 'package:sponti/features/locations/viewmodel/current_location_viewmodel.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
@@ -93,8 +91,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   void _setShellHidden(bool hidden) => _shellBarHiddenController.state = hidden;
 
   Future<void> _onCategoryChanged(LocationCategory? category) async {
-    ref.read(locationFilterProvider.notifier).setCategory(category);
-    ref.read(locationFilterProvider.notifier).setRanking(null);
+    final filterNotifier = ref.read(locationFilterProvider.notifier);
+    filterNotifier.setCategory(category);
+    filterNotifier.setRanking(null);
     await ref.read(locationsProvider.notifier).refresh();
     _openPanel();
   }
@@ -258,37 +257,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   @override
   Widget build(BuildContext context) {
     final locationsAsync = ref.watch(locationsProvider);
-    // Use select to only rebuild when specific filter fields change
-    final selectedCategory = ref.watch(
-      locationFilterProvider.select((f) => f.selectedCategory),
-    );
-    final selectedRanking = ref.watch(
-      locationFilterProvider.select((f) => f.selectedRanking),
-    );
-    final selectedPrice = ref.watch(
-      locationFilterProvider.select((f) => f.selectedPrice),
-    );
-    final hasWifiFilter = ref.watch(
-      locationFilterProvider.select((f) => f.hasWifi),
-    );
-    final hasPetFriendlyFilter = ref.watch(
-      locationFilterProvider.select((f) => f.isPetFriendly),
-    );
-    final hasParkingFilter = ref.watch(
-      locationFilterProvider.select((f) => f.hasParking),
-    );
-    final filter = LocationFilter(
-      selectedCategory: selectedCategory,
-      selectedRanking: selectedRanking,
-      selectedPrice: selectedPrice,
-      hasWifi: hasWifiFilter,
-      isPetFriendly: hasPetFriendlyFilter,
-      hasParking: hasParkingFilter,
-    );
-    // Only watch location permission status, not the full object
-    ref.watch(
-      currentLocationProvider.select((loc) => loc.isPermissionGranted),
-    );
+    final filter = ref.watch(locationFilterProvider);
     final currentLocation = ref.watch(currentLocationProvider);
     final isOnline = ref.watch(connectivityProvider).valueOrNull ?? true;
     final allLocations = locationsAsync.valueOrNull ?? const <Location>[];
@@ -321,22 +290,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
         ? locations.indexWhere((l) => l.id == selectedId)
         : 0;
 
-    // Build an ExploreFilter that reflects the current locationFilterProvider
-    // state so the panel pills show the correct active selection.
-    final panelFilter = ExploreFilter(
-      rankingFilter: filter.selectedRanking != null
-          ? ExploreRanking.values.firstWhere(
-              (r) => r.name == filter.selectedRanking!.name,
-              orElse: () => ExploreRanking.trending,
-            )
-          : ExploreRanking.trending,
-      hasRankingFilter: filter.selectedRanking != null,
-      priceFilter: filter.selectedPrice,
-      hasWifi: filter.hasWifi,
-      petFriendly: filter.isPetFriendly,
-      hasParking: filter.hasParking,
-    );
-
     return Scaffold(
       backgroundColor: SpontiColors.surface,
       body: Stack(
@@ -361,8 +314,8 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                     )
                   : null,
               rankingSnapshot: rankingSnapshot,
-              activeRankingFilter: selectedRanking,
-              activePriceFilter: selectedPrice,
+              activeRankingFilter: filter.selectedRanking,
+              activePriceFilter: filter.selectedPrice,
               onMapCreated: (controller) =>
                   _handleMapCreated(controller, locations),
               onMapTap: () {
@@ -396,88 +349,22 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
             ),
           // Category row + action buttons stacked just above the shell bar
           if (!_isExplorePanelVisible && _detailLocation == null)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: bottomInset + kShellBottomBarClearance + 12,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // Refresh + locate-me buttons: horizontal, right-aligned
-                  LocationMapActionButtons(
-                    isLocating: currentLocation.isLoading,
-                    isRefreshing: locationsAsync.isLoading,
-                    onLocateMe: _moveToCurrentLocation,
-                    onRefresh: _refreshLocations,
-                  ),
-                  const SizedBox(height: 10),
-                  LocationMapFloatingControls(
-                    selectedCategory: selectedCategory,
-                    selectedRanking: selectedRanking,
-                    selectedPrice: selectedPrice,
-                    hasWifiFilter: hasWifiFilter,
-                    hasPetFriendlyFilter: hasPetFriendlyFilter,
-                    hasParkingFilter: hasParkingFilter,
-                    onCategoryChanged: _onCategoryChanged,
-                    onWifiFilterChanged: (enabled) {
-                      ref.read(locationFilterProvider.notifier).setWifi(enabled);
-                    },
-                    onPetFriendlyFilterChanged: (enabled) {
-                      ref
-                          .read(locationFilterProvider.notifier)
-                          .setPetFriendly(enabled);
-                    },
-                    onParkingFilterChanged: (enabled) {
-                      ref.read(locationFilterProvider.notifier).setParking(enabled);
-                    },
-                    onClearRanking: () {
-                      ref.read(locationFilterProvider.notifier).setRanking(null);
-                    },
-                    onClearPrice: () {
-                      ref.read(locationFilterProvider.notifier).setPrice(null);
-                    },
-                  ),
-                ],
-              ),
+            LocationScreenMapControls(
+              bottomInset: bottomInset,
+              locationsLoading: locationsAsync.isLoading,
+              onCategoryChanged: _onCategoryChanged,
+              onLocateMe: _moveToCurrentLocation,
+              onRefresh: _refreshLocations,
             ),
           if (_isExplorePanelVisible && _detailLocation == null)
-            ExploreBottomPanel(
+            LocationScreenExplorePanel(
               locationsAsync: locationsAsync,
               locations: locations,
-              selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+              selectedIndex: selectedIndex,
               isExpanded: _isExplorePanelExpanded,
-              bottomInset: bottomInset,
-              selectedCategory: selectedCategory,
               onCategoryChanged: _onCategoryChanged,
-              filter: panelFilter,
-              onRankingChanged: (ranking) {
-                ref
-                    .read(locationFilterProvider.notifier)
-                    .setRanking(
-                      ranking == null
-                          ? null
-                          : LocationRanking.values.firstWhere(
-                              (value) => value.name == ranking.name,
-                              orElse: () => LocationRanking.trending,
-                            ),
-                    );
-              },
-              onPriceChanged: (price) {
-                ref.read(locationFilterProvider.notifier).setPrice(price);
-              },
-              onWifiChanged: (enabled) {
-                ref.read(locationFilterProvider.notifier).setWifi(enabled);
-              },
-              onPetFriendlyChanged: (enabled) {
-                ref.read(locationFilterProvider.notifier).setPetFriendly(enabled);
-              },
-              onParkingChanged: (enabled) {
-                ref.read(locationFilterProvider.notifier).setParking(enabled);
-              },
               onExpandChanged: _setPanelExpanded,
               onDismissed: _hidePanel,
-              edgeToEdge: true,
               onSheetProgressChanged: _setSheetProgress,
               onSelectLocation: _selectLocation,
               onLocationTap: _showLocationDetails,

@@ -269,7 +269,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               locations: locations,
               selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
               isExpanded: _isPanelExpanded,
-              bottomInset: bottomInset,
               onExpandChanged: _setPanelExpanded,
               selectedCategory: filter.categoryFilter,
               onCategoryChanged: _onCategoryChanged,
