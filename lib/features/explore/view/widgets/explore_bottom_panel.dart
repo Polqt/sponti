@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
+import 'package:sponti/features/explore/view/widgets/explore_amenity_filters.dart';
 import 'package:sponti/features/explore/view/widgets/explore_budget_filter_modal.dart';
 import 'package:sponti/features/explore/view/widgets/explore_discovery_filter_modal.dart';
 import 'package:sponti/features/explore/view/widgets/explore_loading.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
+import 'package:sponti/features/location_comparison/viewmodel/location_comparison_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
 import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
@@ -27,6 +29,9 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
     required this.filter,
     this.onRankingChanged,
     this.onPriceChanged,
+    this.onWifiChanged,
+    this.onPetFriendlyChanged,
+    this.onParkingChanged,
     this.onLocationTap,
     this.onSheetProgressChanged,
     this.onDismissed,
@@ -44,6 +49,9 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
   final ValueChanged<Location> onSelectLocation;
   final ValueChanged<ExploreRanking?>? onRankingChanged;
   final ValueChanged<PriceRange?>? onPriceChanged;
+  final ValueChanged<bool>? onWifiChanged;
+  final ValueChanged<bool>? onPetFriendlyChanged;
+  final ValueChanged<bool>? onParkingChanged;
   final ValueChanged<Location>? onLocationTap;
   final LocationCategory? selectedCategory;
   final ValueChanged<LocationCategory?> onCategoryChanged;
@@ -204,6 +212,7 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
   @override
   Widget build(BuildContext context) {
     final favoriteIds = ref.watch(favoriteIdSetProvider);
+    final pinnedIds = ref.watch(pinnedComparisonIdSetProvider);
     final screenHeight = MediaQuery.sizeOf(context).height;
     final hPad = widget.edgeToEdge ? 0.0 : 12.0;
     final radius = widget.edgeToEdge
@@ -277,12 +286,30 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
                                 onChanged: widget.onCategoryChanged,
                               ),
                             ),
+                            if (widget.isExpanded &&
+                                widget.onWifiChanged != null &&
+                                widget.onPetFriendlyChanged != null &&
+                                widget.onParkingChanged != null)
+                              ExploreAmenityFilters(
+                                hasWifi: widget.filter.hasWifi,
+                                isPetFriendly: widget.filter.petFriendly,
+                                hasParking: widget.filter.hasParking,
+                                onWifiChanged: widget.onWifiChanged!,
+                                onPetFriendlyChanged:
+                                    widget.onPetFriendlyChanged!,
+                                onParkingChanged: widget.onParkingChanged!,
+                              ),
                             const Divider(
                               height: 1,
                               thickness: 1,
                               color: Color(0x14A68F7B),
                             ),
-                            Expanded(child: _buildList(favoriteIds: favoriteIds)),
+                             Expanded(
+                               child: _buildList(
+                                 favoriteIds: favoriteIds,
+                                 pinnedIds: pinnedIds,
+                               ),
+                             ),
                           ],
                         ),
                       ),
@@ -297,7 +324,10 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
     );
   }
 
-  Widget _buildList({required Set<String> favoriteIds}) {
+  Widget _buildList({
+    required Set<String> favoriteIds,
+    required Set<String> pinnedIds,
+  }) {
     if (widget.locationsAsync.isLoading) {
       return ListView(
         controller: _listScrollController,
@@ -364,6 +394,18 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
                 },
                 onSaveToggle: () =>
                     ref.read(favoriteIdsProvider.notifier).toggle(location.id),
+                isPinnedForComparison: pinnedIds.contains(location.id),
+                onComparisonToggle: () async {
+                  final success = await ref
+                      .read(pinnedComparisonIdsProvider.notifier)
+                      .togglePin(location.id);
+                  if (!context.mounted || success) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('You can compare up to 3 locations only.'),
+                    ),
+                  );
+                },
               ),
             ),
           ),

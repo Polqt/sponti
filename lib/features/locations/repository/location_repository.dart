@@ -6,7 +6,7 @@ import 'package:sponti/features/locations/model/location_query.dart';
 abstract interface class LocationRepository {
   Future<Either<Failure, List<Location>>> getAllLocations({
     int page = 0,
-    int pageSize = 1000,
+    int pageSize = 100,
   });
   Future<Either<Failure, LocationPage>> getLocationsPage({
     LocationPageCursor? cursor,

@@ -159,7 +159,7 @@ class DiscoveryCuratorLeaderboards {
 
 List<Location> _parseLocations(
   List<dynamic> response,
-  LocationRemoteDataSourceImpl remote,
+  LocationRemoteDataSource remote,
 ) {
   return response
       .map(
@@ -169,6 +169,10 @@ List<Location> _parseLocations(
       )
       .toList(growable: false);
 }
+
+final _discoveryLocationRemote = LocationRemoteDataSourceImpl(
+  Supabase.instance.client,
+);
 
 List<DiscoveryCurator> _parseCurators(List<dynamic> rows) {
   return rows
@@ -255,7 +259,7 @@ DiscoveryCuratorLeaderboards _buildCuratorLeaderboards(
 final categoryTopSpotsProvider = FutureProvider.autoDispose
     .family<List<Location>, LocationCategory>((ref, category) async {
       final client = Supabase.instance.client;
-      final remote = LocationRemoteDataSourceImpl(client);
+      final remote = _discoveryLocationRemote;
 
       final response = await client.rpc(
         ApiConstants.rpcGetTrendingLocations,

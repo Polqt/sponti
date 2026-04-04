@@ -32,7 +32,7 @@ abstract interface class LocationRemoteDataSource {
   Map<String, dynamic> resolvePhotoUrls(Map<String, dynamic> json);
 }
 
-const _defaultLocationsPageSize = 1000;
+const _defaultLocationsPageSize = 100;
 
 const _columns = '''
   id, name, description, category, latitude, longitude, address,
@@ -52,7 +52,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   /// Key: storage path, Value: resolved public URL
   /// Limited to 500 entries to prevent unbounded memory growth.
   static const _maxCacheSize = 500;
-  final Map<String, String> _photoUrlCache = {};
+  static final Map<String, String> _photoUrlCache = <String, String>{};
 
   void _trimCacheIfNeeded() {
     if (_photoUrlCache.length > _maxCacheSize) {
@@ -121,15 +121,24 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
     int page = 0,
     int pageSize = _defaultLocationsPageSize,
   }) => _executeQuery(() async {
-    final start = page * pageSize;
-    final end = start + pageSize - 1;
-    final response = await _client
-        .from(ApiConstants.locationsTable)
-        .select(_columns)
-        .range(start, end)
-        .order('created_at', ascending: false);
+    final effectiveLimit = pageSize.clamp(1, 100).toInt();
+    LocationPageCursor? cursor;
+    var currentPage = 0;
 
-    return _parseLocationList(response);
+    while (currentPage < page) {
+      final skippedPage = await getLocationsPage(
+        cursor: cursor,
+        limit: effectiveLimit,
+      );
+      if (!skippedPage.hasMore || skippedPage.nextCursor == null) {
+        return const <LocationModel>[];
+      }
+      cursor = skippedPage.nextCursor;
+      currentPage++;
+    }
+
+    final pageResult = await getLocationsPage(cursor: cursor, limit: effectiveLimit);
+    return pageResult.items.cast<LocationModel>();
   });
 
   @override

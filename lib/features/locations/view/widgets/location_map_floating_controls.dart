@@ -6,17 +6,14 @@ import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
 
+/// Category row + active filter chips shown at the bottom of the map.
 class LocationMapFloatingControls extends StatelessWidget {
   const LocationMapFloatingControls({
     super.key,
     required this.selectedCategory,
     required this.selectedRanking,
     required this.selectedPrice,
-    required this.isLocating,
-    required this.isRefreshing,
     required this.onCategoryChanged,
-    required this.onLocateMe,
-    required this.onRefresh,
     required this.onClearRanking,
     required this.onClearPrice,
     this.hasWifiFilter = false,
@@ -30,14 +27,10 @@ class LocationMapFloatingControls extends StatelessWidget {
   final LocationCategory? selectedCategory;
   final LocationRanking? selectedRanking;
   final PriceRange? selectedPrice;
-  final bool isLocating;
-  final bool isRefreshing;
   final ValueChanged<LocationCategory?> onCategoryChanged;
-  final VoidCallback onLocateMe;
-  final VoidCallback onRefresh;
   final VoidCallback onClearRanking;
   final VoidCallback onClearPrice;
-  
+
   // Quick filters
   final bool hasWifiFilter;
   final bool hasPetFriendlyFilter;
@@ -48,101 +41,71 @@ class LocationMapFloatingControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasActiveFilters = selectedRanking != null || 
-        selectedPrice != null || 
-        hasWifiFilter || 
-        hasPetFriendlyFilter || 
+    final hasActiveFilters = selectedRanking != null ||
+        selectedPrice != null ||
+        hasWifiFilter ||
+        hasPetFriendlyFilter ||
         hasParkingFilter;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Active filter chips
+        // Active filter chips (only shown when a filter is active)
         if (hasActiveFilters)
           Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                if (selectedRanking != null)
-                  _RankingFilterChip(
-                    ranking: selectedRanking!,
-                    onClear: onClearRanking,
-                  ),
-                if (selectedPrice != null)
-                  _PriceFilterChip(
-                    price: selectedPrice!,
-                    onClear: onClearPrice,
-                  ),
-                if (hasWifiFilter)
-                  _QuickFilterChip(
-                    icon: Icons.wifi_rounded,
-                    label: 'WiFi',
-                    color: SpontiColors.info,
-                    onClear: () => onWifiFilterChanged?.call(false),
-                  ),
-                if (hasPetFriendlyFilter)
-                  _QuickFilterChip(
-                    icon: Icons.pets_rounded,
-                    label: 'Pet Friendly',
-                    color: SpontiColors.warning,
-                    onClear: () => onPetFriendlyFilterChanged?.call(false),
-                  ),
-                if (hasParkingFilter)
-                  _QuickFilterChip(
-                    icon: Icons.local_parking_rounded,
-                    label: 'Parking',
-                    color: SpontiColors.secondary,
-                    onClear: () => onParkingFilterChanged?.call(false),
-                  ),
-              ],
-            ),
-          ),
-        // Quick filter buttons row + locate me button
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Row(
-            children: [
-              Flexible(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: _QuickFiltersRow(
-                    hasWifi: hasWifiFilter,
-                    hasPetFriendly: hasPetFriendlyFilter,
-                    hasParking: hasParkingFilter,
-                    onWifiTap: () => onWifiFilterChanged?.call(!hasWifiFilter),
-                    onPetFriendlyTap: () => onPetFriendlyFilterChanged?.call(!hasPetFriendlyFilter),
-                    onParkingTap: () => onParkingFilterChanged?.call(!hasParkingFilter),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+            padding: const EdgeInsets.only(bottom: 8),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
                 children: [
-                  _MapActionButton(
-                    icon: Icons.refresh_rounded,
-                    accentColor: SpontiColors.primary,
-                    borderColor: SpontiColors.primary.withValues(alpha: 0.3),
-                    isLoading: isRefreshing,
-                    onTap: onRefresh,
-                  ),
-                  const SizedBox(width: 8),
-                  _MapActionButton(
-                    icon: Icons.person_pin_circle_rounded,
-                    accentColor: SpontiColors.secondary,
-                    borderColor: SpontiColors.secondary.withValues(alpha: 0.3),
-                    isLoading: isLocating,
-                    onTap: onLocateMe,
-                  ),
+                  if (selectedRanking != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _RankingFilterChip(
+                        ranking: selectedRanking!,
+                        onClear: onClearRanking,
+                      ),
+                    ),
+                  if (selectedPrice != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _PriceFilterChip(
+                        price: selectedPrice!,
+                        onClear: onClearPrice,
+                      ),
+                    ),
+                  if (hasWifiFilter)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _QuickFilterChip(
+                        icon: Icons.wifi_rounded,
+                        label: 'WiFi',
+                        color: SpontiColors.info,
+                        onClear: () => onWifiFilterChanged?.call(false),
+                      ),
+                    ),
+                  if (hasPetFriendlyFilter)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _QuickFilterChip(
+                        icon: Icons.pets_rounded,
+                        label: 'Pets',
+                        color: SpontiColors.warning,
+                        onClear: () => onPetFriendlyFilterChanged?.call(false),
+                      ),
+                    ),
+                  if (hasParkingFilter)
+                    _QuickFilterChip(
+                      icon: Icons.local_parking_rounded,
+                      label: 'Parking',
+                      color: SpontiColors.secondary,
+                      onClear: () => onParkingFilterChanged?.call(false),
+                    ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
         // Category row
         _GlassSurface(
           padding: const EdgeInsets.all(10),
@@ -156,117 +119,46 @@ class LocationMapFloatingControls extends StatelessWidget {
   }
 }
 
-/// Row of quick filter toggle buttons
-class _QuickFiltersRow extends StatelessWidget {
-  const _QuickFiltersRow({
-    required this.hasWifi,
-    required this.hasPetFriendly,
-    required this.hasParking,
-    required this.onWifiTap,
-    required this.onPetFriendlyTap,
-    required this.onParkingTap,
+/// Refresh + locate-me buttons shown at the top-right of the map, horizontal.
+class LocationMapActionButtons extends StatelessWidget {
+  const LocationMapActionButtons({
+    super.key,
+    required this.isLocating,
+    required this.isRefreshing,
+    required this.onLocateMe,
+    required this.onRefresh,
   });
 
-  final bool hasWifi;
-  final bool hasPetFriendly;
-  final bool hasParking;
-  final VoidCallback onWifiTap;
-  final VoidCallback onPetFriendlyTap;
-  final VoidCallback onParkingTap;
+  final bool isLocating;
+  final bool isRefreshing;
+  final VoidCallback onLocateMe;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _QuickFilterButton(
-          icon: Icons.wifi_rounded,
-          label: 'WiFi',
-          isActive: hasWifi,
-          activeColor: SpontiColors.info,
-          onTap: onWifiTap,
+        _MapActionButton(
+          icon: Icons.refresh_rounded,
+          accentColor: SpontiColors.primary,
+          borderColor: SpontiColors.primary.withValues(alpha: 0.3),
+          isLoading: isRefreshing,
+          onTap: onRefresh,
         ),
-        const SizedBox(width: 8),
-        _QuickFilterButton(
-          icon: Icons.pets_rounded,
-          label: 'Pet Friendly',
-          isActive: hasPetFriendly,
-          activeColor: SpontiColors.warning,
-          onTap: onPetFriendlyTap,
-        ),
-        const SizedBox(width: 8),
-        _QuickFilterButton(
-          icon: Icons.local_parking_rounded,
-          label: 'Parking',
-          isActive: hasParking,
-          activeColor: SpontiColors.secondary,
-          onTap: onParkingTap,
+        const SizedBox(width: 10),
+        _MapActionButton(
+          icon: Icons.person_pin_circle_rounded,
+          accentColor: SpontiColors.secondary,
+          borderColor: SpontiColors.secondary.withValues(alpha: 0.3),
+          isLoading: isLocating,
+          onTap: onLocateMe,
         ),
       ],
     );
   }
 }
 
-/// Individual quick filter toggle button
-class _QuickFilterButton extends StatelessWidget {
-  const _QuickFilterButton({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.activeColor,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final Color activeColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: isActive ? activeColor : Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.10),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-          border: isActive 
-              ? null 
-              : Border.all(color: SpontiColors.outline.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isActive ? Colors.white : SpontiColors.textSecondary,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: isActive ? Colors.white : SpontiColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 /// Chip showing an active quick filter with clear button
 class _QuickFilterChip extends StatelessWidget {

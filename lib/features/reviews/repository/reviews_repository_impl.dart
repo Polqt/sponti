@@ -12,8 +12,17 @@ class ReviewsRepositoryImpl extends BaseRepository implements ReviewsRepository 
   final ReviewsRemoteDataSource _remote;
 
   @override
-  Future<Either<Failure, List<Review>>> getReviewsForLocation(String locationId) =>
-      guard(() => _remote.getReviewsForLocation(locationId));
+  Future<Either<Failure, ReviewPage>> getReviewsForLocationPage(
+    String locationId, {
+    ReviewPageCursor? cursor,
+    int limit = 30,
+  }) => guard(
+    () => _remote.getReviewsForLocationPage(
+      locationId,
+      cursor: cursor,
+      limit: limit,
+    ),
+  );
 
   @override
   Future<Either<Failure, Review?>> getMyReviewForLocation(String locationId) =>

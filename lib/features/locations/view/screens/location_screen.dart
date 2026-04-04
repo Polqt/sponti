@@ -332,6 +332,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
           : ExploreRanking.trending,
       hasRankingFilter: filter.selectedRanking != null,
       priceFilter: filter.selectedPrice,
+      hasWifi: filter.hasWifi,
+      petFriendly: filter.isPetFriendly,
+      hasParking: filter.hasParking,
     );
 
     return Scaffold(
@@ -391,40 +394,51 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 ),
               ),
             ),
+          // Category row + action buttons stacked just above the shell bar
           if (!_isExplorePanelVisible && _detailLocation == null)
             Positioned(
               left: 16,
               right: 16,
-              bottom: floatingControlsBottom,
-              child: LocationMapFloatingControls(
-                selectedCategory: selectedCategory,
-                selectedRanking: selectedRanking,
-                selectedPrice: selectedPrice,
-                isLocating: currentLocation.isLoading,
-                isRefreshing: locationsAsync.isLoading,
-                hasWifiFilter: hasWifiFilter,
-                hasPetFriendlyFilter: hasPetFriendlyFilter,
-                hasParkingFilter: hasParkingFilter,
-                onCategoryChanged: _onCategoryChanged,
-                onLocateMe: _moveToCurrentLocation,
-                onRefresh: _refreshLocations,
-                onWifiFilterChanged: (enabled) {
-                  ref.read(locationFilterProvider.notifier).setWifi(enabled);
-                },
-                onPetFriendlyFilterChanged: (enabled) {
-                  ref
-                      .read(locationFilterProvider.notifier)
-                      .setPetFriendly(enabled);
-                },
-                onParkingFilterChanged: (enabled) {
-                  ref.read(locationFilterProvider.notifier).setParking(enabled);
-                },
-                onClearRanking: () {
-                  ref.read(locationFilterProvider.notifier).setRanking(null);
-                },
-                onClearPrice: () {
-                  ref.read(locationFilterProvider.notifier).setPrice(null);
-                },
+              bottom: bottomInset + kShellBottomBarClearance + 12,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Refresh + locate-me buttons: horizontal, right-aligned
+                  LocationMapActionButtons(
+                    isLocating: currentLocation.isLoading,
+                    isRefreshing: locationsAsync.isLoading,
+                    onLocateMe: _moveToCurrentLocation,
+                    onRefresh: _refreshLocations,
+                  ),
+                  const SizedBox(height: 10),
+                  LocationMapFloatingControls(
+                    selectedCategory: selectedCategory,
+                    selectedRanking: selectedRanking,
+                    selectedPrice: selectedPrice,
+                    hasWifiFilter: hasWifiFilter,
+                    hasPetFriendlyFilter: hasPetFriendlyFilter,
+                    hasParkingFilter: hasParkingFilter,
+                    onCategoryChanged: _onCategoryChanged,
+                    onWifiFilterChanged: (enabled) {
+                      ref.read(locationFilterProvider.notifier).setWifi(enabled);
+                    },
+                    onPetFriendlyFilterChanged: (enabled) {
+                      ref
+                          .read(locationFilterProvider.notifier)
+                          .setPetFriendly(enabled);
+                    },
+                    onParkingFilterChanged: (enabled) {
+                      ref.read(locationFilterProvider.notifier).setParking(enabled);
+                    },
+                    onClearRanking: () {
+                      ref.read(locationFilterProvider.notifier).setRanking(null);
+                    },
+                    onClearPrice: () {
+                      ref.read(locationFilterProvider.notifier).setPrice(null);
+                    },
+                  ),
+                ],
               ),
             ),
           if (_isExplorePanelVisible && _detailLocation == null)
@@ -451,6 +465,15 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               },
               onPriceChanged: (price) {
                 ref.read(locationFilterProvider.notifier).setPrice(price);
+              },
+              onWifiChanged: (enabled) {
+                ref.read(locationFilterProvider.notifier).setWifi(enabled);
+              },
+              onPetFriendlyChanged: (enabled) {
+                ref.read(locationFilterProvider.notifier).setPetFriendly(enabled);
+              },
+              onParkingChanged: (enabled) {
+                ref.read(locationFilterProvider.notifier).setParking(enabled);
               },
               onExpandChanged: _setPanelExpanded,
               onDismissed: _hidePanel,

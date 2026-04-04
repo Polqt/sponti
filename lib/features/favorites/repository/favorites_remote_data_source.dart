@@ -11,9 +11,10 @@ abstract interface class FavoritesRemoteDataSource {
 }
 
 class FavoritesRemoteDataSourceImpl implements FavoritesRemoteDataSource {
-  const FavoritesRemoteDataSourceImpl(this._client);
+  const FavoritesRemoteDataSourceImpl(this._client, this._locationRemote);
 
   final SupabaseClient _client;
+  final LocationRemoteDataSource _locationRemote;
 
   String get _userId {
     final user = _client.auth.currentUser;
@@ -37,7 +38,6 @@ class FavoritesRemoteDataSourceImpl implements FavoritesRemoteDataSource {
 
   @override
   Future<List<FavoriteModel>> getFavorites() => _executeQuery(() async {
-        final locationRemote = LocationRemoteDataSourceImpl(_client);
         final response = await _client
             .from(ApiConstants.favoritesTable)
             .select('location_id, user_id, created_at, locations(*)')
@@ -49,7 +49,7 @@ class FavoritesRemoteDataSourceImpl implements FavoritesRemoteDataSource {
               final json = Map<String, dynamic>.from(row as Map);
               final locationJson = json['locations'];
               if (locationJson is Map<String, dynamic>) {
-                json['locations'] = locationRemote.resolvePhotoUrls(locationJson);
+                json['locations'] = _locationRemote.resolvePhotoUrls(locationJson);
               }
               return FavoriteModel.fromJson(json);
             })

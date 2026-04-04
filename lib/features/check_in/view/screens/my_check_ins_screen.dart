@@ -7,6 +7,7 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/features/check_in/models/checkins.dart';
 import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
+import 'package:sponti/features/location_comparison/viewmodel/location_comparison_viewmodel.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
 import 'package:sponti/features/streaks/view/widgets/checkin_streak_card.dart';
@@ -93,6 +94,7 @@ class _MyCheckInItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locationAsync = ref.watch(locationDetailProvider(checkIn.locationId));
+    final pinnedIds = ref.watch(pinnedComparisonIdSetProvider);
     final formattedDate = DateFormat.yMMMd().format(checkIn.createdAt);
 
     return locationAsync.when(
@@ -122,6 +124,18 @@ class _MyCheckInItem extends ConsumerWidget {
             location: location,
             variant: LocationCardVariant.fullWidth,
             onTap: () => context.push(RouteName.locationDetailPath(location.id)),
+            isPinnedForComparison: pinnedIds.contains(location.id),
+            onComparisonToggle: () async {
+              final success = await ref
+                  .read(pinnedComparisonIdsProvider.notifier)
+                  .togglePin(location.id);
+              if (!context.mounted || success) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('You can compare up to 3 locations only.'),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 10),
           Padding(

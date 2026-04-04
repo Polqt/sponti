@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/features/location_comparison/viewmodel/location_comparison_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
 
@@ -20,6 +21,9 @@ class _FavoriteListItemState extends ConsumerState<FavoriteListItem> {
 
   @override
   Widget build(BuildContext context) {
+    final pinnedIds = ref.watch(pinnedComparisonIdSetProvider);
+    final isPinned = pinnedIds.contains(widget.location.id);
+
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) => setState(() => _isPressed = false),
@@ -51,6 +55,21 @@ class _FavoriteListItemState extends ConsumerState<FavoriteListItem> {
             location: widget.location,
             variant: LocationCardVariant.fullWidth,
             onTap: null,
+            isPinnedForComparison: isPinned,
+            onComparisonToggle: () async {
+              final success = await ref
+                  .read(pinnedComparisonIdsProvider.notifier)
+                  .togglePin(widget.location.id);
+              if (!context.mounted) return;
+
+              if (!success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('You can compare up to 3 locations only.'),
+                  ),
+                );
+              }
+            },
           ),
         ),
       ),

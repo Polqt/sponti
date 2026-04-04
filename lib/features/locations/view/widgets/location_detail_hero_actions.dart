@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
 import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
+import 'package:sponti/features/location_comparison/viewmodel/location_comparison_viewmodel.dart';
 
 class LocationDetailHeroActions extends StatelessWidget {
   const LocationDetailHeroActions({
@@ -21,6 +24,8 @@ class LocationDetailHeroActions extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        CompareHeroActionButton(locationId: locationId),
+        const SizedBox(width: 8),
         FavoriteHeroActionButton(locationId: locationId),
         const SizedBox(width: 8),
         CheckInHeroActionButton(
@@ -52,6 +57,48 @@ class FavoriteHeroActionButton extends ConsumerWidget {
       isActive: isSaved,
       activeColor: SpontiColors.error,
       onPressed: () => ref.read(favoriteIdsProvider.notifier).toggle(locationId),
+    );
+  }
+}
+
+class CompareHeroActionButton extends ConsumerWidget {
+  const CompareHeroActionButton({
+    super.key,
+    required this.locationId,
+  });
+
+  final String locationId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pinnedIds = ref.watch(pinnedComparisonIdSetProvider);
+    final isPinned = pinnedIds.contains(locationId);
+    final pinnedCount = ref.watch(pinnedComparisonIdsProvider).valueOrNull?.length ?? 0;
+
+    return _LocationHeroActionButton(
+      icon: isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+      semanticLabel: isPinned ? 'Unpin from comparison' : 'Pin for comparison',
+      isActive: isPinned,
+      activeColor: SpontiColors.info,
+      onPressed: () async {
+        final success =
+            await ref.read(pinnedComparisonIdsProvider.notifier).togglePin(locationId);
+        if (!context.mounted) return;
+        if (!success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You can compare up to 3 locations only.'),
+            ),
+          );
+          return;
+        }
+
+        final nextCount =
+            ref.read(pinnedComparisonIdsProvider).valueOrNull?.length ?? pinnedCount;
+        if (nextCount >= kLocationComparisonMinPins) {
+          context.push(RouteName.locationComparisonPath());
+        }
+      },
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/features/group_plans/viewmodel/group_plans_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/search/view/widgets/search_results_content.dart';
 import 'package:sponti/features/search/view/widgets/search_scaffold_background.dart';
@@ -13,7 +14,11 @@ import 'package:sponti/features/search/view/widgets/search_top_bar.dart';
 import 'package:sponti/features/search/viewmodel/search_viewmodel.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({super.key, this.voteForPlanId});
+
+  /// When set, tapping a result votes for that location in the given plan
+  /// and pops back instead of navigating to the location detail.
+  final String? voteForPlanId;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -107,6 +112,44 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           onClear: _clearQuery,
                         ),
                       ),
+                      if (widget.voteForPlanId != null)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: SpontiColors.info.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: SpontiColors.info.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.how_to_vote_rounded,
+                                  size: 16,
+                                  color: SpontiColors.info,
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Tap a location to cast your vote',
+                                    style: TextStyle(
+                                      color: SpontiColors.info,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ValueListenableBuilder<String>(
                         valueListenable: _draftQuery,
                         builder: (context, draftQuery, _) {
@@ -156,10 +199,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 resultsAsync: resultsAsync,
                                 results: results,
                                 onSuggestionTap: _applySuggestion,
-                                onLocationTap: (location) {
-                                  context.push(
-                                    RouteName.locationDetailPath(location.id),
-                                  );
+                                onLocationTap: (location) async {
+                                  final planId = widget.voteForPlanId;
+                                  if (planId != null) {
+                                    await ref
+                                        .read(groupPlanDetailProvider(planId).notifier)
+                                        .vote(location.id);
+                                    if (!context.mounted) return;
+                                    context.pop();
+                                  } else {
+                                    context.push(
+                                      RouteName.locationDetailPath(location.id),
+                                    );
+                                  }
                                 },
                               ),
                             );

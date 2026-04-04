@@ -124,10 +124,8 @@ class _ProfileBody extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.only(bottom: bottomPadding),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Spacer pushes content down, but allows scrolling when content is tall
-                const Spacer(),
                 FadeSlideIn(
                   child: ProfileHeader(
                     profile: profile,
@@ -179,6 +177,18 @@ class _ProfileBody extends StatelessWidget {
       iconColor: SpontiColors.primary,
       label: 'Saved Spots',
       onTap: () => context.go(RouteName.favorites),
+    ),
+    ProfileMenuItem(
+      icon: Icons.groups_2_rounded,
+      iconColor: SpontiColors.info,
+      label: "Let's Go Plans",
+      onTap: () => context.push(RouteName.groupPlans),
+    ),
+    ProfileMenuItem(
+      icon: Icons.compare_arrows_rounded,
+      iconColor: SpontiColors.accent,
+      label: 'Compare Locations',
+      onTap: () => context.push(RouteName.locationComparisonPath()),
     ),
     ProfileMenuItem(
       icon: Icons.add_location_alt_rounded,

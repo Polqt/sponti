@@ -7,17 +7,21 @@ import 'package:sponti/features/favorites/repository/favorites_remote_data_sourc
 import 'package:sponti/features/favorites/repository/favorites_repository.dart';
 import 'package:sponti/features/favorites/repository/favorites_repository_impl.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final favoritesRemoteDataSourceProvider = Provider<FavoritesRemoteDataSource>((
   ref,
 ) {
-  return FavoritesRemoteDataSourceImpl(Supabase.instance.client);
+  return FavoritesRemoteDataSourceImpl(
+    Supabase.instance.client,
+    ref.read(locationRemoteDataSourceProvider),
+  );
 });
 
 final favoritesRepositoryProvider = Provider<FavoritesRepository>((ref) {
-  return FavoritesRepositoryImpl(ref.watch(favoritesRemoteDataSourceProvider));
+  return FavoritesRepositoryImpl(ref.read(favoritesRemoteDataSourceProvider));
 });
 
 class FavoritesViewModel extends AsyncNotifier<List<String>> {
@@ -87,12 +91,14 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
     final current = [...await future];
     state = const AsyncData(<String>[]);
 
-    for (final locationId in current) {
-      final result = await _repository.removeFavorite(locationId);
-      if (result.isLeft()) {
-        state = AsyncData(current);
-        return;
-      }
+    final results = await Future.wait(
+      current.map(_repository.removeFavorite),
+      eagerError: false,
+    );
+    final hasFailure = results.any((result) => result.isLeft());
+    if (hasFailure) {
+      state = AsyncData(current);
+      return;
     }
 
     _invalidateDependentProviders();

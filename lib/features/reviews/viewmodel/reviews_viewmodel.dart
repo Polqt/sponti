@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sponti/config/feature_flags.dart';
 import 'package:sponti/config/supabase_options.dart';
 import 'package:sponti/features/reviews/model/review.dart';
 import 'package:sponti/features/reviews/model/review_model.dart';
@@ -12,18 +13,45 @@ final reviewsRemoteDataSourceProvider = Provider<ReviewsRemoteDataSource>((ref) 
 });
 
 final reviewsRepositoryProvider = Provider<ReviewsRepository>((ref) {
-  return ReviewsRepositoryImpl(ref.watch(reviewsRemoteDataSourceProvider));
+  return ReviewsRepositoryImpl(ref.read(reviewsRemoteDataSourceProvider));
 });
 
 final reviewsByLocationProvider =
     FutureProvider.family<List<Review>, String>((ref, locationId) async {
-      final result = await ref
-          .read(reviewsRepositoryProvider)
-          .getReviewsForLocation(locationId);
+      final repository = ref.read(reviewsRepositoryProvider);
+      final useCursor = ref.watch(featureFlagsProvider).useCursorPagination;
 
-      return result.fold((failure) {
-        throw StateError(failure.message);
-      }, (reviews) => reviews);
+      if (!useCursor) {
+        final firstPageResult = await repository.getReviewsForLocationPage(
+          locationId,
+          limit: 100,
+        );
+        return firstPageResult.fold((failure) {
+          throw StateError(failure.message);
+        }, (page) => page.items);
+      }
+
+      final items = <Review>[];
+      ReviewPageCursor? cursor;
+
+      while (true) {
+        final result = await repository.getReviewsForLocationPage(
+          locationId,
+          cursor: cursor,
+          limit: 30,
+        );
+        final page = result.fold(
+          (failure) => throw StateError(failure.message),
+          (p) => p,
+        );
+        items.addAll(page.items);
+        if (!page.hasMore || page.nextCursor == null) {
+          break;
+        }
+        cursor = page.nextCursor;
+      }
+
+      return List.unmodifiable(items);
     });
 
 final reviewsStreamProvider =
@@ -34,6 +62,7 @@ final reviewsStreamProvider =
           .from(SupabaseTables.reviews)
           .stream(primaryKey: const ['id'])
           .eq('location_id', locationId)
+          .limit(20)
           .map((rows) {
             final reviews = rows
                 .map(

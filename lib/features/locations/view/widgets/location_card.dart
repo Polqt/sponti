@@ -19,6 +19,8 @@ class LocationCard extends StatelessWidget {
     this.savedIcon = Icons.favorite_border_rounded,
     this.savedActiveIcon = Icons.favorite_rounded,
     this.showShadow = true,
+    this.isPinnedForComparison = false,
+    this.onComparisonToggle,
   });
 
   final Location location;
@@ -30,6 +32,8 @@ class LocationCard extends StatelessWidget {
   final IconData savedIcon;
   final IconData savedActiveIcon;
   final bool showShadow;
+  final bool isPinnedForComparison;
+  final VoidCallback? onComparisonToggle;
 
   bool get _isFullWidth => variant == LocationCardVariant.fullWidth;
 
@@ -65,6 +69,8 @@ class LocationCard extends StatelessWidget {
                 onSaveToggle: onSaveToggle,
                 savedIcon: savedIcon,
                 savedActiveIcon: savedActiveIcon,
+                isPinnedForComparison: isPinnedForComparison,
+                onComparisonToggle: onComparisonToggle,
               ),
               _CardBody(location: location),
             ],
@@ -82,6 +88,8 @@ class _CardImage extends StatelessWidget {
     required this.onSaveToggle,
     required this.savedIcon,
     required this.savedActiveIcon,
+    required this.isPinnedForComparison,
+    required this.onComparisonToggle,
   });
 
   final Location location;
@@ -89,6 +97,8 @@ class _CardImage extends StatelessWidget {
   final VoidCallback? onSaveToggle;
   final IconData savedIcon;
   final IconData savedActiveIcon;
+  final bool isPinnedForComparison;
+  final VoidCallback? onComparisonToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +176,9 @@ class _CardImage extends StatelessWidget {
           if (location.isHiddenGem)
             Positioned(
               top: 8,
-              right: onSaveToggle == null ? 8 : 48,
+              right: onSaveToggle != null && onComparisonToggle != null
+                  ? 88
+                  : (onSaveToggle != null || onComparisonToggle != null ? 48 : 8),
               child: Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
@@ -198,6 +210,31 @@ class _CardImage extends StatelessWidget {
                       size: 16,
                       color: isSaved
                           ? SpontiColors.primary
+                          : SpontiColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (onComparisonToggle != null)
+            Positioned(
+              top: 8,
+              right: onSaveToggle != null ? 48 : 8,
+              child: Material(
+                color: Colors.white.withValues(alpha: 0.92),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onComparisonToggle,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Icon(
+                      isPinnedForComparison
+                          ? Icons.push_pin_rounded
+                          : Icons.push_pin_outlined,
+                      size: 16,
+                      color: isPinnedForComparison
+                          ? SpontiColors.info
                           : SpontiColors.textSecondary,
                     ),
                   ),

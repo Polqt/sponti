@@ -43,3 +43,31 @@ class Review extends Equatable {
     createdAt,
   ];
 }
+
+class ReviewPageCursor extends Equatable {
+  const ReviewPageCursor({
+    required this.createdAt,
+    required this.id,
+  });
+
+  final DateTime createdAt;
+  final String id;
+
+  @override
+  List<Object?> get props => [createdAt, id];
+}
+
+class ReviewPage extends Equatable {
+  const ReviewPage({
+    required this.items,
+    required this.hasMore,
+    this.nextCursor,
+  });
+
+  final List<Review> items;
+  final bool hasMore;
+  final ReviewPageCursor? nextCursor;
+
+  @override
+  List<Object?> get props => [items, hasMore, nextCursor];
+}
