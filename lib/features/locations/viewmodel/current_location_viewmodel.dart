@@ -129,6 +129,9 @@ class CurrentLocationNotifier extends Notifier<CurrentLocationState> {
   Future<Position> _fetchCurrentPosition() {
     return Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.best),
+    ).timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => throw Exception('Location request timed out'),
     );
   }
 

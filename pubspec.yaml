@@ -48,6 +48,8 @@ dependencies:
   latlong2: ^0.9.1
   flutter_map: ^8.2.2
   google_maps_flutter: ^2.15.0
+  google_maps_flutter_android: ^2.14.10
+  google_maps_flutter_platform_interface: ^2.10.0
 
   # Image Handling
   image_picker: ^1.2.1
