@@ -184,14 +184,6 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
                       checkInCount: displayedCheckInCount,
                     ),
                   ),
-                  LocationDetailInset(
-                    top: 16,
-                    child: ReviewActionButton(
-                      locationId: location.id,
-                      locationName: sourceLocation.name,
-                    ),
-                  ),
-                  LocationDetailReviewsSection(locationId: location.id),
                   if (hasQuickInfo)
                     LocationDetailInset(
                       top: 20,
@@ -220,6 +212,17 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
                   ],
                   if (sourceLocation.tags.isNotEmpty)
                     LocationTagsSection(tags: sourceLocation.tags),
+                  LocationDetailInset(
+                    top: 16,
+                    child: ReviewActionButton(
+                      locationId: location.id,
+                      locationName: sourceLocation.name,
+                    ),
+                  ),
+                  LocationDetailReviewsSection(
+                    locationId: location.id,
+                    locationName: sourceLocation.name,
+                  ),
                 ],
               ),
             ),
