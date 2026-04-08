@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sponti/core/constants/api_constants.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/discovery/model/discovery_curator.dart';
 import 'package:sponti/features/locations/model/location.dart';
@@ -262,7 +262,7 @@ final categoryTopSpotsProvider = FutureProvider.autoDispose
       final remote = _discoveryLocationRemote;
 
       final response = await client.rpc(
-        ApiConstants.rpcGetTrendingLocations,
+        SupabaseRPC.getTrendingLocations,
         params: {
           'ranking_filter': 'popular',
           'category_filter': category.name,
@@ -278,10 +278,13 @@ final curatorLeaderboardsProvider =
       final client = Supabase.instance.client;
       final responses = await Future.wait<dynamic>([
         client.rpc(
-          ApiConstants.rpcGetTopCurators,
+          SupabaseRPC.getTopCurators,
           params: {'limit_count': _topCuratorsLimit},
         ),
-        client.from(ApiConstants.profilesTable).select(_curatorProfileColumns),
+        client
+            .from(SupabaseTables.profiles)
+            .select(_curatorProfileColumns)
+            .limit(_topCuratorsLimit * 4),
       ]);
 
       yield _buildCuratorLeaderboards(
@@ -290,8 +293,9 @@ final curatorLeaderboardsProvider =
       );
 
       yield* client
-          .from(ApiConstants.profilesTable)
+          .from(SupabaseTables.profiles)
           .stream(primaryKey: const ['id'])
+          .limit(_topCuratorsLimit * 4)
           .map(_parseCurators)
           .map(_buildCuratorLeaderboards);
     });

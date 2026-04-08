@@ -1,4 +1,4 @@
-import 'package:sponti/config/supabase_options.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/group_plans/models/group_plan.dart';
 import 'package:sponti/features/group_plans/models/group_plan_model.dart';

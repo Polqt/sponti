@@ -7,6 +7,7 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/core/widgets/fade_slide_in.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
+import 'package:sponti/features/friends/view/widgets/add_friend_button.dart';
 import 'package:sponti/features/profile/model/user_profile.dart';
 import 'package:sponti/features/profile/view/widgets/profile_header.dart';
 import 'package:sponti/features/profile/view/widgets/profile_menu_section.dart';
@@ -137,6 +138,10 @@ class _ProfileBody extends StatelessWidget {
                   delay: const Duration(milliseconds: 100),
                   child: ProfileStatsCard(profile: profile),
                 ),
+                if (!isOwnProfile) ...[
+                  const SizedBox(height: 16),
+                  AddFriendButton(userId: profile.id),
+                ],
                 if (isOwnProfile) ...[
                   const SizedBox(height: 32),
                   FadeSlideIn(
@@ -166,6 +171,12 @@ class _ProfileBody extends StatelessWidget {
   }
 
   List<ProfileMenuItem> _activityItems(BuildContext context) => [
+    ProfileMenuItem(
+      icon: Icons.people_rounded,
+      iconColor: SpontiColors.secondary,
+      label: 'Friends',
+      onTap: () => context.push(RouteName.friends),
+    ),
     ProfileMenuItem(
       icon: Icons.location_on_rounded,
       iconColor: SpontiColors.primary,

@@ -16,6 +16,7 @@ import 'package:sponti/features/locations/view/screens/location_detail.dart';
 import 'package:sponti/features/locations/view/screens/location_screen.dart';
 import 'package:sponti/features/onboarding/repository/onboarding_local_data_source.dart';
 import 'package:sponti/features/onboarding/view/screens/video_onboarding_screen.dart';
+import 'package:sponti/features/friends/view/screens/friends_screen.dart';
 import 'package:sponti/features/profile/view/screens/edit_profile_screen.dart';
 import 'package:sponti/features/profile/view/screens/profile_screen.dart';
 import 'package:sponti/features/reviews/view/screens/reviews_screen.dart';
@@ -138,6 +139,11 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       path: RouteName.createGroupPlan,
       builder: (context, state) => const CreateGroupPlanScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: RouteName.friends,
+      builder: (context, state) => const FriendsScreen(),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

@@ -34,6 +34,7 @@ abstract final class RouteName {
   static const String groupPlans = '/group-plans';
   static const String createGroupPlan = '/group-plans/create';
   static const String groupPlanDetail = '/group-plans/:id';
+  static const String friends = '/friends';
 
   static String reviewsPath({
     required String locationId,

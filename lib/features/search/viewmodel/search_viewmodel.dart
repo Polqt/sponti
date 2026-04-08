@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sponti/config/feature_flags.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/core/errors/failures.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/model/location_query.dart';

@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:sponti/config/supabase_options.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/profile/model/user_profile_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

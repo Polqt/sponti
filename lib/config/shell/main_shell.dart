@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/core/widgets/app_badge.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
+import 'package:sponti/features/friends/viewmodel/friends_viewmodel.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 import 'package:sponti/features/surprise_me/view/screens/surprise_me_modal.dart';
 
@@ -74,7 +76,7 @@ class MainShell extends ConsumerWidget {
   }
 }
 
-class _SpontiBottomBar extends StatelessWidget {
+class _SpontiBottomBar extends ConsumerWidget {
   const _SpontiBottomBar({
     required this.activeRoute,
     required this.avatarUrl,
@@ -99,7 +101,8 @@ class _SpontiBottomBar extends StatelessWidget {
   bool get _isProfileActive => activeRoute.startsWith(RouteName.profile);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pendingCount = ref.watch(pendingRequestCountProvider);
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final dockBottomInset = bottomInset > 0 ? bottomInset : 6.0;
     final dockHeight = kShellBottomBarHeight + dockBottomInset;
@@ -160,10 +163,13 @@ class _SpontiBottomBar extends StatelessWidget {
                   isActive: _isSavedActive,
                   onTap: onTapSaved,
                 ),
-                _ProfileTab(
-                  avatarUrl: avatarUrl,
-                  isActive: _isProfileActive,
-                  onTap: onTapProfile,
+                AppBadge(
+                  count: pendingCount,
+                  child: _ProfileTab(
+                    avatarUrl: avatarUrl,
+                    isActive: _isProfileActive,
+                    onTap: onTapProfile,
+                  ),
                 ),
               ],
             ),
