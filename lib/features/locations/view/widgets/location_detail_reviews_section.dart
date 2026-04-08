@@ -7,9 +7,14 @@ import 'package:sponti/features/reviews/view/widgets/review_card.dart';
 import 'package:sponti/features/reviews/viewmodel/reviews_viewmodel.dart';
 
 class LocationDetailReviewsSection extends ConsumerWidget {
-  const LocationDetailReviewsSection({super.key, required this.locationId});
+  const LocationDetailReviewsSection({
+    super.key,
+    required this.locationId,
+    required this.locationName,
+  });
 
   final String locationId;
+  final String locationName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,6 +51,7 @@ class LocationDetailReviewsSection extends ConsumerWidget {
                   ReviewCard(
                     key: ValueKey<String>(reviews[index].id),
                     review: reviews[index],
+                    locationName: locationName,
                   ),
                   if (index != reviews.length - 1) const SizedBox(height: 18),
                 ],

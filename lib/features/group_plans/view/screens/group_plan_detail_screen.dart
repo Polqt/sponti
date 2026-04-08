@@ -6,6 +6,7 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/group_plans/models/group_plan.dart';
 import 'package:sponti/features/group_plans/view/widgets/vote_card.dart';
 import 'package:sponti/features/group_plans/viewmodel/group_plans_viewmodel.dart';
+import 'package:sponti/features/friends/view/widgets/invite_friends_modal.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
 class GroupPlanDetailScreen extends ConsumerWidget {
@@ -165,6 +166,8 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                     planId: planId,
                     winner: winner,
                     isLoading: state.isLoading,
+                    existingParticipantIds:
+                        state.participants.toIdSet(),
                     ref: ref,
                     context: context,
                   ),
@@ -345,6 +348,7 @@ class _BottomActions extends StatelessWidget {
     required this.planId,
     required this.winner,
     required this.isLoading,
+    required this.existingParticipantIds,
     required this.ref,
     required this.context,
   });
@@ -352,6 +356,7 @@ class _BottomActions extends StatelessWidget {
   final String planId;
   final String? winner;
   final bool isLoading;
+  final Set<String> existingParticipantIds;
   final WidgetRef ref;
   final BuildContext context;
 
@@ -364,6 +369,30 @@ class _BottomActions extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => InviteFriendsModal.show(
+                  context,
+                  planId: planId,
+                  existingParticipantIds: existingParticipantIds,
+                ),
+                icon: const Icon(Icons.person_add_rounded, size: 16),
+                label: const Text('Invite Friends'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: SpontiColors.secondary,
+                  side: const BorderSide(color: SpontiColors.secondary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             if (winner != null)
               SizedBox(
                 width: double.infinity,

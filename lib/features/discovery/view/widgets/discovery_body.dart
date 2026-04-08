@@ -5,7 +5,7 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_category_accordions_section.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_column_switcher.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_for_you_grid.dart';
-import 'package:sponti/features/discovery/view/widgets/discovery_friends_placeholder.dart';
+import 'package:sponti/features/friends/view/widgets/friend_activity_feed.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_top_curators_section.dart';
 import 'package:sponti/features/discovery/viewmodel/discovery_viewmodel.dart';
 
@@ -52,7 +52,7 @@ class DiscoveryBody extends ConsumerWidget {
             switchOutCurve: Curves.easeInCubic,
             child: state.activeColumn == DiscoveryColumn.forYou
                 ? const DiscoveryForYouGrid(cards: discoveryTopPicks)
-                : const DiscoveryFriendsPlaceholder(),
+                : const FriendActivityFeed(),
           ),
 
           if (state.activeColumn == DiscoveryColumn.forYou) ...[

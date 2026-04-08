@@ -20,10 +20,7 @@ import 'package:sponti/features/reviews/view/widgets/review_action_button.dart';
 import 'package:sponti/features/reviews/viewmodel/reviews_viewmodel.dart';
 
 class LocationDetailPage extends ConsumerStatefulWidget {
-  const LocationDetailPage({
-    super.key,
-    required this.locationId,
-  });
+  const LocationDetailPage({super.key, required this.locationId});
 
   final String locationId;
 
@@ -113,17 +110,18 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
     final liveLocation = ref
         .watch(locationStreamProvider(location.id))
         .valueOrNull;
-    final liveReviews = ref.watch(reviewsStreamProvider(location.id)).valueOrNull;
+    final liveReviews = ref
+        .watch(reviewsStreamProvider(location.id))
+        .valueOrNull;
     final sourceLocation = liveLocation ?? location;
-    final displayedReviewCount = liveReviews?.length ?? sourceLocation.reviewCount;
+    final displayedReviewCount =
+        liveReviews?.length ?? sourceLocation.reviewCount;
     final displayedRating = switch (liveReviews) {
       null => sourceLocation.rating,
       [] => 0.0,
-      final reviews => reviews.fold<double>(
-            0,
-            (sum, review) => sum + review.rating,
-          ) /
-          reviews.length,
+      final reviews =>
+        reviews.fold<double>(0, (sum, review) => sum + review.rating) /
+            reviews.length,
     };
     final displayedCheckInCount =
         _optimisticCheckInCount ?? sourceLocation.checkInCount;
@@ -141,7 +139,9 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
       });
     }
 
-    final extraPhotoUrls = sourceLocation.photoUrls.skip(1).toList(growable: false);
+    final extraPhotoUrls = sourceLocation.photoUrls
+        .skip(1)
+        .toList(growable: false);
     final hasQuickInfo =
         sourceLocation.hasWifi ||
         sourceLocation.isPetFriendly ||
@@ -189,46 +189,6 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
                       checkInCount: displayedCheckInCount,
                     ),
                   ),
-                  if (isTrending)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF6B35).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFFFF6B35).withValues(alpha: 0.35),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('🔥', style: TextStyle(fontSize: 13)),
-                            SizedBox(width: 6),
-                            Text(
-                              'Trending this week',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFFFF6B35),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  LocationDetailInset(
-                    top: 16,
-                    child: ReviewActionButton(
-                      locationId: location.id,
-                      locationName: sourceLocation.name,
-                    ),
-                  ),
-                  LocationDetailReviewsSection(locationId: location.id),
                   if (hasQuickInfo)
                     LocationDetailInset(
                       top: 20,
@@ -241,7 +201,9 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
                     ),
                   const LocationDetailDivider(top: 24),
                   if (sourceLocation.description.isNotEmpty) ...[
-                    LocationAboutSection(description: sourceLocation.description),
+                    LocationAboutSection(
+                      description: sourceLocation.description,
+                    ),
                     const LocationDetailDivider(top: 20),
                   ],
                   if (sourceLocation.operatingHours case final hours?) ...[
@@ -257,6 +219,17 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
                   ],
                   if (sourceLocation.tags.isNotEmpty)
                     LocationTagsSection(tags: sourceLocation.tags),
+                  LocationDetailInset(
+                    top: 16,
+                    child: ReviewActionButton(
+                      locationId: location.id,
+                      locationName: sourceLocation.name,
+                    ),
+                  ),
+                  LocationDetailReviewsSection(
+                    locationId: location.id,
+                    locationName: sourceLocation.name,
+                  ),
                 ],
               ),
             ),
@@ -280,9 +253,7 @@ class _LocationDetailErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Expanded(
-          child: AppErrorState(message: message),
-        ),
+        Expanded(child: AppErrorState(message: message)),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
           child: SizedBox(

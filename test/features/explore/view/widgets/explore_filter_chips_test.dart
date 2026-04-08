@@ -14,6 +14,11 @@ void main() {
     var nowOpenTapped = false;
     var amenitiesTapped = false;
 
+    // Use a wide surface so all chips fit without scrolling.
+    tester.view.physicalSize = const Size(1600, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(
       MaterialApp(
         theme: SpontiTheme.light,
