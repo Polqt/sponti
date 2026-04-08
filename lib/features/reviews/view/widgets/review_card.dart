@@ -131,7 +131,7 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                _ReviewPhotoStack(
+                _ReviewPhotoStrip(
                   photoUrls: review.photos,
                 ),
                 const SizedBox(height: 12),
@@ -317,51 +317,85 @@ class _AvatarFallback extends StatelessWidget {
   }
 }
 
-class _ReviewPhotoStack extends StatelessWidget {
-  const _ReviewPhotoStack({
-    required this.photoUrls,
-  });
+class _ReviewPhotoStrip extends StatelessWidget {
+  const _ReviewPhotoStrip({required this.photoUrls});
 
   final List<String> photoUrls;
 
+  static const double _height = 180;
+  static const double _width = 220;
+  static const double _radius = 14;
+
   @override
   Widget build(BuildContext context) {
-    final visiblePhotos = photoUrls.take(3).toList(growable: false);
-    const double cardWidth = 172;
-    const double cardHeight = 196;
-    const double overlap = 28;
+    if (photoUrls.length == 1) {
+      return _PhotoTile(
+        url: photoUrls.first,
+        allUrls: photoUrls,
+        index: 0,
+        width: double.infinity,
+        height: _height,
+        radius: _radius,
+      );
+    }
 
     return SizedBox(
-      height: cardHeight,
-      width: cardWidth + ((visiblePhotos.length - 1) * overlap),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          for (int index = visiblePhotos.length - 1; index >= 0; index--)
-            Positioned(
-              left: index * overlap,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => _openReviewPhotoGallery(
-                    context,
-                    photoUrls,
-                    index,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: CachedNetworkImage(
-                      imageUrl: visiblePhotos[index],
-                      width: cardWidth,
-                      height: cardHeight,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ),
+      height: _height,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: photoUrls.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, i) => _PhotoTile(
+          url: photoUrls[i],
+          allUrls: photoUrls,
+          index: i,
+          width: _width,
+          height: _height,
+          radius: _radius,
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoTile extends StatelessWidget {
+  const _PhotoTile({
+    required this.url,
+    required this.allUrls,
+    required this.index,
+    required this.width,
+    required this.height,
+    required this.radius,
+  });
+
+  final String url;
+  final List<String> allUrls;
+  final int index;
+  final double width;
+  final double height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: Material(
+        color: SpontiColors.surfaceVariant,
+        child: InkWell(
+          onTap: () => _openReviewPhotoGallery(context, allUrls, index),
+          child: CachedNetworkImage(
+            imageUrl: url,
+            width: width,
+            height: height,
+            fit: BoxFit.cover,
+            placeholder: (_, _) => const SizedBox.shrink(),
+            errorWidget: (_, _, _) => const Icon(
+              Icons.broken_image_outlined,
+              color: SpontiColors.textMuted,
             ),
-        ],
+          ),
+        ),
       ),
     );
   }

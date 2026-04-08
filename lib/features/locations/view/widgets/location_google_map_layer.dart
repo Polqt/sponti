@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:sponti/core/constants/map_constants.dart';
+import 'package:sponti/core/constants/map_style.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/utils/location_google_marker_icon_factory.dart';
 import 'package:sponti/features/locations/utils/location_ranking.dart';
@@ -329,6 +330,7 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
   Widget build(BuildContext context) {
     return gmaps.GoogleMap(
       initialCameraPosition: widget.initialCameraPosition,
+      style: kMapStyle,
       mapType: gmaps.MapType.normal,
       buildingsEnabled: true,
       compassEnabled: false,

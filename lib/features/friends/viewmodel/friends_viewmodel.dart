@@ -213,3 +213,12 @@ final friendActivityProvider =
     AsyncNotifierProvider<FriendActivityNotifier, List<FriendActivity>>(
   FriendActivityNotifier.new,
 );
+
+/// Suggested users to add as friends (people you may know).
+/// Reuses searchUsers with empty query — the RPC excludes existing friends.
+final suggestedUsersProvider =
+    FutureProvider.autoDispose<List<UserProfileModel>>((ref) async {
+  final result =
+      await ref.read(friendsRepositoryProvider).searchUsers('');
+  return result.fold((_) => const [], (users) => users);
+});

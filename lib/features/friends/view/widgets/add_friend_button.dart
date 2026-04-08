@@ -77,7 +77,6 @@ class _FriendButton extends ConsumerWidget {
           onPressed: isLoading
               ? null
               : () async {
-                  // Need request ID — fetch via status lookup then cancel.
                   final repo = ref.read(friendsRepositoryProvider);
                   final result = await repo.getRequestBetween(userId);
                   final requestId = result.fold((_) => null, (r) => r?.id);

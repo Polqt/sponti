@@ -55,7 +55,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           indicatorColor: SpontiColors.primary,
           labelColor: SpontiColors.primary,
           unselectedLabelColor: SpontiColors.textMuted,
-          labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          labelStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
           tabs: [
             const Tab(text: 'My Friends'),
             Tab(
@@ -100,10 +103,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Friends tab
-// ---------------------------------------------------------------------------
 
 class _FriendsTab extends ConsumerStatefulWidget {
   const _FriendsTab({required this.searchController});
@@ -183,7 +182,10 @@ class _SearchResults extends ConsumerWidget {
     return searchState.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
-        child: Text('$e', style: const TextStyle(color: SpontiColors.textMuted)),
+        child: Text(
+          '$e',
+          style: const TextStyle(color: SpontiColors.textMuted),
+        ),
       ),
       data: (users) {
         if (users.isEmpty) {
@@ -226,8 +228,11 @@ class _FriendsList extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.people_outline_rounded,
-                      size: 48, color: SpontiColors.outline),
+                  Icon(
+                    Icons.people_outline_rounded,
+                    size: 48,
+                    color: SpontiColors.outline,
+                  ),
                   SizedBox(height: 12),
                   Text(
                     'No friends yet',
@@ -241,7 +246,9 @@ class _FriendsList extends ConsumerWidget {
                   Text(
                     'Search for users above to add friends.',
                     style: TextStyle(
-                        fontSize: 13, color: SpontiColors.textMuted),
+                      fontSize: 13,
+                      color: SpontiColors.textMuted,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -271,9 +278,7 @@ class _FriendProfileTile extends ConsumerWidget {
     final profileAsync = ref.watch(userProfileProvider(friendId));
     return profileAsync.when(
       loading: () => const ListTile(
-        leading: CircleAvatar(
-          backgroundColor: SpontiColors.surfaceVariant,
-        ),
+        leading: CircleAvatar(backgroundColor: SpontiColors.surfaceVariant),
         title: SizedBox(
           height: 12,
           width: 80,
@@ -285,17 +290,11 @@ class _FriendProfileTile extends ConsumerWidget {
       error: (_, _) => const SizedBox.shrink(),
       data: (profile) {
         if (profile == null) return const SizedBox.shrink();
-        return FriendCard(
-          profile: UserProfileModel.fromEntity(profile),
-        );
+        return FriendCard(profile: UserProfileModel.fromEntity(profile));
       },
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Requests tab
-// ---------------------------------------------------------------------------
 
 class _RequestsTab extends ConsumerWidget {
   const _RequestsTab();
@@ -323,8 +322,11 @@ class _RequestsTab extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.mark_email_read_rounded,
-                      size: 48, color: SpontiColors.outline),
+                  Icon(
+                    Icons.mark_email_read_rounded,
+                    size: 48,
+                    color: SpontiColors.outline,
+                  ),
                   SizedBox(height: 12),
                   Text(
                     'No pending requests',
