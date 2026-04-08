@@ -13,14 +13,12 @@ class LocationScreenMapControls extends ConsumerWidget {
     required this.locationsLoading,
     required this.onCategoryChanged,
     required this.onLocateMe,
-    required this.onRefresh,
   });
 
   final double bottomInset;
   final bool locationsLoading;
   final ValueChanged<LocationCategory?> onCategoryChanged;
   final VoidCallback onLocateMe;
-  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,9 +36,7 @@ class LocationScreenMapControls extends ConsumerWidget {
         children: [
           LocationMapActionButtons(
             isLocating: currentLocation.isLoading,
-            isRefreshing: locationsLoading,
             onLocateMe: onLocateMe,
-            onRefresh: onRefresh,
           ),
           const SizedBox(height: 10),
           LocationMapFloatingControls(

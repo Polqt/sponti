@@ -124,37 +124,20 @@ class LocationMapActionButtons extends StatelessWidget {
   const LocationMapActionButtons({
     super.key,
     required this.isLocating,
-    required this.isRefreshing,
     required this.onLocateMe,
-    required this.onRefresh,
   });
 
   final bool isLocating;
-  final bool isRefreshing;
   final VoidCallback onLocateMe;
-  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _MapActionButton(
-          icon: Icons.refresh_rounded,
-          accentColor: SpontiColors.primary,
-          borderColor: SpontiColors.primary.withValues(alpha: 0.3),
-          isLoading: isRefreshing,
-          onTap: onRefresh,
-        ),
-        const SizedBox(width: 10),
-        _MapActionButton(
-          icon: Icons.person_pin_circle_rounded,
-          accentColor: SpontiColors.secondary,
-          borderColor: SpontiColors.secondary.withValues(alpha: 0.3),
-          isLoading: isLocating,
-          onTap: onLocateMe,
-        ),
-      ],
+    return _MapActionButton(
+      icon: Icons.person_pin_circle_rounded,
+      accentColor: SpontiColors.secondary,
+      borderColor: SpontiColors.secondary.withValues(alpha: 0.3),
+      isLoading: isLocating,
+      onTap: onLocateMe,
     );
   }
 }

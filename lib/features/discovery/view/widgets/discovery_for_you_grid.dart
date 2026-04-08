@@ -17,6 +17,7 @@ class DiscoveryForYouGrid extends ConsumerWidget {
       key: const ValueKey('for-you-grid'),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       itemCount: cards.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
@@ -180,7 +181,7 @@ class _DiscoveryTopPickCardState extends State<DiscoveryTopPickCard>
                             letterSpacing: -0.2,
                           ),
                         ),
-                        const SizedBox(height: 1),
+                        const SizedBox(height:1),
                         Text(
                           card.subtitle,
                           style: TextStyle(

@@ -5,9 +5,9 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_category_accordions_section.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_column_switcher.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_for_you_grid.dart';
-import 'package:sponti/features/friends/view/widgets/friend_activity_feed.dart';
 import 'package:sponti/features/discovery/view/widgets/discovery_top_curators_section.dart';
 import 'package:sponti/features/discovery/viewmodel/discovery_viewmodel.dart';
+import 'package:sponti/features/friends/view/widgets/friend_activity_feed.dart';
 
 class DiscoveryBody extends ConsumerWidget {
   const DiscoveryBody({super.key});
@@ -17,7 +17,6 @@ class DiscoveryBody extends ConsumerWidget {
     final state = ref.watch(discoveryViewModelProvider);
     final notifier = ref.read(discoveryViewModelProvider.notifier);
 
-    // Match the bottom bar's dynamic height calculation
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final dockBottomInset = bottomInset > 0 ? bottomInset : 6.0;
     final bottomPadding = kShellBottomBarHeight + dockBottomInset;
@@ -27,7 +26,6 @@ class DiscoveryBody extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Segmented control
           Center(
             child: DiscoveryColumnSwitcher(
               activeColumn: state.activeColumn,
@@ -35,49 +33,49 @@ class DiscoveryBody extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-
-          // Top Picks section
           _SectionHeader(
             title: state.sectionTitle,
-            subtitle: state.activeColumn == DiscoveryColumn.forYou
-                ? 'Curated spots just for you'
-                : 'What your friends are exploring',
+            subtitle: switch (state.activeColumn) {
+              DiscoveryColumn.forYou => 'Curated spots just for you',
+              DiscoveryColumn.friends => 'What your friends are exploring',
+              DiscoveryColumn.leaderboards => 'Top community members',
+            },
           ),
           const SizedBox(height: 12),
-
-          // Content
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeInCubic,
-            child: state.activeColumn == DiscoveryColumn.forYou
-                ? const DiscoveryForYouGrid(cards: discoveryTopPicks)
-                : const FriendActivityFeed(),
+            child: switch (state.activeColumn) {
+              DiscoveryColumn.forYou => const _ForYouContent(),
+              DiscoveryColumn.friends => const FriendActivityFeed(),
+              DiscoveryColumn.leaderboards => const DiscoveryTopCuratorsSection(),
+            },
           ),
-
-          if (state.activeColumn == DiscoveryColumn.forYou) ...[
-            const SizedBox(height: 20),
-            const _SectionHeader(
-              title: 'Browse',
-              subtitle: 'Explore by category',
-            ),
-            const SizedBox(height: 12),
-            const DiscoveryCategoryAccordionsSection(),
-            const SizedBox(height: 20),
-            const _SectionHeader(
-              title: 'Leaderboards',
-              subtitle: 'Top community members',
-            ),
-            const SizedBox(height: 12),
-            const DiscoveryTopCuratorsSection(),
-          ],
         ],
       ),
     );
   }
 }
 
-/// iOS-style section header
+class _ForYouContent extends StatelessWidget {
+  const _ForYouContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        DiscoveryForYouGrid(cards: discoveryTopPicks),
+        SizedBox(height: 20),
+        _SectionHeader(title: 'Browse', subtitle: 'Explore by category'),
+        SizedBox(height: 12),
+        DiscoveryCategoryAccordionsSection(),
+      ],
+    );
+  }
+}
+
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title, required this.subtitle});
 

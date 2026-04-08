@@ -110,39 +110,50 @@ class _ProfileBody extends StatelessWidget {
     final bottomPadding = kShellBottomBarHeight + dockBottomInset;
 
     return CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
+      physics: const ClampingScrollPhysics(),
       slivers: [
         if (!isOwnProfile)
           SliverAppBar(
             backgroundColor: SpontiColors.surface,
             elevation: 0,
-            pinned: false,
-            title: const Text('Profile'),
+            pinned: true,
+            title: Text(
+              profile.fullName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-        // Use SliverFillRemaining to push content to bottom
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Padding(
-            padding: EdgeInsets.only(bottom: bottomPadding),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                FadeSlideIn(
-                  child: ProfileHeader(
-                    profile: profile,
-                    onAvatarTap: onAvatarTap,
+        if (isOwnProfile)
+          // Transparent pinned app bar — zero height, just occupies the status bar
+          // so content can never scroll behind it.
+          SliverAppBar(
+            backgroundColor: SpontiColors.surface,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            pinned: true,
+            toolbarHeight: 0,
+            automaticallyImplyLeading: false,
+          ),
+        if (isOwnProfile)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(
+                top: 16,
+                bottom: bottomPadding,
+              ),
+              child: Column(
+                children: [
+                  FadeSlideIn(
+                    child: ProfileHeader(
+                      profile: profile,
+                      onAvatarTap: onAvatarTap,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                FadeSlideIn(
-                  delay: const Duration(milliseconds: 100),
-                  child: ProfileStatsCard(profile: profile),
-                ),
-                if (!isOwnProfile) ...[
-                  const SizedBox(height: 16),
-                  AddFriendButton(userId: profile.id),
-                ],
-                if (isOwnProfile) ...[
+                  const SizedBox(height: 20),
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 100),
+                    child: ProfileStatsCard(profile: profile),
+                  ),
                   const SizedBox(height: 32),
                   FadeSlideIn(
                     delay: const Duration(milliseconds: 200),
@@ -162,10 +173,40 @@ class _ProfileBody extends StatelessWidget {
                     ),
                   ),
                 ],
-              ],
+              ),
+            ),
+          )
+        else
+          // Other profile: top-aligned, scrollable
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(0, 24, 0, bottomPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  FadeSlideIn(
+                    child: ProfileHeader(
+                      profile: profile,
+                      onAvatarTap: null,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 100),
+                    child: ProfileStatsCard(profile: profile),
+                  ),
+                  const SizedBox(height: 20),
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 150),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: AddFriendButton(userId: profile.id),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -182,12 +223,6 @@ class _ProfileBody extends StatelessWidget {
       iconColor: SpontiColors.primary,
       label: 'My Check-ins',
       onTap: () => context.push(RouteName.myCheckIns),
-    ),
-    ProfileMenuItem(
-      icon: Icons.bookmark_rounded,
-      iconColor: SpontiColors.primary,
-      label: 'Saved Spots',
-      onTap: () => context.go(RouteName.favorites),
     ),
     ProfileMenuItem(
       icon: Icons.groups_2_rounded,

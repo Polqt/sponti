@@ -358,7 +358,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               locationsLoading: locationsAsync.isLoading,
               onCategoryChanged: _onCategoryChanged,
               onLocateMe: _moveToCurrentLocation,
-              onRefresh: _refreshLocations,
             ),
           if (_isExplorePanelVisible && _detailLocation == null)
             LocationScreenExplorePanel(
