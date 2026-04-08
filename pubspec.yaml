@@ -123,6 +123,7 @@ flutter:
     - assets/animations/
     - assets/videos/
     - .env
+    - .env.production
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

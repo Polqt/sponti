@@ -13,15 +13,23 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables from the .env file; use .env.local when available
-  // flutter_dotenv throws EmptyEnvFileError if the file is missing/empty,
-  // so we guard by checking for existence first.
-  // Load the local env file if present, otherwise fallback to default.
-  // flutter_dotenv doesn't expose a file-existence check, so we try/catch.
+  // Load environment variables.
+  // Priority: .env.local (developer override) → .env.production (release build)
+  // → .env (default / debug). Pass --dart-define=FLAVOR=production to select
+  // the production env at build time (e.g. flutter build apk --dart-define=FLAVOR=production).
+  const flavor = String.fromEnvironment('FLAVOR');
   try {
     await dotenv.load(fileName: '.env.local');
   } catch (_) {
-    await dotenv.load();
+    try {
+      if (flavor == 'production') {
+        await dotenv.load(fileName: '.env.production');
+      } else {
+        await dotenv.load();
+      }
+    } catch (_) {
+      await dotenv.load();
+    }
   }
 
   // Lock the orientation to portrait mode
