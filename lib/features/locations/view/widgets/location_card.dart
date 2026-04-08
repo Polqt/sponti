@@ -21,6 +21,7 @@ class LocationCard extends StatelessWidget {
     this.showShadow = true,
     this.isPinnedForComparison = false,
     this.onComparisonToggle,
+    this.isTrending = false,
   });
 
   final Location location;
@@ -34,6 +35,7 @@ class LocationCard extends StatelessWidget {
   final bool showShadow;
   final bool isPinnedForComparison;
   final VoidCallback? onComparisonToggle;
+  final bool isTrending;
 
   bool get _isFullWidth => variant == LocationCardVariant.fullWidth;
 
@@ -71,6 +73,7 @@ class LocationCard extends StatelessWidget {
                 savedActiveIcon: savedActiveIcon,
                 isPinnedForComparison: isPinnedForComparison,
                 onComparisonToggle: onComparisonToggle,
+                isTrending: isTrending,
               ),
               _CardBody(location: location),
             ],
@@ -90,6 +93,7 @@ class _CardImage extends StatelessWidget {
     required this.savedActiveIcon,
     required this.isPinnedForComparison,
     required this.onComparisonToggle,
+    required this.isTrending,
   });
 
   final Location location;
@@ -99,6 +103,7 @@ class _CardImage extends StatelessWidget {
   final IconData savedActiveIcon;
   final bool isPinnedForComparison;
   final VoidCallback? onComparisonToggle;
+  final bool isTrending;
 
   @override
   Widget build(BuildContext context) {
@@ -171,6 +176,35 @@ class _CardImage extends StatelessWidget {
               ),
             ),
           ),
+
+          // Trending badge — below category pill, top left
+          if (isTrending)
+            Positioned(
+              top: 34,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6B35),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('🔥', style: TextStyle(fontSize: 9)),
+                    SizedBox(width: 3),
+                    Text(
+                      'Trending',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
           // Hidden gem sparkle — top right
           if (location.isHiddenGem)

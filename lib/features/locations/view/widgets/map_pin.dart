@@ -16,6 +16,7 @@ class MapPin extends ConsumerWidget {
     this.ranking,
     this.activeRankingFilter,
     this.activePriceFilter,
+    this.isTrending = false,
   });
 
   final LocationCategory category;
@@ -25,6 +26,7 @@ class MapPin extends ConsumerWidget {
   final LocationRanking? ranking;
   final LocationRanking? activeRankingFilter;
   final PriceRange? activePriceFilter;
+  final bool isTrending;
   static const double canvasWidth = 220;
   static const double canvasHeight = 152;
   static const double _basePinSize = 24;
@@ -109,6 +111,29 @@ class MapPin extends ConsumerWidget {
                               border: Border.all(
                                 color: Colors.white,
                                 width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (isTrending)
+                        Positioned(
+                          top: -2,
+                          left: -2,
+                          child: Container(
+                            width: 11,
+                            height: 11,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF6B35),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                '🔥',
+                                style: TextStyle(fontSize: 5, height: 1),
                               ),
                             ),
                           ),

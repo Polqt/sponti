@@ -16,16 +16,22 @@ List<Marker> buildLocationMarkers({
   LocationRankingSnapshot? rankingSnapshot,
   LocationRanking? activeRankingFilter,
   PriceRange? activePriceFilter,
+  Set<String> trendingIds = const <String>{},
 }) {
   final effectiveRankingSnapshot = rankingSnapshot ?? locations.createRankingSnapshot();
   final markerData = locations.map((location) {
     final isSelected = location.id == selectedId;
-    final zIndex =
-        isSelected ? 1000.0 : 100.0 + (location.rating * 10).clamp(0.0, 100.0);
+    final isTrending = trendingIds.contains(location.id);
+    // Trending pins get a small z-index bump so they surface above idle ones.
+    final zIndex = isSelected
+        ? 1000.0
+        : (isTrending ? 500.0 : 100.0) +
+            (location.rating * 10).clamp(0.0, 100.0);
 
     return (
       location: location,
       isSelected: isSelected,
+      isTrending: isTrending,
       zIndex: zIndex,
       point: LatLng(
         location.coordinates.latitude,
@@ -52,6 +58,7 @@ List<Marker> buildLocationMarkers({
           ranking: data.ranking,
           activeRankingFilter: activeRankingFilter,
           activePriceFilter: activePriceFilter,
+          isTrending: data.isTrending,
         ),
       ),
     );

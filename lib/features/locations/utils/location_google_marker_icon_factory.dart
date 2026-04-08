@@ -19,6 +19,7 @@ class LocationGoogleMarkerIconFactory {
     required LocationCategory category,
     required PriceRange priceRange,
     required bool isSelected,
+    required bool isTrending,
     required LocationRanking? ranking,
     required LocationRanking? activeRankingFilter,
     required PriceRange? activePriceFilter,
@@ -40,6 +41,7 @@ class LocationGoogleMarkerIconFactory {
       if (activePriceFilter != null) activePriceFilter.name else 'none',
       if (accent != null) accent.toARGB32().toRadixString(16) else 'none',
       if (isSelected) 'selected' else 'idle',
+      if (isTrending) 'trending' else 'normal',
     ].join('|');
   }
 
@@ -47,6 +49,7 @@ class LocationGoogleMarkerIconFactory {
     required LocationCategory category,
     required PriceRange priceRange,
     required bool isSelected,
+    required bool isTrending,
     required LocationRanking? ranking,
     required LocationRanking? activeRankingFilter,
     required PriceRange? activePriceFilter,
@@ -64,6 +67,7 @@ class LocationGoogleMarkerIconFactory {
       category: category,
       priceRange: priceRange,
       isSelected: isSelected,
+      isTrending: isTrending,
       ranking: ranking,
       activeRankingFilter: activeRankingFilter,
       activePriceFilter: activePriceFilter,
@@ -75,6 +79,7 @@ class LocationGoogleMarkerIconFactory {
         category: category,
         priceRange: priceRange,
         isSelected: isSelected,
+        isTrending: isTrending,
         rankingIndicator: rankingIndicator,
         accent: accent,
         showPriceBadge: activePriceFilter != null,
@@ -173,6 +178,7 @@ class LocationGoogleMarkerIconFactory {
     required LocationCategory category,
     required PriceRange priceRange,
     required bool isSelected,
+    required bool isTrending,
     required LocationRanking? rankingIndicator,
     required Color? accent,
     required bool showPriceBadge,
@@ -195,6 +201,25 @@ class LocationGoogleMarkerIconFactory {
         ..color = Colors.black.withValues(alpha: isSelected ? 0.18 : 0.12)
         ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 8),
     );
+
+    // Trending: outer glow ring in orange, drawn before the white fill.
+    if (isTrending) {
+      canvas.drawCircle(
+        center,
+        radius + 3.5,
+        Paint()
+          ..color = const Color(0xFFFF6B35).withValues(alpha: 0.28)
+          ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 4),
+      );
+      canvas.drawCircle(
+        center,
+        radius + 2.2,
+        Paint()
+          ..color = const Color(0xFFFF6B35)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.8,
+      );
+    }
 
     canvas.drawCircle(
       center,

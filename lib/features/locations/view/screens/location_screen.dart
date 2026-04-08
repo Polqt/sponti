@@ -259,6 +259,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     final locationsAsync = ref.watch(locationsProvider);
     final filter = ref.watch(locationFilterProvider);
     final currentLocation = ref.watch(currentLocationProvider);
+    final trendingIds = ref.watch(
+      trendingLocationIdsProvider.select((s) => s.valueOrNull ?? const <String>{}),
+    );
     final isOnline = ref.watch(connectivityProvider).valueOrNull ?? true;
     final allLocations = locationsAsync.valueOrNull ?? const <Location>[];
     final filteredResult = applyLocationFilters(
@@ -316,6 +319,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               rankingSnapshot: rankingSnapshot,
               activeRankingFilter: filter.selectedRanking,
               activePriceFilter: filter.selectedPrice,
+              trendingIds: trendingIds,
               onMapCreated: (controller) =>
                   _handleMapCreated(controller, locations),
               onMapTap: () {

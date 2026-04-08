@@ -23,6 +23,7 @@ class LocationGoogleMapLayer extends StatefulWidget {
     this.activeRankingFilter,
     this.activePriceFilter,
     this.onMapCreated,
+    this.trendingIds = const <String>{},
   });
 
   final List<Location> locations;
@@ -39,6 +40,7 @@ class LocationGoogleMapLayer extends StatefulWidget {
   final LocationRankingSnapshot? rankingSnapshot;
   final LocationRanking? activeRankingFilter;
   final PriceRange? activePriceFilter;
+  final Set<String> trendingIds;
 
   @override
   State<LocationGoogleMapLayer> createState() => _LocationGoogleMapLayerState();
@@ -68,7 +70,8 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
     );
     final filterVisualsChanged =
         widget.activeRankingFilter != oldWidget.activeRankingFilter ||
-        widget.activePriceFilter != oldWidget.activePriceFilter;
+        widget.activePriceFilter != oldWidget.activePriceFilter ||
+        !_sameTrendingIds(widget.trendingIds, oldWidget.trendingIds);
     final selectedChanged = widget.selectedId != oldWidget.selectedId;
     final currentLocationChanged = !_sameLatLng(
       widget.currentLocationCoordinates,
@@ -109,11 +112,13 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
           (location) => _MarkerBuildRequest(
             location: location,
             isSelected: location.id == widget.selectedId,
+            isTrending: widget.trendingIds.contains(location.id),
             ranking: rankingSnapshot.rankingFor(location),
             descriptorKey: LocationGoogleMarkerIconFactory.cacheKeyFor(
               category: location.category,
               priceRange: location.priceRange,
               isSelected: location.id == widget.selectedId,
+              isTrending: widget.trendingIds.contains(location.id),
               ranking: rankingSnapshot.rankingFor(location),
               activeRankingFilter: widget.activeRankingFilter,
               activePriceFilter: widget.activePriceFilter,
@@ -179,11 +184,13 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
           (location) => _MarkerBuildRequest(
             location: location,
             isSelected: location.id == widget.selectedId,
+            isTrending: widget.trendingIds.contains(location.id),
             ranking: rankingSnapshot.rankingFor(location),
             descriptorKey: LocationGoogleMarkerIconFactory.cacheKeyFor(
               category: location.category,
               priceRange: location.priceRange,
               isSelected: location.id == widget.selectedId,
+              isTrending: widget.trendingIds.contains(location.id),
               ranking: rankingSnapshot.rankingFor(location),
               activeRankingFilter: widget.activeRankingFilter,
               activePriceFilter: widget.activePriceFilter,
@@ -251,6 +258,7 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
           category: request.location.category,
           priceRange: request.location.priceRange,
           isSelected: request.isSelected,
+          isTrending: request.isTrending,
           ranking: request.ranking,
           activeRankingFilter: widget.activeRankingFilter,
           activePriceFilter: widget.activePriceFilter,
@@ -372,12 +380,20 @@ class _MarkerBuildRequest {
   const _MarkerBuildRequest({
     required this.location,
     required this.isSelected,
+    required this.isTrending,
     required this.ranking,
     required this.descriptorKey,
   });
 
   final Location location;
   final bool isSelected;
+  final bool isTrending;
   final LocationRanking? ranking;
   final String descriptorKey;
+}
+
+bool _sameTrendingIds(Set<String> a, Set<String> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  return a.containsAll(b);
 }

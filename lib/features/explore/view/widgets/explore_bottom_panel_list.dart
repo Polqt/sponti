@@ -6,6 +6,7 @@ import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
 import 'package:sponti/features/location_comparison/viewmodel/location_comparison_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/view/widgets/location_card.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
 class ExploreBottomPanelList extends ConsumerWidget {
   const ExploreBottomPanelList({
@@ -17,6 +18,8 @@ class ExploreBottomPanelList extends ConsumerWidget {
     required this.itemKeys,
     required this.onSelectLocation,
     this.onLocationTap,
+    this.hasMore = false,
+    this.isLoadingMore = false,
   });
 
   final AsyncValue<List<Location>> locationsAsync;
@@ -26,11 +29,16 @@ class ExploreBottomPanelList extends ConsumerWidget {
   final Map<String, GlobalKey> itemKeys;
   final ValueChanged<Location> onSelectLocation;
   final ValueChanged<Location>? onLocationTap;
+  final bool hasMore;
+  final bool isLoadingMore;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final favoriteIds = ref.watch(favoriteIdSetProvider);
     final pinnedIds = ref.watch(pinnedComparisonIdSetProvider);
+    final trendingIds = ref.watch(
+      trendingLocationIdsProvider.select((s) => s.valueOrNull ?? const <String>{}),
+    );
 
     if (locationsAsync.isLoading) {
       return ListView(
@@ -54,13 +62,30 @@ class ExploreBottomPanelList extends ConsumerWidget {
       );
     }
 
+    final showFooter = hasMore || isLoadingMore;
+
     return ListView.separated(
       controller: listScrollController,
       physics: const ClampingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-      itemCount: locations.length,
+      itemCount: locations.length + (showFooter ? 1 : 0),
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
+        if (index == locations.length) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: isLoadingMore
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          );
+        }
+
         final location = locations[index];
         final isSelected = index == selectedIndex;
         final key = itemKeys.putIfAbsent(
@@ -87,6 +112,7 @@ class ExploreBottomPanelList extends ConsumerWidget {
                 location: location,
                 variant: LocationCardVariant.fullWidth,
                 isSaved: favoriteIds.contains(location.id),
+                isTrending: trendingIds.contains(location.id),
                 showShadow: false,
                 onTap: () {
                   final locationTap = onLocationTap;

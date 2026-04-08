@@ -14,6 +14,7 @@ import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/utils/location_map_markers.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/locations/viewmodel/map_zoom_provider.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
@@ -156,6 +157,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final locationsAsync = ref.watch(exploreProvider);
     final filter = ref.watch(exploreFilterProvider);
     final locations = locationsAsync.valueOrNull ?? const <Location>[];
+    final trendingIds = ref.watch(
+      trendingLocationIdsProvider.select((s) => s.valueOrNull ?? const <String>{}),
+    );
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
     _syncSelection(locations);
@@ -217,6 +221,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     zoom: currentZoom,
                     keyPrefix: 'explore_marker',
                     onTap: _showLocationDetails,
+                    trendingIds: trendingIds,
                   ),
                 ),
               ],
@@ -285,6 +290,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               },
               onSelectLocation: _selectLocation,
               onLocationTap: _showLocationDetails,
+              hasMore: ref.read(exploreProvider.notifier).hasMore,
+              isLoadingMore: locationsAsync.isLoading && locationsAsync.hasValue,
+              onLoadMore: () =>
+                  ref.read(exploreProvider.notifier).fetchNextPage(),
             ),
           if (_selectedLocation != null)
             Positioned.fill(

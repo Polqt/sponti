@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:sponti/core/constants/api_constants.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/model/location_model.dart';
@@ -108,7 +108,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
       return _photoUrlCache.putIfAbsent(
         p,
         () => _client.storage
-            .from(ApiConstants.locationPhotosBucket)
+            .from(SupabaseBuckets.locationPhotos)
             .getPublicUrl(p),
       );
     }).toList();
@@ -148,7 +148,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   }) => _executeQuery(() async {
     final effectiveLimit = limit.clamp(1, 100).toInt();
     dynamic query = _client
-        .from(ApiConstants.locationsTable)
+        .from(SupabaseTables.locations)
         .select(_columns)
         .order('created_at', ascending: false)
         .order('id', ascending: false)
@@ -182,7 +182,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   @override
   Future<LocationModel> getLocationById(String id) => _executeQuery(() async {
     final response = await _client
-        .from(ApiConstants.locationsTable)
+        .from(SupabaseTables.locations)
         .select(_columns)
         .eq('id', id)
         .single();
@@ -197,7 +197,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
     double radiusKm = 5.0,
   }) => _executeQuery(() async {
     final response = await _client.rpc(
-      ApiConstants.rpcGetNearbyLocations,
+      SupabaseRPC.getNearbyLocations,
       params: {'lat': latitude, 'lng': longitude, 'radius_km': radiusKm},
     );
 
@@ -208,7 +208,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   Future<List<LocationModel>> filterByCategory(LocationCategory category) =>
       _executeQuery(() async {
         final response = await _client
-            .from(ApiConstants.locationsTable)
+            .from(SupabaseTables.locations)
             .select(_columns)
             .eq('category', category.name)
             .order('rating', ascending: false);
@@ -220,7 +220,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   Future<List<LocationModel>> fetchByCategories(List<String> categories) =>
       _executeQuery(() async {
         final response = await _client
-            .from(ApiConstants.locationsTable)
+            .from(SupabaseTables.locations)
             .select(_columns)
             .inFilter('category', categories)
             .order('created_at', ascending: false);
@@ -232,7 +232,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   Future<List<LocationModel>> searchLocations(String query) =>
       _executeQuery(() async {
         final response = await _client.rpc(
-          ApiConstants.rpcSearchLocations,
+          SupabaseRPC.searchLocations,
           params: {'search_query': query.trim()},
         );
 
@@ -244,7 +244,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
     RankedLocationSearchRequest request,
   ) => _executeQuery(() async {
     final response = await _client.rpc(
-      ApiConstants.rpcSearchLocationsRanked,
+      SupabaseRPC.searchLocationsRanked,
       params: {
         'search_query': request.query.trim(),
         'viewer_lat': request.latitude,
@@ -260,7 +260,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   Future<LocationModel> createLocation(LocationModel model) =>
       _executeQuery(() async {
         final response = await _client
-            .from(ApiConstants.locationsTable)
+            .from(SupabaseTables.locations)
             .insert(model.toJson())
             .select(_columns)
             .single();
@@ -272,7 +272,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
   Future<LocationModel> updateLocation(LocationModel model) =>
       _executeQuery(() async {
         final response = await _client
-            .from(ApiConstants.locationsTable)
+            .from(SupabaseTables.locations)
             .update(
               model.toJson()..['updated_at'] = DateTime.now().toIso8601String(),
             )
@@ -285,7 +285,7 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
 
   @override
   Future<void> deleteLocation(String id) => _executeQuery(() async {
-    await _client.from(ApiConstants.locationsTable).delete().eq('id', id);
+    await _client.from(SupabaseTables.locations).delete().eq('id', id);
   });
 
   String _buildCursorFilter(LocationPageCursor cursor) {

@@ -36,6 +36,11 @@ class LocationScreenExplorePanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(locationFilterProvider);
     final filterNotifier = ref.read(locationFilterProvider.notifier);
+    final locationsNotifier = ref.read(locationsProvider.notifier);
+    final hasMore = locationsNotifier.hasMore;
+    final isLoadingMore = ref.watch(
+      locationsProvider.select((s) => s.isLoading && s.hasValue),
+    );
 
     final panelFilter = ExploreFilter(
       rankingFilter: filter.selectedRanking != null
@@ -79,6 +84,9 @@ class LocationScreenExplorePanel extends ConsumerWidget {
       onSheetProgressChanged: onSheetProgressChanged,
       onSelectLocation: onSelectLocation,
       onLocationTap: onLocationTap,
+      hasMore: hasMore,
+      isLoadingMore: isLoadingMore,
+      onLoadMore: () => locationsNotifier.fetchNextPage(),
     );
   }
 }

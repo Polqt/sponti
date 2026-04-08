@@ -27,6 +27,9 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
     this.onDismissed,
     this.edgeToEdge = false,
     this.isExpanded = false,
+    this.hasMore = false,
+    this.isLoadingMore = false,
+    this.onLoadMore,
   });
 
   final AsyncValue<List<Location>> locationsAsync;
@@ -47,6 +50,9 @@ class ExploreBottomPanel extends ConsumerStatefulWidget {
   final ValueChanged<double>? onSheetProgressChanged;
   final VoidCallback? onDismissed;
   final bool edgeToEdge;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final VoidCallback? onLoadMore;
 
   @override
   ConsumerState<ExploreBottomPanel> createState() => _ExploreBottomPanelState();
@@ -69,8 +75,17 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
   void initState() {
     super.initState();
     _sheetController = DraggableScrollableController();
-    _listScrollController = ScrollController();
+    _listScrollController = ScrollController()
+      ..addListener(_onListScroll);
     _scheduleScrollSelectedIntoView();
+  }
+
+  void _onListScroll() {
+    if (!_listScrollController.hasClients) return;
+    final pos = _listScrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
+      widget.onLoadMore?.call();
+    }
   }
 
   @override
@@ -274,6 +289,8 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
                       itemKeys: _itemKeys,
                       onSelectLocation: widget.onSelectLocation,
                       onLocationTap: widget.onLocationTap,
+                      hasMore: widget.hasMore,
+                      isLoadingMore: widget.isLoadingMore,
                     ),
                   ),
                 ),
