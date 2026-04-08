@@ -89,7 +89,10 @@ dependencies:
   url_launcher: ^6.3.2 # Open directions in external maps app
   share_plus: ^12.0.1 # Share places with friends
 
-  # Environment 
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Environment
   flutter_dotenv: ^6.0.0
 
   # Utilities

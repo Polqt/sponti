@@ -8,7 +8,7 @@ import 'package:sponti/features/locations/model/location_model.dart';
 import 'package:sponti/features/locations/repository/location_remote_data_source.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-enum DiscoveryColumn { forYou, friends }
+enum DiscoveryColumn { forYou, friends, leaderboards }
 
 extension DiscoveryCategoryLabel on LocationCategory {
   String get discoveryLabel => switch (this) {
@@ -87,8 +87,11 @@ class DiscoveryViewState {
   final DiscoveryColumn activeColumn;
   final Set<LocationCategory> expandedCategories;
 
-  String get sectionTitle =>
-      activeColumn == DiscoveryColumn.forYou ? 'Top Picks' : 'Friends';
+  String get sectionTitle => switch (activeColumn) {
+    DiscoveryColumn.forYou => 'Top Picks',
+    DiscoveryColumn.friends => 'Friends',
+    DiscoveryColumn.leaderboards => 'Leaderboards',
+  };
 
   bool isCategoryExpanded(LocationCategory category) =>
       expandedCategories.contains(category);

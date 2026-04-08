@@ -34,6 +34,11 @@ class DiscoveryColumnSwitcher extends StatelessWidget {
             isSelected: activeColumn == DiscoveryColumn.friends,
             onTap: () => onChanged(DiscoveryColumn.friends),
           ),
+          _SegmentTab(
+            label: 'Leaderboards',
+            isSelected: activeColumn == DiscoveryColumn.leaderboards,
+            onTap: () => onChanged(DiscoveryColumn.leaderboards),
+          ),
         ],
       ),
     );

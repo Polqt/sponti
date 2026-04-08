@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/friends/model/friend_activity.dart';
+import 'package:sponti/features/friends/view/widgets/add_friend_button.dart';
+import 'package:sponti/features/friends/view/widgets/friend_avatar.dart';
 import 'package:sponti/features/friends/viewmodel/friends_viewmodel.dart';
+import 'package:sponti/features/profile/model/user_profile_model.dart';
 
 class FriendActivityFeed extends ConsumerWidget {
   const FriendActivityFeed({super.key});
@@ -12,38 +15,160 @@ class FriendActivityFeed extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(friendActivityProvider);
+    final suggestionsAsync = ref.watch(suggestedUsersProvider);
 
     return feedAsync.when(
       loading: () => const Center(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 32),
+          padding: EdgeInsets.symmetric(vertical: 40),
           child: CircularProgressIndicator(color: SpontiColors.primary),
         ),
       ),
-      error: (e, _) => _EmptyState(
-        icon: Icons.wifi_off_rounded,
-        message: 'Could not load friend activity.',
-      ),
-      data: (items) {
-        if (items.isEmpty) {
-          return _EmptyState(
-            icon: Icons.people_outline_rounded,
-            message:
-                'No activity yet.\nAdd friends to see where they check in.',
-          );
-        }
-        final notifier = ref.read(friendActivityProvider.notifier);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      error: (_, _) => _SuggestionsSection(suggestionsAsync: suggestionsAsync),
+      data: (items) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SuggestionsSection(suggestionsAsync: suggestionsAsync),
+          const SizedBox(height: 24),
+          const _SectionLabel(label: 'Friend Activity'),
+          const SizedBox(height: 12),
+          if (items.isEmpty)
+            const _EmptyCard(
+              icon: Icons.location_searching_rounded,
+              title: 'No check-ins yet',
+              subtitle: "When your friends check in somewhere, you'll see it here.",
+            )
+          else ...[
             ...items.map((item) => _ActivityCard(item: item)),
-            if (notifier.hasMore) _LoadMoreButton(notifier: notifier),
+            if (ref.read(friendActivityProvider.notifier).hasMore)
+              _LoadMoreButton(notifier: ref.read(friendActivityProvider.notifier)),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Suggestions (vertical list, no section header) ─────────────────────────
+
+class _SuggestionsSection extends StatelessWidget {
+  const _SuggestionsSection({required this.suggestionsAsync});
+
+  final AsyncValue<List<UserProfileModel>> suggestionsAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return suggestionsAsync.when(
+      loading: () => Column(
+        children: List.generate(
+          3,
+          (_) => const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: _SuggestionSkeleton(),
+          ),
+        ),
+      ),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (users) {
+        if (users.isEmpty) return const SizedBox.shrink();
+        return Column(
+          children: users
+              .map(
+                (u) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _SuggestionCard(profile: u),
+                ),
+              )
+              .toList(),
         );
       },
     );
   }
 }
+
+class _SuggestionCard extends StatelessWidget {
+  const _SuggestionCard({required this.profile});
+
+  final UserProfileModel profile;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push(RouteName.userProfilePath(profile.id)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: SpontiColors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: SpontiColors.outline),
+          boxShadow: [
+            BoxShadow(
+              color: SpontiColors.shadow.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            FriendAvatar(
+              name: profile.fullName,
+              avatarUrl: profile.avatarUrl,
+              radius: 22,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    profile.fullName.isNotEmpty ? profile.fullName : 'Unknown',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: SpontiColors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (profile.username?.isNotEmpty == true)
+                    Text(
+                      '@${profile.username}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: SpontiColors.textMuted,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            AddFriendButton(userId: profile.id),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SuggestionSkeleton extends StatelessWidget {
+  const _SuggestionSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 64,
+      decoration: BoxDecoration(
+        color: SpontiColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(14),
+      ),
+    );
+  }
+}
+
+// ─── Activity feed ───────────────────────────────────────────────────────────
 
 class _ActivityCard extends StatelessWidget {
   const _ActivityCard({required this.item});
@@ -56,11 +181,11 @@ class _ActivityCard extends StatelessWidget {
       onTap: () => context.push(RouteName.locationDetailPath(item.locationId)),
       child: Container(
         key: ValueKey(item.checkInId),
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: SpontiColors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: SpontiColors.outline),
           boxShadow: [
             BoxShadow(
@@ -73,25 +198,10 @@ class _ActivityCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Friend avatar
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: SpontiColors.primaryLight.withValues(alpha: 0.3),
-              backgroundImage: item.friendAvatar != null
-                  ? NetworkImage(item.friendAvatar!)
-                  : null,
-              child: item.friendAvatar == null
-                  ? Text(
-                      item.friendFullName.isNotEmpty
-                          ? item.friendFullName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: SpontiColors.primaryDark,
-                      ),
-                    )
-                  : null,
+            FriendAvatar(
+              name: item.friendFullName,
+              avatarUrl: item.friendAvatar,
+              radius: 20,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -211,42 +321,67 @@ class _LoadMoreButton extends ConsumerWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.icon, required this.message});
+// ─── Shared ───────────────────────────────────────────────────────────────────
+
+class _EmptyCard extends StatelessWidget {
+  const _EmptyCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
 
   final IconData icon;
-  final String message;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      key: const ValueKey('friends-feed-empty'),
-      padding: const EdgeInsets.all(24),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: SpontiColors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: SpontiColors.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: SpontiColors.surfaceVariant,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: SpontiColors.textSecondary),
-          ),
-          const SizedBox(height: 18),
+          Icon(icon, color: SpontiColors.textMuted, size: 26),
+          const SizedBox(height: 10),
           Text(
-            message,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: SpontiColors.textSecondary),
+            title,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: SpontiColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 12, color: SpontiColors.textSecondary),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
+        color: SpontiColors.textPrimary,
+        letterSpacing: -0.3,
       ),
     );
   }
