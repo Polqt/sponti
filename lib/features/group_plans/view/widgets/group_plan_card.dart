@@ -37,87 +37,123 @@ class GroupPlanCard extends StatelessWidget {
                 ),
               ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Icon badge
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: status.color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(
-                          status.icon,
-                          size: 22,
-                          color: status.color,
-                        ),
+                  // Left accent stripe
+                  Container(
+                    width: 5,
+                    decoration: BoxDecoration(
+                      color: status.color,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        bottomLeft: Radius.circular(20),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Icon badge
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: status.color.withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(13),
+                                ),
+                                child: Icon(
+                                  status.icon,
+                                  size: 20,
+                                  color: status.color,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      plan.name,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            color: SpontiColors.textPrimary,
+                                            letterSpacing: -0.3,
+                                          ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      timeago.format(plan.createdAt),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: SpontiColors.textMuted,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _StatusPill(
+                                label: status.label,
+                                color: status.color,
+                              ),
+                            ],
+                          ),
+                          if (plan.description.isNotEmpty) ...[
+                            const SizedBox(height: 10),
                             Text(
-                              plan.name,
-                              style: Theme.of(context).textTheme.titleMedium
+                              plan.description,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
                                   ?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: SpontiColors.textPrimary,
-                                    letterSpacing: -0.3,
+                                    color: SpontiColors.textSecondary,
+                                    height: 1.45,
                                   ),
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              timeago.format(plan.createdAt),
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(color: SpontiColors.textMuted),
                             ),
                           ],
-                        ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.touch_app_rounded,
+                                size: 13,
+                                color: status.color.withValues(alpha: 0.7),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Tap to view & vote',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: status.color.withValues(
+                                        alpha: 0.7,
+                                      ),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      _StatusPill(label: status.label, color: status.color),
-                    ],
-                  ),
-                  if (plan.description.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      plan.description,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SpontiColors.textSecondary,
-                        height: 1.45,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 16,
-                        color: SpontiColors.textMuted,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'View & vote',
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
-                              color: SpontiColors.textMuted,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ],
                   ),
                 ],
               ),

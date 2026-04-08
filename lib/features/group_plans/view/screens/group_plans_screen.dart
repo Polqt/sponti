@@ -22,7 +22,7 @@ class GroupPlansScreen extends ConsumerWidget {
           children: [
             // ── Header ────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 16, 0),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
                 children: [
                   IconButton(
@@ -34,28 +34,31 @@ class GroupPlansScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 4),
                   Expanded(
-                    child: Text(
-                      "Let's Go Plans",
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Let's Go Plans",
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Plan where to go with your crew',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: SpontiColors.textMuted,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-              child: Text(
-                'Plan where to go with your crew',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: SpontiColors.textMuted,
-                ),
-              ),
-            ),
-            // ── Body ─────────────────────────────────────────
+            const SizedBox(height: 16),
+            // ── Body ──────────────────────────────────────────
             Expanded(
               child: plansAsync.when(
                 loading: () => const Center(
