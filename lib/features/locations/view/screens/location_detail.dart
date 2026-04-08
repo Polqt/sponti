@@ -125,7 +125,7 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
     };
     final displayedCheckInCount =
         _optimisticCheckInCount ?? sourceLocation.checkInCount;
-    final isTrending = ref.watch(
+    ref.watch(
       trendingLocationIdsProvider.select(
         (s) => s.valueOrNull?.contains(location.id) ?? false,
       ),
