@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sponti/config/feature_flags.dart';
-import 'package:sponti/config/supabase_options.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/features/reviews/model/review.dart';
 import 'package:sponti/features/reviews/model/review_model.dart';
 import 'package:sponti/features/reviews/repository/reviews_remote_data_source.dart';
@@ -16,43 +15,69 @@ final reviewsRepositoryProvider = Provider<ReviewsRepository>((ref) {
   return ReviewsRepositoryImpl(ref.read(reviewsRemoteDataSourceProvider));
 });
 
-final reviewsByLocationProvider =
-    FutureProvider.family<List<Review>, String>((ref, locationId) async {
+const _reviewsPageSize = 20;
+
+class ReviewsByLocationNotifier
+    extends FamilyAsyncNotifier<List<Review>, String> {
+  ReviewPageCursor? _nextCursor;
+  bool _hasMore = false;
+  bool _isFetchingNextPage = false;
+
+  bool get hasMore => _hasMore;
+
+  @override
+  Future<List<Review>> build(String locationId) async {
+    _nextCursor = null;
+    _hasMore = false;
+
+    final repository = ref.read(reviewsRepositoryProvider);
+    final result = await repository.getReviewsForLocationPage(
+      locationId,
+      limit: _reviewsPageSize,
+    );
+    return result.fold(
+      (failure) => throw StateError(failure.message),
+      (page) {
+        _hasMore = page.hasMore;
+        _nextCursor = page.nextCursor;
+        return page.items;
+      },
+    );
+  }
+
+  /// Returns an error message on failure, null on success.
+  Future<String?> fetchNextPage() async {
+    if (!_hasMore || _nextCursor == null || _isFetchingNextPage) return null;
+    final current = state.valueOrNull;
+    if (current == null) return null;
+
+    _isFetchingNextPage = true;
+    try {
       final repository = ref.read(reviewsRepositoryProvider);
-      final useCursor = ref.watch(featureFlagsProvider).useCursorPagination;
+      final result = await repository.getReviewsForLocationPage(
+        arg,
+        cursor: _nextCursor,
+        limit: _reviewsPageSize,
+      );
+      return result.fold(
+        (f) => f.message,
+        (page) {
+          _hasMore = page.hasMore;
+          _nextCursor = page.nextCursor;
+          state = AsyncData([...current, ...page.items]);
+          return null;
+        },
+      );
+    } finally {
+      _isFetchingNextPage = false;
+    }
+  }
+}
 
-      if (!useCursor) {
-        final firstPageResult = await repository.getReviewsForLocationPage(
-          locationId,
-          limit: 100,
-        );
-        return firstPageResult.fold((failure) {
-          throw StateError(failure.message);
-        }, (page) => page.items);
-      }
-
-      final items = <Review>[];
-      ReviewPageCursor? cursor;
-
-      while (true) {
-        final result = await repository.getReviewsForLocationPage(
-          locationId,
-          cursor: cursor,
-          limit: 30,
-        );
-        final page = result.fold(
-          (failure) => throw StateError(failure.message),
-          (p) => p,
-        );
-        items.addAll(page.items);
-        if (!page.hasMore || page.nextCursor == null) {
-          break;
-        }
-        cursor = page.nextCursor;
-      }
-
-      return List.unmodifiable(items);
-    });
+final reviewsByLocationProvider = AsyncNotifierProviderFamily<
+    ReviewsByLocationNotifier, List<Review>, String>(
+  ReviewsByLocationNotifier.new,
+);
 
 final reviewsStreamProvider =
     StreamProvider.family<List<Review>, String>((ref, locationId) {

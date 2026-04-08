@@ -19,6 +19,7 @@ class MyCheckInsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final checkInsAsync = ref.watch(myCheckInsProvider);
+    final notifier = ref.read(myCheckInsProvider.notifier);
     final streakAsync = ref.watch(checkInStreakProvider);
 
     return Scaffold(
@@ -61,23 +62,82 @@ class MyCheckInsScreen extends ConsumerWidget {
             );
           }
 
+          final showFooter = notifier.hasMore;
           return Column(
             children: [
               streakWidget,
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                  itemCount: checkIns.length,
+                  itemCount: checkIns.length + (showFooter ? 1 : 0),
                   separatorBuilder: (_, _) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) => _MyCheckInItem(
-                    key: ValueKey(checkIns[index].id),
-                    checkIn: checkIns[index],
-                  ),
+                  itemBuilder: (context, index) {
+                    if (index == checkIns.length) {
+                      return _LoadMoreCheckInsButton(
+                        onTap: notifier.fetchNextPage,
+                      );
+                    }
+                    return _MyCheckInItem(
+                      key: ValueKey(checkIns[index].id),
+                      checkIn: checkIns[index],
+                    );
+                  },
                 ),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _LoadMoreCheckInsButton extends StatefulWidget {
+  const _LoadMoreCheckInsButton({required this.onTap});
+
+  final Future<String?> Function() onTap;
+
+  @override
+  State<_LoadMoreCheckInsButton> createState() =>
+      _LoadMoreCheckInsButtonState();
+}
+
+class _LoadMoreCheckInsButtonState extends State<_LoadMoreCheckInsButton> {
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TextButton(
+        onPressed: _loading
+            ? null
+            : () async {
+                final messenger = ScaffoldMessenger.of(context);
+                setState(() => _loading = true);
+                final error = await widget.onTap();
+                if (!mounted) return;
+                setState(() => _loading = false);
+                if (error != null) {
+                  messenger.showSnackBar(SnackBar(content: Text(error)));
+                }
+              },
+        child: _loading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: SpontiColors.primary,
+                ),
+              )
+            : const Text(
+                'Load more',
+                style: TextStyle(
+                  color: SpontiColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
       ),
     );
   }

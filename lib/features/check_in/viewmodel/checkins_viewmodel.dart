@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sponti/config/feature_flags.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:sponti/features/check_in/models/checkins.dart';
 import 'package:sponti/features/check_in/repository/checkins_remote_data_source.dart';
@@ -219,32 +218,63 @@ final checkInProvider =
       CheckInNotifier.new,
     );
 
-final myCheckInsProvider = FutureProvider<List<CheckIn>>((ref) async {
-  final repository = ref.read(checkinsRepositoryProvider);
-  final useCursor = ref.watch(featureFlagsProvider).useCursorPagination;
+const _myCheckInsPageSize = 20;
 
-  if (!useCursor) {
-    final firstPageResult = await repository.getMyCheckInsPage(limit: 100);
-    return firstPageResult.fold((failure) {
-      throw StateError(failure.message);
-    }, (page) => page.items);
-  }
+class MyCheckInsNotifier extends AsyncNotifier<List<CheckIn>> {
+  CheckInPageCursor? _nextCursor;
+  bool _hasMore = false;
+  bool _isFetchingNextPage = false;
 
-  final items = <CheckIn>[];
-  CheckInPageCursor? cursor;
+  bool get hasMore => _hasMore;
 
-  while (true) {
+  @override
+  Future<List<CheckIn>> build() async {
+    _nextCursor = null;
+    _hasMore = false;
+
+    final repository = ref.read(checkinsRepositoryProvider);
     final result = await repository.getMyCheckInsPage(
-      cursor: cursor,
-      limit: 30,
+      limit: _myCheckInsPageSize,
     );
-    final page = result.fold((failure) => throw StateError(failure.message), (p) => p);
-    items.addAll(page.items);
-    if (!page.hasMore || page.nextCursor == null) {
-      break;
-    }
-    cursor = page.nextCursor;
+    return result.fold(
+      (failure) => throw StateError(failure.message),
+      (page) {
+        _hasMore = page.hasMore;
+        _nextCursor = page.nextCursor;
+        return page.items;
+      },
+    );
   }
 
-  return List.unmodifiable(items);
-});
+  /// Returns an error message on failure, null on success.
+  Future<String?> fetchNextPage() async {
+    if (!_hasMore || _nextCursor == null || _isFetchingNextPage) return null;
+    final current = state.valueOrNull;
+    if (current == null) return null;
+
+    _isFetchingNextPage = true;
+    try {
+      final repository = ref.read(checkinsRepositoryProvider);
+      final result = await repository.getMyCheckInsPage(
+        cursor: _nextCursor,
+        limit: _myCheckInsPageSize,
+      );
+      return result.fold(
+        (f) => f.message,
+        (page) {
+          _hasMore = page.hasMore;
+          _nextCursor = page.nextCursor;
+          state = AsyncData([...current, ...page.items]);
+          return null;
+        },
+      );
+    } finally {
+      _isFetchingNextPage = false;
+    }
+  }
+}
+
+final myCheckInsProvider =
+    AsyncNotifierProvider<MyCheckInsNotifier, List<CheckIn>>(
+      MyCheckInsNotifier.new,
+    );

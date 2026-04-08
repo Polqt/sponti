@@ -1,4 +1,4 @@
-import 'package:sponti/config/supabase_options.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/core/errors/exceptions.dart' as app_exceptions;
 import 'package:sponti/features/reviews/model/review.dart';
 import 'package:sponti/features/reviews/model/review_model.dart';

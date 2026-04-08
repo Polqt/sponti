@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sponti/config/supabase_options.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:sponti/features/streaks/model/checkin_streak.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

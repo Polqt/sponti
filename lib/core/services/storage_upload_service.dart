@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:sponti/config/supabase_options.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/core/utils/image_upload.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

@@ -121,7 +121,9 @@ final favoriteIdsProvider =
     );
 
 final favoriteIdSetProvider = Provider<Set<String>>((ref) {
-  final ids = ref.watch(favoriteIdsProvider).valueOrNull ?? const <String>[];
+  final ids = ref.watch(
+    favoriteIdsProvider.select((s) => s.valueOrNull ?? const <String>[]),
+  );
   return ids.toSet();
 });
 

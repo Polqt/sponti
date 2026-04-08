@@ -1,4 +1,4 @@
-import 'package:sponti/config/supabase_options.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/check_in/models/checkins.dart';
 import 'package:sponti/features/check_in/models/checkins_model.dart';

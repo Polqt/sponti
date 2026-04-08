@@ -19,10 +19,18 @@ final suggestionsRepositoryProvider = Provider<SuggestionsRepository>((ref) {
 });
 
 // Read — my suggestions list
+// Kept alive for 10 minutes then auto-invalidated so navigating back after
+// a long gap re-fetches rather than showing stale data.
 
 final mySuggestionsProvider = FutureProvider<List<SuggestionModel>>((
   ref,
 ) async {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 10), () {
+    link.close();
+    ref.invalidateSelf();
+  });
+
   final repository = ref.read(suggestionsRepositoryProvider);
   final result = await repository.fetchMySuggestions();
   return result.fold((failure) => throw StateError(failure.message), (data) => data);
