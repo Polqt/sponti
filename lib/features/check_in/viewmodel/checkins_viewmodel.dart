@@ -4,6 +4,7 @@ import 'package:sponti/features/check_in/models/checkins.dart';
 import 'package:sponti/features/check_in/repository/checkins_remote_data_source.dart';
 import 'package:sponti/features/check_in/repository/checkins_repository.dart';
 import 'package:sponti/features/check_in/repository/checkins_repository_impl.dart';
+import 'package:sponti/features/locations/utils/location_explore_cache.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 import 'package:sponti/features/streaks/viewmodel/checkin_streak_viewmodel.dart';
@@ -210,6 +211,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
     ref.invalidate(myCheckInsProvider);
     ref.invalidate(checkInStreakProvider);
     ref.invalidate(locationStreamProvider(_locationId));
+    invalidateLocationExploreRankingCaches(ref.invalidate);
   }
 }
 

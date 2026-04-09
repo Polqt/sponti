@@ -13,22 +13,22 @@ enum ExploreRanking {
   trending(
     'trending',
     'Trending',
-    'Most check-ins overall',
+    'Highest check-in totals (strong visit activity)',
   ),
   popular(
     'popular',
     'Popular',
-    'Most favorited by users',
+    'Most saved spots; Explore orders by favorites',
   ),
   lowkey(
     'lowkey',
     'Lowkey',
-    'Most suggested spot categories',
+    'Suggested categories, gems & quieter places',
   ),
   newest(
     'new',
     'New',
-    'Latest seeded spots from us',
+    'Latest seeded listings (Explore: recent seeds)',
   );
 
   const ExploreRanking(this.rpcValue, this.label, this.subtitle);

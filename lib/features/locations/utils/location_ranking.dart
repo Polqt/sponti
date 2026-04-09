@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/utils/location_ranking_standards.dart';
 
 enum LocationRanking {
   trending,
@@ -24,6 +25,7 @@ class LocationRankingSnapshot {
     required this.checkInP75,
     required this.reviewP75,
     required this.checkInP25,
+    required this.favoriteP75,
   });
 
   factory LocationRankingSnapshot.fromLocations(
@@ -33,10 +35,13 @@ class LocationRankingSnapshot {
     final referenceTime = now ?? DateTime.now();
     if (locations.isEmpty) {
       return LocationRankingSnapshot._(
-        thirtyDaysAgo: referenceTime.subtract(const Duration(days: 30)),
+        thirtyDaysAgo: referenceTime.subtract(
+          Duration(days: LocationRankingStandards.newListingWindowDays),
+        ),
         checkInP75: 0,
         reviewP75: 0,
         checkInP25: 0,
+        favoriteP75: 0,
       );
     }
 
@@ -44,12 +49,17 @@ class LocationRankingSnapshot {
       ..sort();
     final reviewCounts = locations.map((location) => location.reviewCount).toList()
       ..sort();
+    final favoriteCounts = locations.map((location) => location.favoriteCount).toList()
+      ..sort();
 
     return LocationRankingSnapshot._(
-      thirtyDaysAgo: referenceTime.subtract(const Duration(days: 30)),
+      thirtyDaysAgo: referenceTime.subtract(
+        Duration(days: LocationRankingStandards.newListingWindowDays),
+      ),
       checkInP75: _percentile(checkInCounts, 0.75),
       reviewP75: _percentile(reviewCounts, 0.75),
       checkInP25: _percentile(checkInCounts, 0.25),
+      favoriteP75: _percentile(favoriteCounts, 0.75),
     );
   }
 
@@ -57,24 +67,59 @@ class LocationRankingSnapshot {
   final double checkInP75;
   final double reviewP75;
   final double checkInP25;
+  final double favoriteP75;
+
+  /// True when the location has any community signal (not just "listed").
+  bool _hasEngagement(Location location) =>
+      location.checkInCount > 0 ||
+      location.reviewCount > 0 ||
+      location.favoriteCount > 0;
 
   LocationRanking? rankingFor(Location location) {
     final relevantDate = location.seededAt ?? location.createdAt;
+    final isRecentSeeded =
+        location.isSeeded && relevantDate.isAfter(thirtyDaysAgo);
+    final engaged = _hasEngagement(location);
 
-    if (location.isSeeded && relevantDate.isAfter(thirtyDaysAgo)) {
-      return LocationRanking.newest;
-    }
-
-    if (location.checkInCount >= checkInP75 && location.checkInCount > 0) {
+    final minTrend = LocationRankingStandards.trendingMinLifetimeCheckIns;
+    if (location.checkInCount >= minTrend &&
+        (location.checkInCount >= checkInP75 || checkInP75 < minTrend)) {
       return LocationRanking.trending;
     }
 
-    if ((location.rating >= 4.0 && location.reviewCount >= reviewP75) ||
-        location.reviewCount >= 10) {
+    final minFav = LocationRankingStandards.popularMinFavorites;
+    final popularByFavorites = location.favoriteCount >= minFav &&
+        (location.favoriteCount >= favoriteP75 || favoriteP75 < minFav);
+
+    final popularByReviews =
+        (location.rating >= LocationRankingStandards.popularMinRating &&
+            location.reviewCount >= reviewP75 &&
+            location.reviewCount >=
+                LocationRankingStandards.popularMinReviewsPercentilePath) ||
+            location.reviewCount >=
+                LocationRankingStandards.popularMinReviewsAbsolute;
+
+    if (popularByFavorites || popularByReviews) {
       return LocationRanking.popular;
     }
 
-    if (location.isHiddenGem || location.checkInCount <= checkInP25) {
+    if (isRecentSeeded && !engaged) {
+      return LocationRanking.newest;
+    }
+
+    // Recent seeds with visits but below the trending floor: still "under the radar"
+    // (shows under Lowkey filter instead of no tier).
+    if (isRecentSeeded &&
+        engaged &&
+        location.checkInCount > 0 &&
+        location.checkInCount < minTrend) {
+      return LocationRanking.lowkey;
+    }
+
+    final quietCap = LocationRankingStandards.lowkeyMaxCheckIns;
+    if (location.isHiddenGem ||
+        (location.checkInCount <= checkInP25 &&
+            location.checkInCount <= quietCap)) {
       return LocationRanking.lowkey;
     }
 
