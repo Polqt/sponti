@@ -66,7 +66,7 @@ final appRouter = GoRouter(
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
       path: RouteName.surprise,
-      builder: (context, state) => const SurpriseMeModal(),
+      builder: (context, state) => const SurpriseScreen(),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
