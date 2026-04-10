@@ -4,9 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
-import 'package:sponti/core/widgets/app_badge.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
-import 'package:sponti/features/friends/viewmodel/friends_viewmodel.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 import 'package:sponti/features/surprise_me/view/screens/surprise_me_modal.dart';
 
@@ -118,8 +116,6 @@ class _SpontiBottomBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pendingCount = ref.watch(pendingRequestCountProvider);
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
       child: AnimatedContainer(
@@ -170,13 +166,10 @@ class _SpontiBottomBar extends ConsumerWidget {
               isActive: _isSavedActive,
               onTap: onTapSaved,
             ),
-            AppBadge(
-              count: pendingCount,
-              child: _ProfileTab(
-                avatarUrl: avatarUrl,
-                isActive: _isProfileActive,
-                onTap: onTapProfile,
-              ),
+            _ProfileTab(
+              avatarUrl: avatarUrl,
+              isActive: _isProfileActive,
+              onTap: onTapProfile,
             ),
           ],
         ),

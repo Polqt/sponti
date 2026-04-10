@@ -68,6 +68,7 @@ final friendshipStatusProvider =
   return result.fold((_) => FriendshipStatus.none, (req) {
     if (req == null) return FriendshipStatus.none;
     if (req.status == FriendRequestStatus.accepted) return FriendshipStatus.friends;
+    if (req.status == FriendRequestStatus.declined) return FriendshipStatus.none;
     if (req.senderId == myId) return FriendshipStatus.pendingSent;
     return FriendshipStatus.pendingReceived;
   });
@@ -86,6 +87,7 @@ class FriendRequestNotifier extends AsyncNotifier<void> {
     return result.fold((f) => f.message, (_) {
       // Invalidate status for this user so the button refreshes.
       ref.invalidate(friendshipStatusProvider(receiverId));
+      ref.invalidate(incomingRequestsProvider);
       return null;
     });
   }
@@ -97,6 +99,7 @@ class FriendRequestNotifier extends AsyncNotifier<void> {
     state = const AsyncData(null);
     return result.fold((f) => f.message, (_) {
       ref.invalidate(friendshipStatusProvider(otherUserId));
+      ref.invalidate(incomingRequestsProvider);
       return null;
     });
   }
@@ -108,6 +111,8 @@ class FriendRequestNotifier extends AsyncNotifier<void> {
     state = const AsyncData(null);
     return result.fold((f) => f.message, (_) {
       ref.invalidate(friendshipStatusProvider(senderId));
+      ref.invalidate(incomingRequestsProvider);
+      ref.invalidate(friendConnectionsStreamProvider);
       return null;
     });
   }
@@ -119,6 +124,7 @@ class FriendRequestNotifier extends AsyncNotifier<void> {
     state = const AsyncData(null);
     return result.fold((f) => f.message, (_) {
       ref.invalidate(friendshipStatusProvider(senderId));
+      ref.invalidate(incomingRequestsProvider);
       return null;
     });
   }
@@ -130,6 +136,7 @@ class FriendRequestNotifier extends AsyncNotifier<void> {
     state = const AsyncData(null);
     return result.fold((f) => f.message, (_) {
       ref.invalidate(friendshipStatusProvider(friendId));
+      ref.invalidate(friendConnectionsStreamProvider);
       return null;
     });
   }
