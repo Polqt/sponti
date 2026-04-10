@@ -43,10 +43,10 @@ class GroupPlanDetailScreen extends ConsumerWidget {
 
             return Column(
               children: [
-                // ── Header ──────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       IconButton(
                         onPressed: () => context.pop(),
@@ -58,7 +58,7 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                           foregroundColor: SpontiColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 2),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,8 +72,11 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                                   ),
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 2),
-                            _StatusRow(plan: plan, participantCount: state.participants.length),
+                            const SizedBox(height: 4),
+                            _StatusRow(
+                              plan: plan,
+                              participantCount: state.participants.length,
+                            ),
                           ],
                         ),
                       ),
@@ -82,7 +85,7 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                 ),
                 if (plan.description.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                     child: Text(
                       plan.description,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -90,8 +93,7 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                const SizedBox(height: 12),
-                // ── Body ────────────────────────────────────
+                const SizedBox(height: 16),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
@@ -106,7 +108,7 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                                 ? 'Be the first to vote'
                                 : '${candidateIds.length} location${candidateIds.length == 1 ? '' : 's'} nominated',
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                           if (candidateIds.isEmpty)
                             _EmptyVoteHint(planId: planId)
                           else
@@ -160,7 +162,6 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                // ── Bottom actions ───────────────────────────
                 if (plan.status == PlanStatus.voting)
                   _BottomActions(
                     planId: planId,
@@ -180,8 +181,6 @@ class GroupPlanDetailScreen extends ConsumerWidget {
   }
 }
 
-// ─── Sub-widgets ─────────────────────────────────────────────────────────────
-
 class _StatusRow extends StatelessWidget {
   const _StatusRow({required this.plan, required this.participantCount});
 
@@ -194,7 +193,7 @@ class _StatusRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
           decoration: BoxDecoration(
             color: statusStyle.$1.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(999),
@@ -208,15 +207,15 @@ class _StatusRow extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Icon(
           Icons.people_alt_rounded,
-          size: 12,
+          size: 13,
           color: SpontiColors.textMuted,
         ),
         const SizedBox(width: 4),
         Text(
-          '$participantCount',
+          '$participantCount ${participantCount == 1 ? 'member' : 'members'}',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
             color: SpontiColors.textMuted,
           ),
@@ -266,32 +265,43 @@ class _EmptyVoteHint extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: SpontiColors.info.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: SpontiColors.info.withValues(alpha: 0.2),
-          style: BorderStyle.solid,
-        ),
+        color: SpontiColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: SpontiColors.outline),
       ),
       child: Column(
         children: [
-          const Text('🗺️', style: TextStyle(fontSize: 32)),
-          const SizedBox(height: 10),
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: SpontiColors.info.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.add_location_alt_rounded,
+              size: 26,
+              color: SpontiColors.info,
+            ),
+          ),
+          const SizedBox(height: 12),
           Text(
             'No locations yet',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
+              color: SpontiColors.textPrimary,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Search for a spot and tap it to add your vote.',
+            'Search for a spot below and add your vote.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: SpontiColors.textSecondary,
+              height: 1.4,
             ),
           ),
         ],
@@ -311,13 +321,17 @@ class _AddLocationButton extends StatelessWidget {
       onTap: () => context.push(RouteName.searchVotePath(planId)),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 15),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: SpontiColors.outline,
-          ),
+          color: SpontiColors.primary,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: SpontiColors.primary.withValues(alpha: 0.28),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -325,7 +339,7 @@ class _AddLocationButton extends StatelessWidget {
             Icon(
               Icons.add_location_alt_rounded,
               size: 18,
-              color: SpontiColors.primary,
+              color: Colors.white,
             ),
             SizedBox(width: 8),
             Text(
@@ -333,7 +347,7 @@ class _AddLocationButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: SpontiColors.primary,
+                color: Colors.white,
               ),
             ),
           ],
