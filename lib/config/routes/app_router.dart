@@ -31,9 +31,10 @@ final _onboardingDataSource = OnboardingLocalDataSourceImpl();
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: RouteName.location,
+  initialLocation: RouteName.signin,
   debugLogDiagnostics: kDebugMode,
   redirect: (context, state) async {
+    // Check Supabase session directly for instant feedback
     final session = Supabase.instance.client.auth.currentSession;
     final isAuth = session != null;
     final currentPath = state.matchedLocation;
@@ -41,7 +42,8 @@ final appRouter = GoRouter(
     final isOnSignIn = currentPath == RouteName.signin;
     final isOnAuthRoute = isOnSignIn || isOnVideoOnboarding;
 
-    final hasCompletedOnboarding = await _onboardingDataSource.hasCompletedOnboarding();
+    final hasCompletedOnboarding = await _onboardingDataSource
+        .hasCompletedOnboarding();
 
     if (!hasCompletedOnboarding && !isOnVideoOnboarding) {
       return RouteName.videoOnboarding;

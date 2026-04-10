@@ -61,7 +61,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
                 state.event == AuthChangeEvent.signedIn ||
                 state.event == AuthChangeEvent.signedOut,
           )
-          .timeout(const Duration(seconds: 120));
+          .timeout(const Duration(seconds: 180));
 
       if (authState.event == AuthChangeEvent.signedOut ||
           authState.session == null) {
@@ -74,7 +74,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
       return user;
     } on TimeoutException {
-      throw AuthException('$providerLabel sign-in timed out. Please try again.');
+      throw AuthException(
+        '$providerLabel sign-in timed out. Please try again.',
+      );
     } catch (e) {
       if (e is AuthException) rethrow;
       throw AuthException(e.toString());

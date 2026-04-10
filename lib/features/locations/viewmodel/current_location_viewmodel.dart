@@ -2,6 +2,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
+enum CurrentLocationRequestStatus {
+  success,
+  serviceDisabled,
+  permissionDenied,
+  permissionDeniedForever,
+  failure,
+}
+
+class CurrentLocationRequestResult {
+  const CurrentLocationRequestResult(this.status);
+
+  final CurrentLocationRequestStatus status;
+
+  bool get isSuccess => status == CurrentLocationRequestStatus.success;
+}
+
 class CurrentLocationState {
   const CurrentLocationState({
     this.latitude,
@@ -49,8 +65,12 @@ class CurrentLocationNotifier extends Notifier<CurrentLocationState> {
   @override
   CurrentLocationState build() => const CurrentLocationState();
 
-  Future<void> locate() async {
-    if (state.isLoading) return;
+  Future<CurrentLocationRequestResult> locate() async {
+    if (state.isLoading) {
+      return const CurrentLocationRequestResult(
+        CurrentLocationRequestStatus.failure,
+      );
+    }
 
     final previous = state;
     state = state.copyWith(
@@ -72,6 +92,9 @@ class CurrentLocationNotifier extends Notifier<CurrentLocationState> {
         subtitle: 'Tap again anytime to recenter on your live spot.',
         isPermissionGranted: true,
       );
+      return const CurrentLocationRequestResult(
+        CurrentLocationRequestStatus.success,
+      );
     } on _LocationServiceDisabledException {
       state = previous.copyWith(
         isLoading: false,
@@ -79,6 +102,9 @@ class CurrentLocationNotifier extends Notifier<CurrentLocationState> {
         title: 'Location is off',
         subtitle: 'Turn on location services to jump back to your spot.',
         errorMessage: 'Location services are off.',
+      );
+      return const CurrentLocationRequestResult(
+        CurrentLocationRequestStatus.serviceDisabled,
       );
     } on _LocationPermissionDeniedException catch (e) {
       state = previous.copyWith(
@@ -92,6 +118,11 @@ class CurrentLocationNotifier extends Notifier<CurrentLocationState> {
             ? 'Location permission is permanently denied.'
             : 'Location permission was denied.',
       );
+      return CurrentLocationRequestResult(
+        e.isPermanent
+            ? CurrentLocationRequestStatus.permissionDeniedForever
+            : CurrentLocationRequestStatus.permissionDenied,
+      );
     } catch (_) {
       state = previous.copyWith(
         isLoading: false,
@@ -100,6 +131,9 @@ class CurrentLocationNotifier extends Notifier<CurrentLocationState> {
             : 'Could not locate you',
         subtitle: 'Try again in a moment.',
         errorMessage: 'We could not fetch your live location right now.',
+      );
+      return const CurrentLocationRequestResult(
+        CurrentLocationRequestStatus.failure,
       );
     }
   }
@@ -110,6 +144,13 @@ class CurrentLocationNotifier extends Notifier<CurrentLocationState> {
   }
 
   Future<void> _ensureLocationPermission() async {
+    // First, double-check that location service is actually enabled
+    // Some Android versions may not properly report permission when service is off
+    final isServiceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!isServiceEnabled) {
+      throw _LocationServiceDisabledException();
+    }
+
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
