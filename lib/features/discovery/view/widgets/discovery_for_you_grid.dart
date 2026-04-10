@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
-import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/discovery/viewmodel/discovery_viewmodel.dart';
 import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
@@ -18,12 +17,13 @@ class DiscoveryForYouGrid extends ConsumerWidget {
       key: const ValueKey('for-you-grid'),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       itemCount: cards.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 18,
-        mainAxisExtent: 262,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        mainAxisExtent: 180,
       ),
       itemBuilder: (context, index) => DiscoveryTopPickCard(
         card: cards[index],
@@ -42,7 +42,7 @@ class DiscoveryForYouGrid extends ConsumerWidget {
   }
 }
 
-class DiscoveryTopPickCard extends StatelessWidget {
+class DiscoveryTopPickCard extends StatefulWidget {
   const DiscoveryTopPickCard({
     super.key,
     required this.card,
@@ -53,82 +53,149 @@ class DiscoveryTopPickCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<DiscoveryTopPickCard> createState() => _DiscoveryTopPickCardState();
+}
+
+class _DiscoveryTopPickCardState extends State<DiscoveryTopPickCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1, end: 0.97).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) => _controller.forward();
+  void _handleTapUp(TapUpDetails details) => _controller.reverse();
+  void _handleTapCancel() => _controller.reverse();
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Ink(
+    final card = widget.card;
+
+    return GestureDetector(
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      onTap: widget.onTap,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF4EFF4),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: SpontiColors.outline),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: SpontiColors.shadow.withValues(alpha: 0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 12,
-                offset: const Offset(0, 6),
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                  child: DiscoveryCardImagePlaceholder(card: card),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Gradient background
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: card.placeholderColors,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                // Decorative circle
+                Positioned(
+                  right: -30,
+                  top: -20,
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                // Icon
+                Positioned(
+                  right: 12,
+                  bottom: 50,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      card.icon,
+                      color: Colors.white.withValues(alpha: 0.95),
+                      size: 18,
+                    ),
+                  ),
+                ),
+                // Text overlay at bottom
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(12, 24, 12, 12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.5),
+                        ],
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: card.chipColor,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: card.chipColor.withValues(alpha: 0.34),
-                                blurRadius: 6,
-                              ),
-                            ],
+                        Text(
+                          card.title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -0.2,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            card.title.toUpperCase(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.2,
-                                ),
+                        const SizedBox(height:1),
+                        Text(
+                          card.subtitle,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withValues(alpha: 0.85),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      card.subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: SpontiColors.textSecondary,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -144,7 +211,7 @@ class DiscoveryCardImagePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -158,67 +225,32 @@ class DiscoveryCardImagePlaceholder extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 12,
-            left: 12,
+            right: -20,
+            top: -10,
             child: Container(
-              width: 34,
-              height: 34,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.78),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.image_outlined,
-                size: 18,
-                color: SpontiColors.textSecondary,
-              ),
-            ),
-          ),
-          Positioned(
-            right: -18,
-            top: -8,
-            child: Container(
-              width: 92,
-              height: 92,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
+                color: Colors.white.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
             ),
           ),
           Positioned(
-            left: 18,
-            right: 18,
-            bottom: 18,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.18),
-                    ),
-                  ),
-                  child: Icon(
-                    card.icon,
-                    color: Colors.white.withValues(alpha: 0.92),
-                    size: 22,
-                  ),
-                ),
-              ],
+            right: 10,
+            bottom: 10,
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                card.icon,
+                color: Colors.white.withValues(alpha: 0.9),
+                size: 20,
+              ),
             ),
           ),
         ],

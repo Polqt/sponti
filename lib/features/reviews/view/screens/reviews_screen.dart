@@ -1,12 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:sponti/config/supabase_options.dart';
+import 'package:sponti/core/services/storage_upload_service.dart';
 import 'package:sponti/core/theme/app_colors.dart';
-import 'package:sponti/core/utils/image_upload.dart';
 import 'package:sponti/core/widgets/app_button.dart';
 import 'package:sponti/core/widgets/location_feedback_widgets.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
@@ -14,12 +11,6 @@ import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/locations/view/widgets/location_feedback_sections.dart';
 import 'package:sponti/features/reviews/model/review.dart';
 import 'package:sponti/features/reviews/viewmodel/reviews_viewmodel.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-typedef _PhotoUploadResult = ({
-  List<String> uploadedUrls,
-  List<String> failedMessages,
-});
 
 class ReviewsScreen extends ConsumerStatefulWidget {
   const ReviewsScreen({
@@ -100,76 +91,6 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
     setState(() => _pickedPhotos.removeAt(index));
   }
 
-  Future<({String? uploadedUrl, String? errorMessage})> _uploadPhoto({
-    required XFile file,
-  }) async {
-    try {
-      final contentType = imageContentTypeForPath(file.path);
-      if (contentType == null) {
-        return (
-          uploadedUrl: null,
-          errorMessage: 'Unsupported file type. Use JPG, PNG, or WEBP.',
-        );
-      }
-
-      final client = Supabase.instance.client;
-      final userId = client.auth.currentUser?.id;
-      if (userId == null) {
-        return (
-          uploadedUrl: null,
-          errorMessage: 'You must be signed in to upload photos.',
-        );
-      }
-
-      final extension = contentType.split('/').last;
-      final path =
-          'reviews/$userId/${widget.locationId}/${DateTime.now().microsecondsSinceEpoch}.$extension';
-
-      await client.storage.from(SupabaseBuckets.locationPhotos).uploadBinary(
-            path,
-            await File(file.path).readAsBytes(),
-            fileOptions: FileOptions(
-              contentType: contentType,
-              upsert: true,
-            ),
-          );
-
-      return (
-        uploadedUrl: client.storage
-            .from(SupabaseBuckets.locationPhotos)
-            .getPublicUrl(path),
-        errorMessage: null,
-      );
-    } on StorageException catch (error) {
-      return (uploadedUrl: null, errorMessage: error.message);
-    } catch (error) {
-      return (uploadedUrl: null, errorMessage: error.toString());
-    }
-  }
-
-  Future<_PhotoUploadResult> _uploadPhotos() async {
-    final uploadedUrls = <String>[];
-    final failedMessages = <String>[];
-
-    for (final file in _pickedPhotos) {
-      final result = await _uploadPhoto(file: file);
-      if (result.uploadedUrl case final uploadedUrl?) {
-        uploadedUrls.add(uploadedUrl);
-        continue;
-      }
-
-      final errorMessage = result.errorMessage;
-      if (errorMessage != null && !failedMessages.contains(errorMessage)) {
-        failedMessages.add(errorMessage);
-      }
-    }
-
-    return (
-      uploadedUrls: uploadedUrls,
-      failedMessages: failedMessages,
-    );
-  }
-
   Future<void> _saveReview() async {
     if (_isSaving) return;
 
@@ -183,7 +104,11 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
 
     setState(() => _isSaving = true);
 
-    final uploadResult = await _uploadPhotos();
+    final uploadResult = await ref.read(storageUploadServiceProvider).uploadLocationPhotos(
+          files: _pickedPhotos,
+          locationId: widget.locationId,
+          folder: LocationPhotoUploadFolder.reviews,
+        );
     if (!mounted) return;
 
     final review = Review(

@@ -7,13 +7,19 @@ import 'package:sponti/features/reviews/view/widgets/review_card.dart';
 import 'package:sponti/features/reviews/viewmodel/reviews_viewmodel.dart';
 
 class LocationDetailReviewsSection extends ConsumerWidget {
-  const LocationDetailReviewsSection({super.key, required this.locationId});
+  const LocationDetailReviewsSection({
+    super.key,
+    required this.locationId,
+    required this.locationName,
+  });
 
   final String locationId;
+  final String locationName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reviewsAsync = ref.watch(reviewsStreamProvider(locationId));
+    final reviewsAsync = ref.watch(reviewsByLocationProvider(locationId));
+    final notifier = ref.read(reviewsByLocationProvider(locationId).notifier);
 
     return LocationDetailSection(
       title: 'Reviews',
@@ -45,13 +51,68 @@ class LocationDetailReviewsSection extends ConsumerWidget {
                   ReviewCard(
                     key: ValueKey<String>(reviews[index].id),
                     review: reviews[index],
+                    locationName: locationName,
                   ),
                   if (index != reviews.length - 1) const SizedBox(height: 18),
+                ],
+                if (notifier.hasMore) ...[
+                  const SizedBox(height: 18),
+                  _LoadMoreReviewsButton(onTap: notifier.fetchNextPage),
                 ],
               ],
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _LoadMoreReviewsButton extends StatefulWidget {
+  const _LoadMoreReviewsButton({required this.onTap});
+
+  final Future<String?> Function() onTap;
+
+  @override
+  State<_LoadMoreReviewsButton> createState() => _LoadMoreReviewsButtonState();
+}
+
+class _LoadMoreReviewsButtonState extends State<_LoadMoreReviewsButton> {
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TextButton(
+        onPressed: _loading
+            ? null
+            : () async {
+                final messenger = ScaffoldMessenger.of(context);
+                setState(() => _loading = true);
+                final error = await widget.onTap();
+                if (!mounted) return;
+                setState(() => _loading = false);
+                if (error != null) {
+                  messenger.showSnackBar(SnackBar(content: Text(error)));
+                }
+              },
+        child: _loading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: SpontiColors.primary,
+                ),
+              )
+            : const Text(
+                'Load more reviews',
+                style: TextStyle(
+                  color: SpontiColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
       ),
     );
   }

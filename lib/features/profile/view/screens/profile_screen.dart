@@ -2,189 +2,281 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
+import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
-import 'package:sponti/core/widgets/app_shimmer.dart';
+import 'package:sponti/core/widgets/fade_slide_in.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
+import 'package:sponti/features/friends/view/widgets/add_friend_button.dart';
+import 'package:sponti/features/profile/model/user_profile.dart';
 import 'package:sponti/features/profile/view/widgets/profile_header.dart';
+import 'package:sponti/features/profile/view/widgets/profile_menu_section.dart';
 import 'package:sponti/features/profile/view/widgets/profile_photo_picker.dart';
+import 'package:sponti/features/profile/view/widgets/profile_shimmer.dart';
 import 'package:sponti/features/profile/view/widgets/profile_stats_card.dart';
+import 'package:sponti/features/profile/view/widgets/sign_out_dialog.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 
-class _AnimatedFadeIn extends StatefulWidget {
-  const _AnimatedFadeIn({
-    required this.child,
-    required this.delay,
-  });
-
-  final Widget child;
-  final Duration delay;
-
-  @override
-  State<_AnimatedFadeIn> createState() => _AnimatedFadeInState();
-}
-
-class _AnimatedFadeInState extends State<_AnimatedFadeIn>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _opacityAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-
-    _opacityAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.15),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
-
-    Future.delayed(widget.delay, () {
-      if (mounted) _controller.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacityAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: widget.child,
-      ),
-    );
-  }
-}
-
 class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.userId});
+
+  final String? userId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(profileProvider);
     final authUser = ref.watch(currentUserProvider);
+    final viewingOwnProfile = userId == null;
+    if (viewingOwnProfile && authUser == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        context.go(RouteName.signin);
+      });
+      return const Scaffold(
+        backgroundColor: SpontiColors.surface,
+        body: SizedBox.shrink(),
+      );
+    }
+
+    final viewedUserId = userId ?? authUser?.id;
+    final isOwnProfile = viewedUserId != null && viewedUserId == authUser?.id;
+
+    final profileAsync = _watchProfile(ref, viewedUserId, isOwnProfile);
+    final statsAsync = _watchStats(ref, viewedUserId);
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
       body: profileAsync.when(
-        loading: () => const _ProfileShimmer(),
-        error: (e, _) => AppErrorState(
+        loading: () => const ProfileShimmer(),
+        error: (_, _) => AppErrorState(
           message: 'Could not load profile.',
-          onRetry: () => ref.invalidate(profileProvider),
+          onRetry: () => _refreshProfile(ref, viewedUserId, isOwnProfile),
         ),
         data: (profile) {
           if (profile == null) {
             return AppErrorState(
               message: 'Profile not found.',
-              onRetry: () => ref.invalidate(profileProvider),
+              onRetry: () => _refreshProfile(ref, viewedUserId, isOwnProfile),
             );
           }
-
-          return CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverAppBar(
-                backgroundColor: SpontiColors.surface,
-                elevation: 0,
-                pinned: false,
-                toolbarHeight: 0,
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 100),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 12),
-                      _AnimatedFadeIn(
-                        delay: Duration.zero,
-                        child: ProfileHeader(
-                          profile: profile,
-                          onAvatarTap: authUser != null
-                              ? () =>
-                                    _pickAndUploadPhoto(context, ref, authUser.id)
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      _AnimatedFadeIn(
-                        delay: const Duration(milliseconds: 100),
-                        child: ProfileStatsCard(profile: profile),
-                      ),
-                      const SizedBox(height: 32),
-                      _AnimatedFadeIn(
-                        delay: const Duration(milliseconds: 200),
-                        child: _MenuSection(
-                          title: 'My Activity',
-                          items: [
-                            _MenuItem(
-                              icon: Icons.location_on_rounded,
-                              iconColor: SpontiColors.primary,
-                              label: 'My Check-ins',
-                              onTap: () => context.push(RouteName.myCheckIns),
-                            ),
-                            _MenuItem(
-                              icon: Icons.bookmark_rounded,
-                              iconColor: SpontiColors.primary,
-                              label: 'Saved Spots',
-                              onTap: () => context.go(RouteName.favorites),
-                            ),
-                            _MenuItem(
-                              icon: Icons.add_location_alt_rounded,
-                              iconColor: SpontiColors.secondary,
-                              label: 'Suggested Spots',
-                              onTap: () => context.push(RouteName.suggestSpot),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      _AnimatedFadeIn(
-                        delay: const Duration(milliseconds: 300),
-                        child: _MenuSection(
-                          title: 'Settings',
-                          items: [
-                            _MenuItem(
-                              icon: Icons.edit_rounded,
-                              iconColor: SpontiColors.secondary,
-                              label: 'Edit Profile',
-                              onTap: () => context.push(RouteName.editProfile),
-                            ),
-                            _MenuItem(
-                              icon: Icons.logout_rounded,
-                              iconColor: SpontiColors.error,
-                              label: 'Sign Out',
-                              onTap: () => _confirmSignOut(context, ref),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          return _ProfileBody(
+            profile: _mergeStats(profile, statsAsync.valueOrNull),
+            isOwnProfile: isOwnProfile,
+            onAvatarTap: isOwnProfile && authUser != null
+                ? () => _pickAndUploadPhoto(context, ref, authUser.id)
+                : null,
           );
         },
       ),
     );
+  }
+
+  AsyncValue<UserProfile?> _watchProfile(
+    WidgetRef ref,
+    String? viewedUserId,
+    bool isOwnProfile,
+  ) {
+    if (viewedUserId == null || viewedUserId.isEmpty) {
+      return const AsyncValue<UserProfile?>.data(null);
+    }
+    return isOwnProfile
+        ? ref.watch(profileProvider)
+        : ref.watch(userProfileProvider(viewedUserId));
+  }
+
+  AsyncValue<UserStats?> _watchStats(WidgetRef ref, String? viewedUserId) {
+    if (viewedUserId == null || viewedUserId.isEmpty) {
+      return const AsyncValue<UserStats?>.data(null);
+    }
+    return ref.watch(userStatsProvider(viewedUserId));
+  }
+}
+
+class _ProfileBody extends StatelessWidget {
+  const _ProfileBody({
+    required this.profile,
+    required this.isOwnProfile,
+    required this.onAvatarTap,
+  });
+
+  final UserProfile profile;
+  final bool isOwnProfile;
+  final VoidCallback? onAvatarTap;
+
+  @override
+  Widget build(BuildContext context) {
+    // Match the bottom bar's dynamic height calculation
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final dockBottomInset = bottomInset > 0 ? bottomInset : 6.0;
+    final bottomPadding = kShellBottomBarHeight + dockBottomInset;
+
+    return CustomScrollView(
+      physics: const ClampingScrollPhysics(),
+      slivers: [
+        if (!isOwnProfile)
+          SliverAppBar(
+            backgroundColor: SpontiColors.surface,
+            elevation: 0,
+            pinned: true,
+            title: Text(
+              profile.fullName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        if (isOwnProfile)
+          // Transparent pinned app bar — zero height, just occupies the status bar
+          // so content can never scroll behind it.
+          SliverAppBar(
+            backgroundColor: SpontiColors.surface,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            pinned: true,
+            toolbarHeight: 0,
+            automaticallyImplyLeading: false,
+          ),
+        if (isOwnProfile)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(
+                top: 16,
+                bottom: bottomPadding,
+              ),
+              child: Column(
+                children: [
+                  FadeSlideIn(
+                    child: ProfileHeader(
+                      profile: profile,
+                      onAvatarTap: onAvatarTap,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 100),
+                    child: ProfileStatsCard(profile: profile),
+                  ),
+                  const SizedBox(height: 32),
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 200),
+                    child: ProfileMenuSection(
+                      title: 'My Activity',
+                      items: _activityItems(context),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 300),
+                    child: Consumer(
+                      builder: (context, ref, _) => ProfileMenuSection(
+                        title: 'Settings',
+                        items: _settingsItems(context, ref),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          // Other profile: top-aligned, scrollable
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(0, 24, 0, bottomPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  FadeSlideIn(
+                    child: ProfileHeader(
+                      profile: profile,
+                      onAvatarTap: null,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 100),
+                    child: ProfileStatsCard(profile: profile),
+                  ),
+                  const SizedBox(height: 20),
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 150),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: AddFriendButton(userId: profile.id),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  List<ProfileMenuItem> _activityItems(BuildContext context) => [
+    ProfileMenuItem(
+      icon: Icons.people_rounded,
+      iconColor: SpontiColors.secondary,
+      label: 'Friends',
+      onTap: () => context.push(RouteName.friends),
+    ),
+    ProfileMenuItem(
+      icon: Icons.location_on_rounded,
+      iconColor: SpontiColors.primary,
+      label: 'My Check-ins',
+      onTap: () => context.push(RouteName.myCheckIns),
+    ),
+    ProfileMenuItem(
+      icon: Icons.groups_2_rounded,
+      iconColor: SpontiColors.info,
+      label: "Let's Go Plans",
+      onTap: () => context.push(RouteName.groupPlans),
+    ),
+    ProfileMenuItem(
+      icon: Icons.compare_arrows_rounded,
+      iconColor: SpontiColors.accent,
+      label: 'Compare Locations',
+      onTap: () => context.push(RouteName.locationComparisonPath()),
+    ),
+    ProfileMenuItem(
+      icon: Icons.add_location_alt_rounded,
+      iconColor: SpontiColors.secondary,
+      label: 'Suggested Spots',
+      onTap: () => context.push(RouteName.suggestSpot),
+    ),
+  ];
+
+  List<ProfileMenuItem> _settingsItems(BuildContext context, WidgetRef ref) => [
+    ProfileMenuItem(
+      icon: Icons.edit_rounded,
+      iconColor: SpontiColors.secondary,
+      label: 'Edit Profile',
+      onTap: () => context.push(RouteName.editProfile),
+    ),
+    ProfileMenuItem(
+      icon: Icons.logout_rounded,
+      iconColor: SpontiColors.error,
+      label: 'Sign Out',
+      onTap: () => showSignOutDialog(context, ref),
+    ),
+  ];
+}
+
+UserProfile _mergeStats(UserProfile profile, UserStats? stats) {
+  if (stats == null) return profile;
+  return profile.copyWith(
+    checkInCount: stats.checkInCount,
+    favoritesCount: stats.favoritesCount,
+    spotsSuggested: stats.spotsSuggested,
+  );
+}
+
+void _refreshProfile(WidgetRef ref, String? userId, bool isOwnProfile) {
+  if (isOwnProfile) {
+    ref.invalidate(profileProvider);
+  } else if (userId != null && userId.isNotEmpty) {
+    ref.invalidate(userProfileProvider(userId));
+  }
+  if (userId != null && userId.isNotEmpty) {
+    ref.invalidate(userStatsProvider(userId));
   }
 }
 
@@ -196,233 +288,19 @@ Future<void> _pickAndUploadPhoto(
   final picked = await ProfilePhotoPicker.show(context);
   if (picked == null) return;
 
-  await ref
+  final errorMessage = await ref
       .read(profileProvider.notifier)
       .uploadPhoto(
         userId: userId,
         bytes: picked.bytes,
         extension: picked.extension,
         contentType: picked.contentType,
-      )
-      .then((errorMessage) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              errorMessage ?? 'Profile photo updated successfully.',
-            ),
-          ),
-        );
-      });
-}
+      );
 
-Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
-  final shouldSignOut =
-      await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text('Sign Out'),
-          content: const Text('Are you sure you want to sign out?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text(
-                'Sign Out',
-                style: TextStyle(color: SpontiColors.error),
-              ),
-            ),
-          ],
-        ),
-      ) ??
-      false;
-
-  if (!shouldSignOut || !context.mounted) return;
-
-  final signedOut = await ref.read(authProvider.notifier).signOut();
   if (!context.mounted) return;
-
-  if (!signedOut) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sign out failed. Please try again.')),
-    );
-    return;
-  }
-
-  ref.invalidate(profileProvider);
-  context.go(RouteName.signin);
-}
-
-class _MenuSection extends StatelessWidget {
-  const _MenuSection({required this.title, required this.items});
-
-  final String title;
-  final List<_MenuItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _SectionLabel(label: title),
-        const SizedBox(height: 12),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: SpontiColors.shadow.withValues(alpha: 0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Column(
-              children: [
-                for (int i = 0; i < items.length; i++) ...[
-                  _MenuTile(
-                    icon: items[i].icon,
-                    iconColor: items[i].iconColor,
-                    label: items[i].label,
-                    onTap: items[i].onTap,
-                  ),
-                  if (i < items.length - 1)
-                    Container(
-                      height: 1,
-                      margin: EdgeInsets.zero,
-                      color: SpontiColors.outline.withValues(alpha: 0.3),
-                    ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MenuItem {
-  const _MenuItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.iconColor,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Color? iconColor;
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: SpontiColors.textMuted,
-            letterSpacing: 0.8,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MenuTile extends StatelessWidget {
-  const _MenuTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.iconColor,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Color? iconColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = iconColor ?? SpontiColors.primary;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        splashColor: color.withValues(alpha: 0.05),
-        highlightColor: color.withValues(alpha: 0.02),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Icon(icon, size: 24, color: color),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 20,
-                color: SpontiColors.textMuted.withValues(alpha: 0.5),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileShimmer extends StatelessWidget {
-  const _ProfileShimmer();
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          const SizedBox(height: 60),
-          Center(child: AppShimmer.circle(size: 96)),
-          const SizedBox(height: 16),
-          Center(child: AppShimmer(height: 20, width: 160)),
-          const SizedBox(height: 8),
-          Center(child: AppShimmer(height: 14, width: 100)),
-          const SizedBox(height: 24),
-          AppShimmer(height: 76, borderRadius: 16),
-          const SizedBox(height: 28),
-          for (int i = 0; i < 5; i++) ...[
-            AppShimmer(height: 56, borderRadius: 14),
-            const SizedBox(height: 8),
-          ],
-        ],
-      ),
-    );
-  }
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(errorMessage ?? 'Profile photo updated successfully.'),
+    ),
+  );
 }

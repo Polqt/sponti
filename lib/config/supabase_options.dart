@@ -5,6 +5,8 @@ class SupabaseOptions {
 
   static String get supabaseUrl => dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
   static String get supabaseAnonKey => dotenv.env['PUBLIC_SUPABASE_KEY'] ?? '';
+  static String get authRedirectTo =>
+      dotenv.env['AUTH_REDIRECT_TO'] ?? 'io.supabase.sponti://login-callback/';
 }
 
 abstract final class SupabaseTables {
@@ -16,6 +18,11 @@ abstract final class SupabaseTables {
   static const String locationPhotos = 'location_photos';
   static const String profiles = 'profiles';
   static const String suggestions = 'suggestions';
+  static const String groupPlans = 'group_plans';
+  static const String planParticipants = 'plan_participants';
+  static const String planVotes = 'plan_votes';
+  static const String friendRequests = 'friend_requests';
+  static const String friendConnections = 'friend_connections';
 }
 
 abstract final class SupabaseBuckets {
@@ -29,4 +36,13 @@ abstract final class SupabaseRPC {
   static const String getNearbyLocations = 'get_nearby_locations';
   static const String getLocationWithStats = 'get_location_with_stats';
   static const String searchLocations = 'search_locations';
+  static const String searchLocationsRanked = 'search_locations_ranked';
+  static const String getUserCheckInStreak = 'get_user_checkin_streak';
+  static const String getTopCurators = 'get_top_curators';
+  static const String getFriendActivity = 'get_friend_activity';
+  static const String searchUsers = 'search_users';
+}
+
+abstract final class SupabaseEdgeFunctions {
+  static const String optimizeUploadedImage = 'optimize-uploaded-image';
 }

@@ -18,34 +18,63 @@ enum LocationRanking {
   };
 }
 
-extension LocationRankingExtension on Location {
-  LocationRanking? getPrimaryRanking(List<Location> allLocations) {
-    if (allLocations.isEmpty) return null;
+class LocationRankingSnapshot {
+  LocationRankingSnapshot._({
+    required this.thirtyDaysAgo,
+    required this.checkInP75,
+    required this.reviewP75,
+    required this.checkInP25,
+  });
 
-    final now = DateTime.now();
-    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-    final relevantDate = seededAt ?? createdAt;
+  factory LocationRankingSnapshot.fromLocations(
+    List<Location> locations, {
+    DateTime? now,
+  }) {
+    final referenceTime = now ?? DateTime.now();
+    if (locations.isEmpty) {
+      return LocationRankingSnapshot._(
+        thirtyDaysAgo: referenceTime.subtract(const Duration(days: 30)),
+        checkInP75: 0,
+        reviewP75: 0,
+        checkInP25: 0,
+      );
+    }
 
-    if (isSeeded && relevantDate.isAfter(thirtyDaysAgo)) {
+    final checkInCounts = locations.map((location) => location.checkInCount).toList()
+      ..sort();
+    final reviewCounts = locations.map((location) => location.reviewCount).toList()
+      ..sort();
+
+    return LocationRankingSnapshot._(
+      thirtyDaysAgo: referenceTime.subtract(const Duration(days: 30)),
+      checkInP75: _percentile(checkInCounts, 0.75),
+      reviewP75: _percentile(reviewCounts, 0.75),
+      checkInP25: _percentile(checkInCounts, 0.25),
+    );
+  }
+
+  final DateTime thirtyDaysAgo;
+  final double checkInP75;
+  final double reviewP75;
+  final double checkInP25;
+
+  LocationRanking? rankingFor(Location location) {
+    final relevantDate = location.seededAt ?? location.createdAt;
+
+    if (location.isSeeded && relevantDate.isAfter(thirtyDaysAgo)) {
       return LocationRanking.newest;
     }
 
-    final checkInCounts = allLocations.map((l) => l.checkInCount).toList()..sort();
-    final reviewCounts = allLocations.map((l) => l.reviewCount).toList()..sort();
-    
-    final checkInP75 = _percentile(checkInCounts, 0.75);
-    final reviewP75 = _percentile(reviewCounts, 0.75);
-    final checkInP25 = _percentile(checkInCounts, 0.25);
-
-    if (checkInCount >= checkInP75 && checkInCount > 0) {
+    if (location.checkInCount >= checkInP75 && location.checkInCount > 0) {
       return LocationRanking.trending;
     }
 
-    if ((rating >= 4.0 && reviewCount >= reviewP75) || reviewCount >= 10) {
+    if ((location.rating >= 4.0 && location.reviewCount >= reviewP75) ||
+        location.reviewCount >= 10) {
       return LocationRanking.popular;
     }
 
-    if (isHiddenGem || checkInCount <= checkInP25) {
+    if (location.isHiddenGem || location.checkInCount <= checkInP25) {
       return LocationRanking.lowkey;
     }
 
@@ -54,8 +83,21 @@ extension LocationRankingExtension on Location {
 
   static double _percentile(List<int> sorted, double percentile) {
     if (sorted.isEmpty) return 0;
-    final index = (sorted.length * percentile).floor().clamp(0, sorted.length - 1);
+    final index =
+        (sorted.length * percentile).floor().clamp(0, sorted.length - 1);
     return sorted[index].toDouble();
+  }
+}
+
+extension LocationRankingSnapshotList on List<Location> {
+  LocationRankingSnapshot createRankingSnapshot({DateTime? now}) =>
+      LocationRankingSnapshot.fromLocations(this, now: now);
+}
+
+extension LocationRankingExtension on Location {
+  LocationRanking? getPrimaryRanking(List<Location> allLocations) {
+    if (allLocations.isEmpty) return null;
+    return allLocations.createRankingSnapshot().rankingFor(this);
   }
 }
 

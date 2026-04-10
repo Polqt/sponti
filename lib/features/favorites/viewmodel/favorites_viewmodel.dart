@@ -1,22 +1,27 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sponti/core/errors/failures.dart';
+import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:sponti/features/favorites/model/favorite.dart';
 import 'package:sponti/features/favorites/repository/favorites_remote_data_source.dart';
 import 'package:sponti/features/favorites/repository/favorites_repository.dart';
 import 'package:sponti/features/favorites/repository/favorites_repository_impl.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final favoritesRemoteDataSourceProvider = Provider<FavoritesRemoteDataSource>((
   ref,
 ) {
-  return FavoritesRemoteDataSourceImpl(Supabase.instance.client);
+  return FavoritesRemoteDataSourceImpl(
+    Supabase.instance.client,
+    ref.read(locationRemoteDataSourceProvider),
+  );
 });
 
 final favoritesRepositoryProvider = Provider<FavoritesRepository>((ref) {
-  return FavoritesRepositoryImpl(ref.watch(favoritesRemoteDataSourceProvider));
+  return FavoritesRepositoryImpl(ref.read(favoritesRemoteDataSourceProvider));
 });
 
 class FavoritesViewModel extends AsyncNotifier<List<String>> {
@@ -45,10 +50,8 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
         : await _repository.addFavorite(locationId);
 
     result.fold(
-      (failure) => state = AsyncError(
-        StateError(failure.message),
-        StackTrace.current,
-      ),
+      (failure) =>
+          state = AsyncError(StateError(failure.message), StackTrace.current),
       (_) => _invalidateDependentProviders(),
     );
 
@@ -58,10 +61,10 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
   }
 
   Future<void> remove(String locationId) => _updateFavorite(
-        locationId: locationId,
-        updater: (current) => current..remove(locationId),
-        operation: () => _repository.removeFavorite(locationId),
-      );
+    locationId: locationId,
+    updater: (current) => current..remove(locationId),
+    operation: () => _repository.removeFavorite(locationId),
+  );
 
   Future<void> _updateFavorite({
     required String locationId,
@@ -74,10 +77,8 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
 
     final result = await operation();
     result.fold(
-      (failure) => state = AsyncError(
-        StateError(failure.message),
-        StackTrace.current,
-      ),
+      (failure) =>
+          state = AsyncError(StateError(failure.message), StackTrace.current),
       (_) => _invalidateDependentProviders(),
     );
 
@@ -90,12 +91,14 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
     final current = [...await future];
     state = const AsyncData(<String>[]);
 
-    for (final locationId in current) {
-      final result = await _repository.removeFavorite(locationId);
-      if (result.isLeft()) {
-        state = AsyncData(current);
-        return;
-      }
+    final results = await Future.wait(
+      current.map(_repository.removeFavorite),
+      eagerError: false,
+    );
+    final hasFailure = results.any((result) => result.isLeft());
+    if (hasFailure) {
+      state = AsyncData(current);
+      return;
     }
 
     _invalidateDependentProviders();
@@ -104,7 +107,11 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
   void _invalidateDependentProviders() {
     ref.invalidate(favoritesProvider);
     ref.invalidate(favoriteLocationsProvider);
-    ref.invalidate(profileProvider);
+    // Invalidate stats only - profile data hasn't changed, just the counts
+    final userId = ref.read(currentUserIdProvider);
+    if (userId != null) {
+      ref.invalidate(userStatsProvider(userId));
+    }
   }
 }
 
@@ -114,7 +121,9 @@ final favoriteIdsProvider =
     );
 
 final favoriteIdSetProvider = Provider<Set<String>>((ref) {
-  final ids = ref.watch(favoriteIdsProvider).valueOrNull ?? const <String>[];
+  final ids = ref.watch(
+    favoriteIdsProvider.select((s) => s.valueOrNull ?? const <String>[]),
+  );
   return ids.toSet();
 });
 

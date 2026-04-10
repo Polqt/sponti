@@ -19,6 +19,9 @@ class LocationCard extends StatelessWidget {
     this.savedIcon = Icons.favorite_border_rounded,
     this.savedActiveIcon = Icons.favorite_rounded,
     this.showShadow = true,
+    this.isPinnedForComparison = false,
+    this.onComparisonToggle,
+    this.isTrending = false,
   });
 
   final Location location;
@@ -30,6 +33,9 @@ class LocationCard extends StatelessWidget {
   final IconData savedIcon;
   final IconData savedActiveIcon;
   final bool showShadow;
+  final bool isPinnedForComparison;
+  final VoidCallback? onComparisonToggle;
+  final bool isTrending;
 
   bool get _isFullWidth => variant == LocationCardVariant.fullWidth;
 
@@ -38,6 +44,7 @@ class LocationCard extends StatelessWidget {
     return SizedBox(
       width: _isFullWidth ? double.infinity : width,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
           clipBehavior: Clip.antiAlias,
@@ -64,6 +71,9 @@ class LocationCard extends StatelessWidget {
                 onSaveToggle: onSaveToggle,
                 savedIcon: savedIcon,
                 savedActiveIcon: savedActiveIcon,
+                isPinnedForComparison: isPinnedForComparison,
+                onComparisonToggle: onComparisonToggle,
+                isTrending: isTrending,
               ),
               _CardBody(location: location),
             ],
@@ -81,6 +91,9 @@ class _CardImage extends StatelessWidget {
     required this.onSaveToggle,
     required this.savedIcon,
     required this.savedActiveIcon,
+    required this.isPinnedForComparison,
+    required this.onComparisonToggle,
+    required this.isTrending,
   });
 
   final Location location;
@@ -88,6 +101,9 @@ class _CardImage extends StatelessWidget {
   final VoidCallback? onSaveToggle;
   final IconData savedIcon;
   final IconData savedActiveIcon;
+  final bool isPinnedForComparison;
+  final VoidCallback? onComparisonToggle;
+  final bool isTrending;
 
   @override
   Widget build(BuildContext context) {
@@ -161,11 +177,42 @@ class _CardImage extends StatelessWidget {
             ),
           ),
 
+          // Trending badge — below category pill, top left
+          if (isTrending)
+            Positioned(
+              top: 34,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6B35),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('🔥', style: TextStyle(fontSize: 9)),
+                    SizedBox(width: 3),
+                    Text(
+                      'Trending',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           // Hidden gem sparkle — top right
           if (location.isHiddenGem)
             Positioned(
               top: 8,
-              right: onSaveToggle == null ? 8 : 48,
+              right: onSaveToggle != null && onComparisonToggle != null
+                  ? 88
+                  : (onSaveToggle != null || onComparisonToggle != null ? 48 : 8),
               child: Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
@@ -197,6 +244,31 @@ class _CardImage extends StatelessWidget {
                       size: 16,
                       color: isSaved
                           ? SpontiColors.primary
+                          : SpontiColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (onComparisonToggle != null)
+            Positioned(
+              top: 8,
+              right: onSaveToggle != null ? 48 : 8,
+              child: Material(
+                color: Colors.white.withValues(alpha: 0.92),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onComparisonToggle,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Icon(
+                      isPinnedForComparison
+                          ? Icons.push_pin_rounded
+                          : Icons.push_pin_outlined,
+                      size: 16,
+                      color: isPinnedForComparison
+                          ? SpontiColors.info
                           : SpontiColors.textSecondary,
                     ),
                   ),

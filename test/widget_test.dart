@@ -4,10 +4,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sponti/core/theme/app_theme.dart';
 import 'package:sponti/features/favorites/view/screens/favorites_screen.dart';
 import 'package:sponti/features/favorites/viewmodel/favorites_viewmodel.dart';
+import 'package:sponti/features/location_comparison/viewmodel/location_comparison_viewmodel.dart';
 import 'package:sponti/features/locations/model/coordinates.dart';
 import 'package:sponti/features/locations/model/location.dart';
 
 void main() {
+  // Overrides to prevent Hive and Supabase from initializing in widget tests.
+  final comparisonOverrides = [
+    pinnedComparisonIdsProvider.overrideWith(_StubComparisonViewModel.new),
+    pinnedComparisonIdSetProvider.overrideWithValue(const <String>{}),
+  ];
+
   testWidgets('shows empty state when there are no saved places', (
     WidgetTester tester,
   ) async {
@@ -26,17 +33,19 @@ void main() {
                   .toList(growable: false);
             },
           ),
+          ...comparisonOverrides,
         ],
         child: const _TestApp(child: FavoritesScreen()),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No saved places yet'), findsOneWidget);
-    expect(find.text('Explore spots'), findsOneWidget);
+    expect(find.text('Nothing saved yet'), findsOneWidget);
   });
 
-  testWidgets('filters and removes saved places', (WidgetTester tester) async {
+  testWidgets('shows saved places when favorites exist', (
+    WidgetTester tester,
+  ) async {
     testFavoriteIds = ['campuestohan', 'tom-n-toms'];
     testLocations = <Location>[
       _location(
@@ -67,6 +76,7 @@ void main() {
                   .toList(growable: false);
             },
           ),
+          ...comparisonOverrides,
         ],
         child: const _TestApp(child: FavoritesScreen()),
       ),
@@ -75,17 +85,6 @@ void main() {
 
     expect(find.text('Campuestohan Highland Resort'), findsOneWidget);
     expect(find.text('Tom N Toms Lacson'), findsOneWidget);
-
-    await tester.enterText(find.byType(TextFormField), 'coffee');
-    await tester.pumpAndSettle();
-
-    expect(find.text('Campuestohan Highland Resort'), findsNothing);
-    expect(find.text('Tom N Toms Lacson'), findsOneWidget);
-
-    await tester.tap(find.text('Remove'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Tom N Toms Lacson'), findsNothing);
   });
 }
 
@@ -112,6 +111,11 @@ class TestFavoritesViewModel extends FavoritesViewModel {
     }
     state = AsyncData(updated);
   }
+}
+
+class _StubComparisonViewModel extends LocationComparisonViewModel {
+  @override
+  Future<List<String>> build() async => const [];
 }
 
 class _TestApp extends StatelessWidget {

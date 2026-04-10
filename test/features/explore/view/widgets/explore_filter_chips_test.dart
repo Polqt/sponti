@@ -12,6 +12,12 @@ void main() {
     var priceTapped = false;
     var categoryTapped = false;
     var nowOpenTapped = false;
+    var amenitiesTapped = false;
+
+    // Use a wide surface so all chips fit without scrolling.
+    tester.view.physicalSize = const Size(1600, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -23,6 +29,7 @@ void main() {
             onTapPrice: () => priceTapped = true,
             onTapCategory: () => categoryTapped = true,
             onToggleNowOpen: () => nowOpenTapped = true,
+            onTapAmenities: () => amenitiesTapped = true,
           ),
         ),
       ),
@@ -32,6 +39,7 @@ void main() {
     expect(find.text('Any price'), findsOneWidget);
     expect(find.text('Category'), findsOneWidget);
     expect(find.text('Now open'), findsOneWidget);
+    expect(find.text('Amenities'), findsOneWidget);
 
     await tester.tap(find.textContaining('Trending'));
     await tester.pump();
@@ -48,5 +56,9 @@ void main() {
     await tester.tap(find.text('Now open'));
     await tester.pump();
     expect(nowOpenTapped, isTrue);
+
+    await tester.tap(find.text('Amenities'));
+    await tester.pump();
+    expect(amenitiesTapped, isTrue);
   });
 }

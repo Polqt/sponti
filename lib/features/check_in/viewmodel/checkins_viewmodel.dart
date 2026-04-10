@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sponti/core/constants/api_constants.dart';
+import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
 import 'package:sponti/features/check_in/models/checkins.dart';
 import 'package:sponti/features/check_in/repository/checkins_remote_data_source.dart';
 import 'package:sponti/features/check_in/repository/checkins_repository.dart';
 import 'package:sponti/features/check_in/repository/checkins_repository_impl.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
+import 'package:sponti/features/streaks/viewmodel/checkin_streak_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final checkinsRemoteDataSourceProvider = Provider<CheckinsRemoteDataSource>((
@@ -14,20 +16,7 @@ final checkinsRemoteDataSourceProvider = Provider<CheckinsRemoteDataSource>((
 });
 
 final checkinsRepositoryProvider = Provider<CheckinsRepository>((ref) {
-  return CheckinsRepositoryImpl(ref.watch(checkinsRemoteDataSourceProvider));
-});
-
-final locationCheckInCountProvider = StreamProvider.family<int, String>((
-  ref,
-  locationId,
-) {
-  final client = Supabase.instance.client;
-
-  return client
-      .from(ApiConstants.checkInsTable)
-      .stream(primaryKey: ['id'])
-      .eq('location_id', locationId)
-      .map((rows) => rows.length);
+  return CheckinsRepositoryImpl(ref.read(checkinsRemoteDataSourceProvider));
 });
 
 /// State for the check-in page tied to one location.
@@ -72,9 +61,12 @@ class CheckInState {
 /// Notifier scoped to a single location.
 /// Pass the locationId via the family parameter.
 class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
+  late final String _locationId;
+
   @override
   Future<CheckInState> build(String locationId) async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
+    _locationId = locationId;
+    final userId = ref.watch(currentUserIdProvider);
     if (userId == null) return const CheckInState();
 
     final repo = ref.read(checkinsRepositoryProvider);
@@ -112,7 +104,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
 
   /// Submit a new check-in with optional note and photos.
   Future<bool> checkIn({String? note, List<String> photos = const []}) async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final userId = ref.read(currentUserIdProvider);
     if (userId == null) return false;
 
     final current = state.valueOrNull ?? const CheckInState();
@@ -127,7 +119,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
     final repository = ref.read(checkinsRepositoryProvider);
     final result = current.myCheckInId == null
         ? await repository.createCheckIn(
-            locationId: arg,
+            locationId: _locationId,
             userId: userId,
             note: note,
             photos: photos,
@@ -191,7 +183,7 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
         return false;
       },
       (_) {
-        final userId = Supabase.instance.client.auth.currentUser?.id;
+        final userId = ref.read(currentUserIdProvider);
         state = AsyncData(
           current.copyWith(
             isLoading: false,
@@ -210,8 +202,14 @@ class CheckInNotifier extends FamilyAsyncNotifier<CheckInState, String> {
   }
 
   void _invalidateDependentProviders() {
-    ref.invalidate(profileProvider);
+    // Invalidate stats only - profile data hasn't changed, just the check-in count
+    final userId = ref.read(currentUserIdProvider);
+    if (userId != null) {
+      ref.invalidate(userStatsProvider(userId));
+    }
     ref.invalidate(myCheckInsProvider);
+    ref.invalidate(checkInStreakProvider);
+    ref.invalidate(locationStreamProvider(_locationId));
   }
 }
 
@@ -220,9 +218,63 @@ final checkInProvider =
       CheckInNotifier.new,
     );
 
-final myCheckInsProvider = FutureProvider<List<CheckIn>>((ref) async {
-  final result = await ref.read(checkinsRepositoryProvider).getMyCheckIns();
-  return result.fold((failure) {
-    throw StateError(failure.message);
-  }, (checkIns) => checkIns);
-});
+const _myCheckInsPageSize = 20;
+
+class MyCheckInsNotifier extends AsyncNotifier<List<CheckIn>> {
+  CheckInPageCursor? _nextCursor;
+  bool _hasMore = false;
+  bool _isFetchingNextPage = false;
+
+  bool get hasMore => _hasMore;
+
+  @override
+  Future<List<CheckIn>> build() async {
+    _nextCursor = null;
+    _hasMore = false;
+
+    final repository = ref.read(checkinsRepositoryProvider);
+    final result = await repository.getMyCheckInsPage(
+      limit: _myCheckInsPageSize,
+    );
+    return result.fold(
+      (failure) => throw StateError(failure.message),
+      (page) {
+        _hasMore = page.hasMore;
+        _nextCursor = page.nextCursor;
+        return page.items;
+      },
+    );
+  }
+
+  /// Returns an error message on failure, null on success.
+  Future<String?> fetchNextPage() async {
+    if (!_hasMore || _nextCursor == null || _isFetchingNextPage) return null;
+    final current = state.valueOrNull;
+    if (current == null) return null;
+
+    _isFetchingNextPage = true;
+    try {
+      final repository = ref.read(checkinsRepositoryProvider);
+      final result = await repository.getMyCheckInsPage(
+        cursor: _nextCursor,
+        limit: _myCheckInsPageSize,
+      );
+      return result.fold(
+        (f) => f.message,
+        (page) {
+          _hasMore = page.hasMore;
+          _nextCursor = page.nextCursor;
+          state = AsyncData([...current, ...page.items]);
+          return null;
+        },
+      );
+    } finally {
+      _isFetchingNextPage = false;
+    }
+  }
+}
+
+final myCheckInsProvider =
+    AsyncNotifierProvider<MyCheckInsNotifier, List<CheckIn>>(
+      MyCheckInsNotifier.new,
+    );

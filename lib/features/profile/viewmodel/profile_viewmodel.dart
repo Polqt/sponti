@@ -60,15 +60,24 @@ class ProfileViewModel extends AsyncNotifier<UserProfile?> {
       contentType: contentType,
     );
 
-    return urlResult.fold((failure) => failure.message, (url) async {
-      final current = state.value;
-      if (current == null) {
-        return 'Profile is still loading. Please try again.';
-      }
+    String? uploadFailureMessage;
+    String? uploadedUrl;
+    urlResult.fold(
+      (failure) => uploadFailureMessage = failure.message,
+      (url) => uploadedUrl = url,
+    );
 
-      final didUpdate = await updateProfile(current.copyWith(avatarUrl: url));
-      return didUpdate ? null : 'Failed to update profile photo.';
-    });
+    if (uploadFailureMessage != null) {
+      return uploadFailureMessage;
+    }
+
+    final current = state.value;
+    if (current == null || uploadedUrl == null) {
+      return 'Profile is still loading. Please try again.';
+    }
+
+    final didUpdate = await updateProfile(current.copyWith(avatarUrl: uploadedUrl));
+    return didUpdate ? null : 'Failed to update profile photo.';
   }
 
   void refresh() {

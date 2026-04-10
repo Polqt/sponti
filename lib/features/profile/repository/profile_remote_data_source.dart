@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:sponti/config/supabase_options.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/profile/model/user_profile_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -99,9 +99,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
         params: {'user_id': userId},
       );
 
-      final data = (response as List<dynamic>).isNotEmpty
-          ? response.first as Map<String, dynamic>
-          : <String, dynamic>{};
+      final data = _extractStatsPayload(response);
 
       return UserStatsModel.fromJson(data);
     } on PostgrestException catch (e) {
@@ -109,6 +107,19 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     } catch (e) {
       throw ServerException(e.toString());
     }
+  }
+
+  Map<String, dynamic> _extractStatsPayload(dynamic response) {
+    if (response is List && response.isNotEmpty) {
+      final first = response.first;
+      if (first is Map<String, dynamic>) return first;
+      if (first is Map) {
+        return Map<String, dynamic>.from(first);
+      }
+    }
+    if (response is Map<String, dynamic>) return response;
+    if (response is Map) return Map<String, dynamic>.from(response);
+    return <String, dynamic>{};
   }
 
   @override

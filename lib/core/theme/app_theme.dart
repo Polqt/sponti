@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 
 abstract final class SpontiTheme {
@@ -20,10 +21,13 @@ abstract final class SpontiTheme {
       onError: SpontiColors.white,
     );
 
+    final baseTextTheme = GoogleFonts.plusJakartaSansTextTheme();
+
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: SpontiColors.surface,
+      fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
 
       // App Bar
       appBarTheme: const AppBarTheme(
@@ -45,8 +49,7 @@ abstract final class SpontiTheme {
         ),
       ),
 
-      // Text
-      textTheme: const TextTheme(
+      textTheme: baseTextTheme.merge(const TextTheme(
         displayLarge: TextStyle(
           fontSize: 32,
           fontWeight: FontWeight.w800,
@@ -127,7 +130,7 @@ abstract final class SpontiTheme {
           color: SpontiColors.textMuted,
           letterSpacing: 0.3,
         ),
-      ),
+      )),
 
       // Card
       cardTheme: CardThemeData(

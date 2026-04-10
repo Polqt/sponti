@@ -1,33 +1,20 @@
 import 'package:dartz/dartz.dart';
+import 'package:sponti/core/errors/base_repository.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/core/errors/failures.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/model/location_model.dart';
+import 'package:sponti/features/locations/model/location_query.dart';
 import 'package:sponti/features/locations/repository/location_local_data_source.dart';
 import 'package:sponti/features/locations/repository/location_remote_data_source.dart';
 import 'package:sponti/features/locations/repository/location_repository.dart';
 
-class LocationRepositoryImpl implements LocationRepository {
+class LocationRepositoryImpl extends BaseRepository
+    implements LocationRepository {
   const LocationRepositoryImpl(this._remote, this._local);
 
   final LocationRemoteDataSource _remote;
   final LocationLocalDataSource _local;
-
-  Future<Either<Failure, T>> _guard<T>(Future<T> Function() call) async {
-    try {
-      return Right(await call());
-    } on NotFoundException catch (e) {
-      return Left(NotFoundFailure(e.message));
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } on CacheException catch (e) {
-      return Left(CacheFailure(e.message));
-    } on NetworkException catch (e) {
-      return Left(NetworkFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
 
   Future<Either<Failure, List<Location>>> _getCachedOrFail(
     String message,
@@ -44,7 +31,7 @@ class LocationRepositoryImpl implements LocationRepository {
   @override
   Future<Either<Failure, List<Location>>> getAllLocations({
     int page = 0,
-    int pageSize = 20,
+    int pageSize = 100,
   }) async {
     try {
       final locations = await _remote.getAllLocations(
@@ -72,10 +59,16 @@ class LocationRepositoryImpl implements LocationRepository {
   }
 
   @override
+  Future<Either<Failure, LocationPage>> getLocationsPage({
+    LocationPageCursor? cursor,
+    int limit = 30,
+  }) => guard(() => _remote.getLocationsPage(cursor: cursor, limit: limit));
+
+  @override
   Future<Either<Failure, Location>> getLocationById(String id) async {
     final cached = await _local.getCachedLocationById(id);
     if (cached != null) return Right(cached);
-    return _guard(() => _remote.getLocationById(id));
+    return guard(() => _remote.getLocationById(id));
   }
 
   @override
@@ -83,7 +76,7 @@ class LocationRepositoryImpl implements LocationRepository {
     required double latitude,
     required double longitude,
     double radiusKm = 5.0,
-  }) => _guard(
+  }) => guard(
     () => _remote.getNearbyLocations(
       latitude: latitude,
       longitude: longitude,
@@ -94,26 +87,31 @@ class LocationRepositoryImpl implements LocationRepository {
   @override
   Future<Either<Failure, List<Location>>> filterByCategory(
     LocationCategory category,
-  ) => _guard(() => _remote.filterByCategory(category));
+  ) => guard(() => _remote.filterByCategory(category));
 
   @override
   Future<Either<Failure, List<Location>>> fetchByCategories(
     List<String> categories,
-  ) => _guard(() => _remote.fetchByCategories(categories));
+  ) => guard(() => _remote.fetchByCategories(categories));
 
   @override
   Future<Either<Failure, List<Location>>> searchLocations(String query) =>
-      _guard(() => _remote.searchLocations(query));
+      guard(() => _remote.searchLocations(query));
+
+  @override
+  Future<Either<Failure, List<Location>>> searchLocationsRanked(
+    RankedLocationSearchRequest request,
+  ) => guard(() => _remote.searchLocationsRanked(request));
 
   @override
   Future<Either<Failure, Location>> createLocation(Location location) =>
-      _guard(() => _remote.createLocation(LocationModel.fromEntity(location)));
+      guard(() => _remote.createLocation(LocationModel.fromEntity(location)));
 
   @override
   Future<Either<Failure, Location>> updateLocation(Location location) =>
-      _guard(() => _remote.updateLocation(LocationModel.fromEntity(location)));
+      guard(() => _remote.updateLocation(LocationModel.fromEntity(location)));
 
   @override
   Future<Either<Failure, void>> deleteLocation(String id) =>
-      _guard(() => _remote.deleteLocation(id));
+      guard(() => _remote.deleteLocation(id));
 }

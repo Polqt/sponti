@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/discovery/viewmodel/discovery_viewmodel.dart';
 
+/// iOS 2025-style segmented control for Discovery screen tabs.
 class DiscoveryColumnSwitcher extends StatelessWidget {
   const DiscoveryColumnSwitcher({
     super.key,
@@ -14,21 +15,29 @@ class DiscoveryColumnSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(999)),
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: SpontiColors.surfaceVariant.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          DiscoveryColumnTab(
-            label: 'for you',
+          _SegmentTab(
+            label: 'For You',
             isSelected: activeColumn == DiscoveryColumn.forYou,
             onTap: () => onChanged(DiscoveryColumn.forYou),
           ),
-          const SizedBox(width: 20),
-          DiscoveryColumnTab(
-            label: 'friends',
+          _SegmentTab(
+            label: 'Friends',
             isSelected: activeColumn == DiscoveryColumn.friends,
             onTap: () => onChanged(DiscoveryColumn.friends),
+          ),
+          _SegmentTab(
+            label: 'Leaderboards',
+            isSelected: activeColumn == DiscoveryColumn.leaderboards,
+            onTap: () => onChanged(DiscoveryColumn.leaderboards),
           ),
         ],
       ),
@@ -36,9 +45,8 @@ class DiscoveryColumnSwitcher extends StatelessWidget {
   }
 }
 
-class DiscoveryColumnTab extends StatelessWidget {
-  const DiscoveryColumnTab({
-    super.key,
+class _SegmentTab extends StatefulWidget {
+  const _SegmentTab({
     required this.label,
     required this.isSelected,
     required this.onTap,
@@ -49,36 +57,81 @@ class DiscoveryColumnTab extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final textStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
-      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-      color: isSelected
-          ? SpontiColors.textPrimary
-          : SpontiColors.textSecondary,
-      letterSpacing: -0.2,
-    );
+  State<_SegmentTab> createState() => _SegmentTabState();
+}
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(2, 0, 2, 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label, style: textStyle),
-            const SizedBox(height: 8),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              height: 2,
-              width: isSelected ? 54 : 0,
-              decoration: BoxDecoration(
-                color: SpontiColors.textPrimary,
-                borderRadius: BorderRadius.circular(999),
-              ),
+class _SegmentTabState extends State<_SegmentTab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1,
+      end: 0.96,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    _controller.forward();
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    _controller.reverse();
+  }
+
+  void _handleTapCancel() {
+    _controller.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      onTap: widget.onTap,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            color: widget.isSelected ? SpontiColors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: widget.isSelected
+                ? [
+                    BoxShadow(
+                      color: SpontiColors.shadow.withValues(alpha: 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            widget.label,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: widget.isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: widget.isSelected
+                  ? SpontiColors.textPrimary
+                  : SpontiColors.textSecondary,
+              letterSpacing: -0.2,
             ),
-          ],
+          ),
         ),
       ),
     );

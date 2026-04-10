@@ -18,13 +18,9 @@ import 'package:sponti/features/locations/view/widgets/location_hours_dropdown_c
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/reviews/view/widgets/review_action_button.dart';
 import 'package:sponti/features/reviews/viewmodel/reviews_viewmodel.dart';
-import 'package:sponti/features/check_in/viewmodel/checkins_viewmodel.dart';
 
 class LocationDetailPage extends ConsumerStatefulWidget {
-  const LocationDetailPage({
-    super.key,
-    required this.locationId,
-  });
+  const LocationDetailPage({super.key, required this.locationId});
 
   final String locationId;
 
@@ -114,41 +110,43 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
     final liveLocation = ref
         .watch(locationStreamProvider(location.id))
         .valueOrNull;
-    final liveReviews = ref.watch(reviewsStreamProvider(location.id)).valueOrNull;
-    final liveCheckInCount = ref
-        .watch(locationCheckInCountProvider(location.id))
+    final liveReviews = ref
+        .watch(reviewsStreamProvider(location.id))
         .valueOrNull;
     final sourceLocation = liveLocation ?? location;
-    final displayedReviewCount = liveReviews?.length ?? sourceLocation.reviewCount;
+    final displayedReviewCount =
+        liveReviews?.length ?? sourceLocation.reviewCount;
     final displayedRating = switch (liveReviews) {
       null => sourceLocation.rating,
       [] => 0.0,
-      final reviews => reviews.fold<double>(
-            0,
-            (sum, review) => sum + review.rating,
-          ) /
-          reviews.length,
+      final reviews =>
+        reviews.fold<double>(0, (sum, review) => sum + review.rating) /
+            reviews.length,
     };
     final displayedCheckInCount =
-        _optimisticCheckInCount ??
-        liveCheckInCount ??
-        sourceLocation.checkInCount;
+        _optimisticCheckInCount ?? sourceLocation.checkInCount;
+    ref.watch(
+      trendingLocationIdsProvider.select(
+        (s) => s.valueOrNull?.contains(location.id) ?? false,
+      ),
+    );
 
     if (_optimisticCheckInCount != null &&
-        (liveCheckInCount == _optimisticCheckInCount ||
-            sourceLocation.checkInCount == _optimisticCheckInCount)) {
+        sourceLocation.checkInCount == _optimisticCheckInCount) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         setState(() => _optimisticCheckInCount = null);
       });
     }
 
-    final extraPhotoUrls = location.photoUrls.skip(1).toList(growable: false);
+    final extraPhotoUrls = sourceLocation.photoUrls
+        .skip(1)
+        .toList(growable: false);
     final hasQuickInfo =
-        location.hasWifi ||
-        location.isPetFriendly ||
-        location.hasParking ||
-        location.distanceKm != null;
+        sourceLocation.hasWifi ||
+        sourceLocation.isPetFriendly ||
+        sourceLocation.hasParking ||
+        sourceLocation.distanceKm != null;
 
     return NotificationListener<ScrollNotification>(
       onNotification: (_) => true,
@@ -161,7 +159,7 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
         slivers: [
           SliverToBoxAdapter(
             child: LocationDetailHero(
-              location: location,
+              location: sourceLocation,
               actionButtons: LocationDetailHeroActions(
                 locationId: location.id,
                 checkInCount: displayedCheckInCount,
@@ -191,42 +189,47 @@ class _LocationDetailState extends ConsumerState<LocationDetail> {
                       checkInCount: displayedCheckInCount,
                     ),
                   ),
-                  LocationDetailInset(
-                    top: 16,
-                    child: ReviewActionButton(
-                      locationId: location.id,
-                      locationName: location.name,
-                    ),
-                  ),
-                  LocationDetailReviewsSection(locationId: location.id),
                   if (hasQuickInfo)
                     LocationDetailInset(
                       top: 20,
-                      child: QuickInfoRow(location: location),
+                      child: QuickInfoRow(location: sourceLocation),
                     ),
                   if (extraPhotoUrls.isNotEmpty)
                     LocationPhotoGallerySection(
                       photoUrls: extraPhotoUrls,
-                      category: location.category,
+                      category: sourceLocation.category,
                     ),
                   const LocationDetailDivider(top: 24),
-                  if (location.description.isNotEmpty) ...[
-                    LocationAboutSection(description: location.description),
+                  if (sourceLocation.description.isNotEmpty) ...[
+                    LocationAboutSection(
+                      description: sourceLocation.description,
+                    ),
                     const LocationDetailDivider(top: 20),
                   ],
-                  if (location.operatingHours case final hours?) ...[
+                  if (sourceLocation.operatingHours case final hours?) ...[
                     LocationDetailInset(
                       top: 20,
                       child: LocationHoursDropdownCard(hours: hours),
                     ),
                     const LocationDetailDivider(top: 20),
                   ],
-                  if (location.hasContact) ...[
-                    LocationContactSection(location: location),
+                  if (sourceLocation.hasContact) ...[
+                    LocationContactSection(location: sourceLocation),
                     const LocationDetailDivider(top: 20),
                   ],
-                  if (location.tags.isNotEmpty)
-                    LocationTagsSection(tags: location.tags),
+                  if (sourceLocation.tags.isNotEmpty)
+                    LocationTagsSection(tags: sourceLocation.tags),
+                  LocationDetailInset(
+                    top: 16,
+                    child: ReviewActionButton(
+                      locationId: location.id,
+                      locationName: sourceLocation.name,
+                    ),
+                  ),
+                  LocationDetailReviewsSection(
+                    locationId: location.id,
+                    locationName: sourceLocation.name,
+                  ),
                 ],
               ),
             ),
@@ -250,9 +253,7 @@ class _LocationDetailErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Expanded(
-          child: AppErrorState(message: message),
-        ),
+        Expanded(child: AppErrorState(message: message)),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
           child: SizedBox(

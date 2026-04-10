@@ -6,9 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/core/widgets/app_badge.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
-import 'package:sponti/features/locations/view/screens/surprise_me_modal.dart';
+import 'package:sponti/features/friends/viewmodel/friends_viewmodel.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
+import 'package:sponti/features/surprise_me/view/screens/surprise_me_modal.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key, required this.child});
@@ -74,7 +76,7 @@ class MainShell extends ConsumerWidget {
   }
 }
 
-class _SpontiBottomBar extends StatelessWidget {
+class _SpontiBottomBar extends ConsumerWidget {
   const _SpontiBottomBar({
     required this.activeRoute,
     required this.avatarUrl,
@@ -99,39 +101,41 @@ class _SpontiBottomBar extends StatelessWidget {
   bool get _isProfileActive => activeRoute.startsWith(RouteName.profile);
 
   @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final isLargeScreen = width >= 840;
-    final horizontalMargin = isLargeScreen ? 24.0 : 12.0;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pendingCount = ref.watch(pendingRequestCountProvider);
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final dockBottomInset = bottomInset > 0 ? bottomInset : 6.0;
+    final dockHeight = kShellBottomBarHeight + dockBottomInset;
 
-    return SafeArea(
-      top: false,
-      minimum: EdgeInsets.fromLTRB(horizontalMargin, 0, horizontalMargin, 8),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: kShellBottomBarBottomGap),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            height: 78,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F6F1).withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.85),
-                width: 0.5,
+            height: dockHeight,
+            padding: EdgeInsets.fromLTRB(8, 9, 8, dockBottomInset),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8F6F1),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              border: Border(
+                top: BorderSide(
+                  color: Colors.white,
+                  width: 0.5,
+                ),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
+                  color: Color(0x0F000000),
                   blurRadius: 20,
-                  offset: const Offset(0, 4),
+                  offset: Offset(0, -4),
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
+                  color: Color(0x05000000),
                   blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  offset: Offset(0, -2),
                 ),
               ],
             ),
@@ -159,10 +163,13 @@ class _SpontiBottomBar extends StatelessWidget {
                   isActive: _isSavedActive,
                   onTap: onTapSaved,
                 ),
-                _ProfileTab(
-                  avatarUrl: avatarUrl,
-                  isActive: _isProfileActive,
-                  onTap: onTapProfile,
+                AppBadge(
+                  count: pendingCount,
+                  child: _ProfileTab(
+                    avatarUrl: avatarUrl,
+                    isActive: _isProfileActive,
+                    onTap: onTapProfile,
+                  ),
                 ),
               ],
             ),

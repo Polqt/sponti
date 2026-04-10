@@ -47,6 +47,9 @@ dependencies:
   crypto: ^3.0.7
   latlong2: ^0.9.1
   flutter_map: ^8.2.2
+  google_maps_flutter: ^2.15.0
+  google_maps_flutter_android: ^2.14.10
+  google_maps_flutter_platform_interface: ^2.10.0
 
   # Image Handling
   image_picker: ^1.2.1
@@ -86,7 +89,10 @@ dependencies:
   url_launcher: ^6.3.2 # Open directions in external maps app
   share_plus: ^12.0.1 # Share places with friends
 
-  # Environment 
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Environment
   flutter_dotenv: ^6.0.0
 
   # Utilities
@@ -94,6 +100,7 @@ dependencies:
   uuid: ^4.5.3 # Generate unique IDs
   timeago: ^3.7.1 # "5 minutes ago" style timestamps for reviews
   collection: ^1.19.1 # Utility functions for collections (lists, maps, etc.)
+  smooth_sheets: ^0.17.0
 
 dev_dependencies:
   flutter_test:
@@ -119,6 +126,7 @@ flutter:
     - assets/animations/
     - assets/videos/
     - .env
+    - .env.production
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

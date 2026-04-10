@@ -1,6 +1,7 @@
-import 'package:sponti/core/constants/api_constants.dart';
+import 'package:sponti/config/config.dart';
 import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/favorites/model/favorite_model.dart';
+import 'package:sponti/features/locations/repository/location_remote_data_source.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 abstract interface class FavoritesRemoteDataSource {
@@ -10,9 +11,10 @@ abstract interface class FavoritesRemoteDataSource {
 }
 
 class FavoritesRemoteDataSourceImpl implements FavoritesRemoteDataSource {
-  const FavoritesRemoteDataSourceImpl(this._client);
+  const FavoritesRemoteDataSourceImpl(this._client, this._locationRemote);
 
   final SupabaseClient _client;
+  final LocationRemoteDataSource _locationRemote;
 
   String get _userId {
     final user = _client.auth.currentUser;
@@ -37,28 +39,36 @@ class FavoritesRemoteDataSourceImpl implements FavoritesRemoteDataSource {
   @override
   Future<List<FavoriteModel>> getFavorites() => _executeQuery(() async {
         final response = await _client
-            .from(ApiConstants.favoritesTable)
+            .from(SupabaseTables.favorites)
             .select('location_id, user_id, created_at, locations(*)')
             .eq('user_id', _userId)
             .order('created_at', ascending: false);
 
         return (response as List<dynamic>)
-            .map((row) => FavoriteModel.fromJson(row as Map<String, dynamic>))
+            .map((row) {
+              final json = Map<String, dynamic>.from(row as Map);
+              final locationJson = json['locations'];
+              if (locationJson is Map<String, dynamic>) {
+                json['locations'] = _locationRemote.resolvePhotoUrls(locationJson);
+              }
+              return FavoriteModel.fromJson(json);
+            })
             .toList(growable: false);
       });
 
   @override
   Future<void> addFavorite(String locationId) => _executeQuery(() async {
-        await _client.from(ApiConstants.favoritesTable).upsert({
-          'location_id': locationId,
-          'user_id': _userId,
-        }, onConflict: 'location_id,user_id');
+        await _client.from(SupabaseTables.favorites).upsert(
+          {'location_id': locationId, 'user_id': _userId},
+          onConflict: 'location_id,user_id',
+          ignoreDuplicates: true,
+        );
       });
 
   @override
   Future<void> removeFavorite(String locationId) => _executeQuery(() async {
         await _client
-            .from(ApiConstants.favoritesTable)
+            .from(SupabaseTables.favorites)
             .delete()
             .eq('user_id', _userId)
             .eq('location_id', locationId);

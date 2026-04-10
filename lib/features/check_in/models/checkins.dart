@@ -20,3 +20,31 @@ class CheckIn extends Equatable {
   @override
   List<Object?> get props => [id, locationId, userId, note, photos, createdAt];
 }
+
+class CheckInPageCursor extends Equatable {
+  const CheckInPageCursor({
+    required this.createdAt,
+    required this.id,
+  });
+
+  final DateTime createdAt;
+  final String id;
+
+  @override
+  List<Object?> get props => [createdAt, id];
+}
+
+class CheckInPage extends Equatable {
+  const CheckInPage({
+    required this.items,
+    required this.hasMore,
+    this.nextCursor,
+  });
+
+  final List<CheckIn> items;
+  final bool hasMore;
+  final CheckInPageCursor? nextCursor;
+
+  @override
+  List<Object?> get props => [items, hasMore, nextCursor];
+}

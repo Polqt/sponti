@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:sponti/config/config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract interface class AuthRemoteDataSource {
@@ -14,7 +15,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   const AuthRemoteDataSourceImpl(this._client);
 
   final SupabaseClient _client;
-  static const String _redirectTo = 'io.supabase.sponti://login-callback/';
 
   @override
   User? get currentUser => _client.auth.currentUser;
@@ -45,7 +45,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       final success = await _client.auth.signInWithOAuth(
         provider,
-        redirectTo: _redirectTo,
+        redirectTo: SupabaseOptions.authRedirectTo,
       );
 
       if (!success) {
@@ -54,7 +54,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
       final authState = await _client.auth.onAuthStateChange
           .firstWhere((state) => state.event == AuthChangeEvent.signedIn)
-          .timeout(const Duration(minutes: 2));
+          .timeout(const Duration(seconds: 60));
 
       final user = authState.session?.user;
       if (user == null) {
@@ -68,6 +68,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> signOut() async {
-    await _client.auth.signOut(scope: SignOutScope.local);
+    await _client.auth.signOut();
   }
 }

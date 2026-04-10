@@ -1,11 +1,16 @@
 import 'package:dartz/dartz.dart';
 import 'package:sponti/core/errors/failures.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/model/location_query.dart';
 
 abstract interface class LocationRepository {
   Future<Either<Failure, List<Location>>> getAllLocations({
     int page = 0,
-    int pageSize = 20,
+    int pageSize = 100,
+  });
+  Future<Either<Failure, LocationPage>> getLocationsPage({
+    LocationPageCursor? cursor,
+    int limit = 30,
   });
 
   Future<Either<Failure, Location>> getLocationById(String id);
@@ -25,6 +30,9 @@ abstract interface class LocationRepository {
   );
 
   Future<Either<Failure, List<Location>>> searchLocations(String query);
+  Future<Either<Failure, List<Location>>> searchLocationsRanked(
+    RankedLocationSearchRequest request,
+  );
   Future<Either<Failure, Location>> createLocation(Location location);
   Future<Either<Failure, Location>> updateLocation(Location location);
   Future<Either<Failure, void>> deleteLocation(String id);

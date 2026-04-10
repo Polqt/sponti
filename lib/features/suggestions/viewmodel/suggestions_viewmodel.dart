@@ -19,17 +19,21 @@ final suggestionsRepositoryProvider = Provider<SuggestionsRepository>((ref) {
 });
 
 // Read — my suggestions list
+// Kept alive for 10 minutes then auto-invalidated so navigating back after
+// a long gap re-fetches rather than showing stale data.
 
 final mySuggestionsProvider = FutureProvider<List<SuggestionModel>>((
   ref,
 ) async {
-  final result = await ref
-      .read(suggestionsRepositoryProvider)
-      .fetchMySuggestions();
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (suggestions) => suggestions,
-  );
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 10), () {
+    link.close();
+    ref.invalidateSelf();
+  });
+
+  final repository = ref.read(suggestionsRepositoryProvider);
+  final result = await repository.fetchMySuggestions();
+  return result.fold((failure) => throw StateError(failure.message), (data) => data);
 });
 
 // Read — single suggestion by id
@@ -38,13 +42,9 @@ final suggestionByIdProvider = FutureProvider.family<SuggestionModel, String>((
   ref,
   id,
 ) async {
-  final result = await ref
-      .read(suggestionsRepositoryProvider)
-      .fetchSuggestionById(id);
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (suggestion) => suggestion,
-  );
+  final repository = ref.read(suggestionsRepositoryProvider);
+  final result = await repository.fetchSuggestionById(id);
+  return result.fold((failure) => throw StateError(failure.message), (data) => data);
 });
 
 // Mutation — insert

@@ -20,35 +20,40 @@ class DiscoveryCategoryAccordionsSection extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: SpontiColors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: SpontiColors.outline),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: SpontiColors.outline.withValues(alpha: 0.5),
+        ),
         boxShadow: [
           BoxShadow(
-            color: SpontiColors.shadow.withValues(alpha: 0.05),
-            blurRadius: 12,
+            color: SpontiColors.shadow.withValues(alpha: 0.04),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          for (int index = 0; index < discoveryCategories.length; index++) ...[
-            if (index > 0)
-              const Divider(
-                height: 1,
-                thickness: 1,
-                color: SpontiColors.outline,
-                indent: 72,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Column(
+          children: [
+            for (int index = 0; index < discoveryCategories.length; index++) ...[
+              if (index > 0)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: SpontiColors.outline.withValues(alpha: 0.4),
+                  indent: 68,
+                ),
+              DiscoveryCategoryAccordionTile(
+                category: discoveryCategories[index],
+                isExpanded: state.isCategoryExpanded(discoveryCategories[index]),
+                isFirst: index == 0,
+                isLast: index == discoveryCategories.length - 1,
+                onTap: () => notifier.toggleCategory(discoveryCategories[index]),
               ),
-            DiscoveryCategoryAccordionTile(
-              category: discoveryCategories[index],
-              isExpanded: state.isCategoryExpanded(discoveryCategories[index]),
-              isFirst: index == 0,
-              isLast: index == discoveryCategories.length - 1,
-              onTap: () => notifier.toggleCategory(discoveryCategories[index]),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -73,43 +78,38 @@ class DiscoveryCategoryAccordionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Color(category.colorValue);
-    final borderRadius = BorderRadius.vertical(
-      top: isFirst ? const Radius.circular(20) : Radius.zero,
-      bottom: isLast && !isExpanded ? const Radius.circular(20) : Radius.zero,
-    );
 
-    return ClipRRect(
-      borderRadius: borderRadius,
-      child: Column(
-        children: [
-          InkWell(
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
             onTap: onTap,
-            borderRadius: borderRadius,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(14),
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
                       child: LocationCategoryIcon(
                         category: category,
                         color: color,
-                        size: 24,
+                        size: 22,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       category.discoveryLabel,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 0.3,
                       ),
                     ),
@@ -118,27 +118,26 @@ class DiscoveryCategoryAccordionTile extends StatelessWidget {
                     turns: isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
                     curve: Curves.easeOutCubic,
-                    child: const Icon(
+                    child: Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      size: 22,
-                      color: SpontiColors.textSecondary,
+                      size: 20,
+                      color: SpontiColors.textSecondary.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: DiscoveryCategoryAccordionContent(category: category),
-            crossFadeState: isExpanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 220),
-            sizeCurve: Curves.easeOutCubic,
-          ),
-        ],
-      ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: isExpanded
+              ? DiscoveryCategoryAccordionContent(category: category)
+              : const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 }
@@ -156,10 +155,10 @@ class DiscoveryCategoryAccordionContent extends ConsumerWidget {
     final spotsAsync = ref.watch(categoryTopSpotsProvider(category));
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 14),
       child: spotsAsync.when(
         loading: () => const SizedBox(
-          height: 200,
+          height: 180,
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
         error: (e, s) => const SizedBox(
@@ -184,12 +183,12 @@ class DiscoveryCategoryAccordionContent extends ConsumerWidget {
             );
           }
           return SizedBox(
-            height: 230,
+            height: 200,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               itemCount: spots.length,
-              separatorBuilder: (_, i) => const SizedBox(width: 12),
+              separatorBuilder: (_, i) => const SizedBox(width: 10),
               itemBuilder: (context, index) => _SpotCard(
                 location: spots[index],
                 onTap: () {
@@ -212,8 +211,8 @@ class _SpotCard extends StatelessWidget {
   final Location location;
   final VoidCallback? onTap;
 
-  static const _cardWidth = 160.0;
-  static const _imageHeight = 140.0;
+  static const _cardWidth = 140.0;
+  static const _imageHeight = 120.0;
 
   @override
   Widget build(BuildContext context) {
@@ -227,9 +226,8 @@ class _SpotCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Image
             ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               child: SizedBox(
                 width: _cardWidth,
                 height: _imageHeight,
@@ -246,41 +244,39 @@ class _SpotCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            // Name
             Text(
               location.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
                 color: SpontiColors.textPrimary,
                 height: 1.2,
               ),
             ),
-            const SizedBox(height: 4),
-            // Price + saves row
+            const SizedBox(height: 3),
             Row(
               children: [
                 Text(
                   location.priceRange.symbol,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: SpontiColors.textSecondary,
                   ),
                 ),
                 const Spacer(),
                 const Icon(
-                  Icons.favorite_rounded,
-                  size: 11,
-                  color: SpontiColors.primary,
+                  Icons.check_circle_rounded,
+                  size: 10,
+                  color: SpontiColors.secondary,
                 ),
-                const SizedBox(width: 3),
+                const SizedBox(width: 2),
                 Text(
                   '${location.checkInCount}',
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: SpontiColors.textSecondary,
                   ),

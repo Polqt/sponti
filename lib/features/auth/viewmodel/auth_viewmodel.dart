@@ -10,7 +10,7 @@ final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepositoryImpl(ref.watch(authRemoteDataSourceProvider));
+  return AuthRepositoryImpl(ref.read(authRemoteDataSourceProvider));
 });
 
 class AuthViewModel extends AsyncNotifier<AuthUser?> {
@@ -83,4 +83,21 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
 
 final currentUserProvider = Provider<AuthUser?>((ref) {
   return ref.watch(authProvider).valueOrNull;
+});
+
+/// Provides the current user's ID.
+/// Returns null if not authenticated. Use [requireCurrentUserIdProvider]
+/// when you need a guaranteed non-null user ID.
+final currentUserIdProvider = Provider<String?>((ref) {
+  return ref.watch(currentUserProvider)?.id;
+});
+
+/// Provides the current user's ID, throwing if not authenticated.
+/// Use this in contexts where authentication is required.
+final requireCurrentUserIdProvider = Provider<String>((ref) {
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId == null) {
+    throw StateError('User must be authenticated to access this resource.');
+  }
+  return userId;
 });

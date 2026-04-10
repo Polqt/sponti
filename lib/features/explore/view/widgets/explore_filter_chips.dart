@@ -13,7 +13,12 @@ class ExploreFilterChips extends StatelessWidget {
     required this.onTapPrice,
     required this.onTapCategory,
     required this.onToggleNowOpen,
+    required this.onTapAmenities,
+    this.showRankingChip = true,
+    this.showPriceChip = true,
     this.showCategoryChip = true,
+    this.showNowOpenChip = true,
+    this.showAmenitiesChip = true,
   });
 
   final ExploreFilter filter;
@@ -21,62 +26,109 @@ class ExploreFilterChips extends StatelessWidget {
   final VoidCallback onTapPrice;
   final VoidCallback onTapCategory;
   final VoidCallback onToggleNowOpen;
+  final VoidCallback onTapAmenities;
+  final bool showRankingChip;
+  final bool showPriceChip;
   final bool showCategoryChip;
+  final bool showNowOpenChip;
+  final bool showAmenitiesChip;
 
   @override
   Widget build(BuildContext context) {
     final ranking = filter.rankingFilter;
+    final hasRankingFilter = filter.hasRankingFilter;
     final category = filter.categoryFilter;
     final price = filter.priceFilter;
     final nowOpen = filter.nowOpenOnly;
+    final amenitiesCount = (filter.hasWifi ? 1 : 0) +
+        (filter.petFriendly ? 1 : 0) +
+        (filter.hasParking ? 1 : 0);
+    final children = <Widget>[];
+
+    void addChip(Widget chip) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(width: 10));
+      }
+      children.add(chip);
+    }
+
+    if (showRankingChip) {
+      addChip(
+        _ExploreFilterChip(
+          label: hasRankingFilter ? '${ranking.label} \u2713' : 'Sort',
+          color: hasRankingFilter
+              ? _rankingColor(ranking)
+              : SpontiColors.textSecondary,
+          leading: const Icon(Icons.auto_awesome_rounded),
+          isActive: hasRankingFilter,
+          onTap: onTapRanking,
+        ),
+      );
+    }
+
+    if (showPriceChip) {
+      addChip(
+        _ExploreFilterChip(
+          label: price == null ? 'Any price' : '${_priceLabel(price)} \u2713',
+          color: _priceColor(price),
+          leading: const Icon(Icons.payments_outlined),
+          isActive: price != null,
+          onTap: onTapPrice,
+        ),
+      );
+    }
+
+    if (showCategoryChip) {
+      addChip(
+        _ExploreFilterChip(
+          label: category == null ? 'Category' : '${category.label} \u2713',
+          color: category == null
+              ? SpontiColors.textSecondary
+              : Color(category.colorValue),
+          leading: category == null
+              ? const Icon(Icons.grid_view_rounded)
+              : LocationCategoryIcon(
+                  category: category,
+                  color: Color(category.colorValue),
+                ),
+          isActive: category != null,
+          onTap: onTapCategory,
+        ),
+      );
+    }
+
+    if (showNowOpenChip) {
+      addChip(
+        _ExploreFilterChip(
+          label: nowOpen ? 'Now open \u2713' : 'Now open',
+          color: SpontiColors.success,
+          leading: const Icon(Icons.schedule_rounded),
+          isActive: nowOpen,
+          onTap: onToggleNowOpen,
+        ),
+      );
+    }
+
+    if (showAmenitiesChip) {
+      addChip(
+        _ExploreFilterChip(
+          label: amenitiesCount == 0
+              ? 'Amenities'
+              : 'Amenities ($amenitiesCount) ✓',
+          color: amenitiesCount == 0
+              ? SpontiColors.textSecondary
+              : SpontiColors.secondary,
+          leading: const Icon(Icons.tune_rounded),
+          isActive: amenitiesCount > 0,
+          onTap: onTapAmenities,
+        ),
+      );
+    }
 
     return GlassContainer(
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _ExploreFilterChip(
-              label: '${ranking.label} \u2713',
-              color: _rankingColor(ranking),
-              leading: const Icon(Icons.auto_awesome_rounded),
-              isActive: true,
-              onTap: onTapRanking,
-            ),
-            const SizedBox(width: 10),
-            _ExploreFilterChip(
-              label: price == null ? 'Any price' : '${_priceLabel(price)} \u2713',
-              color: _priceColor(price),
-              leading: const Icon(Icons.payments_outlined),
-              isActive: price != null,
-              onTap: onTapPrice,
-            ),
-            if (showCategoryChip) ...[
-              const SizedBox(width: 10),
-              _ExploreFilterChip(
-                label: category == null ? 'Category' : '${category.label} \u2713',
-                color: category == null
-                    ? SpontiColors.textSecondary
-                    : Color(category.colorValue),
-                leading: category == null
-                    ? const Icon(Icons.grid_view_rounded)
-                    : LocationCategoryIcon(
-                        category: category,
-                        color: Color(category.colorValue),
-                      ),
-                isActive: category != null,
-                onTap: onTapCategory,
-              ),
-            ],
-            const SizedBox(width: 10),
-            _ExploreFilterChip(
-              label: nowOpen ? 'Now open \u2713' : 'Now open',
-              color: SpontiColors.success,
-              leading: const Icon(Icons.schedule_rounded),
-              isActive: nowOpen,
-              onTap: onToggleNowOpen,
-            ),
-          ],
-        ),
+        child: Row(children: children),
       ),
     );
   }

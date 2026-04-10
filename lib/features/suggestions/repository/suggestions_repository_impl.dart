@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:sponti/core/errors/exceptions.dart';
 import 'package:sponti/features/suggestions/repository/suggestions_remote_data_source.dart';
 import 'package:sponti/features/suggestions/model/suggestion_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
@@ -50,8 +51,7 @@ class SuggestionsRepositoryImpl implements SuggestionsRepository {
   final SuggestionsRemoteDataSource _dataSource;
 
   SuggestionFailure _mapError(Object e) {
-    if (e is Exception &&
-        e.toString().contains('user not authenticated')) {
+    if (e is AuthException) {
       return const SuggestionAuthFailure('you must be logged in');
     }
     if (e is PostgrestException) {

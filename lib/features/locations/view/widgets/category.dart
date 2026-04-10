@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/utils/icon_helpers.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/utils/location_category_assets.dart';
 
 class CategoryChip extends StatefulWidget {
   const CategoryChip({
@@ -184,17 +185,6 @@ class CategoryGradient extends StatelessWidget {
       ),
     );
   }
-}
-
-extension LocationCategoryUi on LocationCategory {
-  String? get assetPath => switch (this) {
-    LocationCategory.food => 'assets/icons/munch.svg',
-    LocationCategory.coffee => 'assets/icons/coffee.svg',
-    LocationCategory.nature => 'assets/icons/stroll.svg',
-    LocationCategory.nightlife => 'assets/icons/nightlife.svg',
-    LocationCategory.arts => 'assets/icons/arts.svg',
-    LocationCategory.activities => 'assets/icons/fun.svg',
-  };
 }
 
 class LocationCategoryIcon extends StatelessWidget {
