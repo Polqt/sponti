@@ -75,8 +75,9 @@ class _CreateGroupPlanScreenState extends ConsumerState<CreateGroupPlanScreen> {
           children: [
             // ── Header ──────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 16, 0),
+              padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   IconButton(
                     onPressed: () => context.pop(),
@@ -88,23 +89,19 @@ class _CreateGroupPlanScreenState extends ConsumerState<CreateGroupPlanScreen> {
                       foregroundColor: SpontiColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      'New Plan',
-                      style:
-                          Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
+                  const SizedBox(width: 2),
+                  Text(
+                    'New Plan',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 6),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
               child: Text(
                 'Decide where your crew is heading',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -112,11 +109,11 @@ class _CreateGroupPlanScreenState extends ConsumerState<CreateGroupPlanScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
             // ── Form ────────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -124,14 +121,14 @@ class _CreateGroupPlanScreenState extends ConsumerState<CreateGroupPlanScreen> {
                     const SizedBox(height: 8),
                     _StyledTextField(
                       controller: _nameController,
-                      hint: "e.g. Friday night out 🍕",
+                      hint: 'e.g. Friday night out 🍕',
                       enabled: !_isLoading,
                       autofocus: true,
                       textInputAction: TextInputAction.next,
                     ),
                     const SizedBox(height: 20),
                     _FieldLabel(label: 'Description'),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       'Optional — add a note for your crew',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -146,90 +143,86 @@ class _CreateGroupPlanScreenState extends ConsumerState<CreateGroupPlanScreen> {
                       maxLines: 4,
                       textInputAction: TextInputAction.done,
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     _HowItWorksCard(),
+                    const SizedBox(height: 24),
+                    // ── CTA inline with content ────────────────
+                    _CreateButton(
+                      isLoading: _isLoading,
+                      onTap: _createPlan,
+                    ),
                   ],
                 ),
               ),
             ),
-            // ── CTA ─────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-              child: SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: _isLoading
-                    ? Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              SpontiColors.primary,
-                              SpontiColors.primaryLight,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        child: const Center(
-                          child: SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      )
-                    : GestureDetector(
-                        onTap: _createPlan,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                SpontiColors.primary,
-                                SpontiColors.primaryLight,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: [
-                              BoxShadow(
-                                color: SpontiColors.primary.withValues(
-                                  alpha: 0.35,
-                                ),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.groups_rounded,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              SizedBox(width: 10),
-                              Text(
-                                "Let's Go",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-              ),
-            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateButton extends StatelessWidget {
+  const _CreateButton({required this.isLoading, required this.onTap});
+
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        width: double.infinity,
+        height: 54,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isLoading
+                ? [
+                    SpontiColors.primary.withValues(alpha: 0.6),
+                    SpontiColors.primaryLight.withValues(alpha: 0.6),
+                  ]
+                : const [SpontiColors.primary, SpontiColors.primaryLight],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: isLoading
+              ? null
+              : [
+                  BoxShadow(
+                    color: SpontiColors.primary.withValues(alpha: 0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+        ),
+        child: Center(
+          child: isLoading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Colors.white,
+                  ),
+                )
+              : const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.groups_rounded, color: Colors.white, size: 20),
+                    SizedBox(width: 10),
+                    Text(
+                      "Let's Go",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
@@ -302,10 +295,7 @@ class _StyledTextField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: SpontiColors.primary,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: SpontiColors.primary, width: 1.5),
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -320,10 +310,18 @@ class _StyledTextField extends StatelessWidget {
 }
 
 class _HowItWorksCard extends StatelessWidget {
+  const _HowItWorksCard();
+
+  static const _steps = [
+    ('1', 'Create a plan and invite your friends'),
+    ('2', 'Everyone nominates & votes for a location'),
+    ('3', 'The top vote wins — lock it in!'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: SpontiColors.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(18),
@@ -338,7 +336,7 @@ class _HowItWorksCard extends StatelessWidget {
             children: [
               const Icon(
                 Icons.lightbulb_rounded,
-                size: 16,
+                size: 15,
                 color: SpontiColors.primary,
               ),
               const SizedBox(width: 6),
@@ -356,7 +354,7 @@ class _HowItWorksCard extends StatelessWidget {
             (s) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
                     width: 20,
@@ -365,14 +363,14 @@ class _HowItWorksCard extends StatelessWidget {
                       color: SpontiColors.primary.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: Center(
-                      child: Text(
-                        s.$1,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: SpontiColors.primary,
-                        ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      s.$1,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: SpontiColors.primary,
+                        height: 1,
                       ),
                     ),
                   ),
@@ -394,10 +392,4 @@ class _HowItWorksCard extends StatelessWidget {
       ),
     );
   }
-
-  static const _steps = [
-    ('1', 'Create a plan and invite your friends'),
-    ('2', 'Everyone nominates & votes for a location'),
-    ('3', 'The top vote wins — lock it in!'),
-  ];
 }

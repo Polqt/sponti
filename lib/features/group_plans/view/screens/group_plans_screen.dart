@@ -20,7 +20,6 @@ class GroupPlansScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
@@ -58,7 +57,6 @@ class GroupPlansScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            // ── Body ──────────────────────────────────────────
             Expanded(
               child: plansAsync.when(
                 loading: () => const Center(
@@ -96,7 +94,6 @@ class GroupPlansScreen extends ConsumerWidget {
           ],
         ),
       ),
-      // ── FAB ──────────────────────────────────────────────
       floatingActionButton: _CreatePlanFab(
         onPressed: () async {
           await context.push(RouteName.createGroupPlan);
