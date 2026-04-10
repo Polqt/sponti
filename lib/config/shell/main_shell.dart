@@ -107,38 +107,36 @@ class _SpontiBottomBar extends ConsumerWidget {
     final dockBottomInset = bottomInset > 0 ? bottomInset : 6.0;
     final dockHeight = kShellBottomBarHeight + dockBottomInset;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: kShellBottomBarBottomGap),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: dockHeight,
-            padding: EdgeInsets.fromLTRB(8, 9, 8, dockBottomInset),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF8F6F1),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              border: Border(
-                top: BorderSide(
-                  color: Colors.white,
-                  width: 0.5,
-                ),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: dockHeight + 20,
+          padding: EdgeInsets.fromLTRB(8, 9, 8, dockBottomInset + 20),
+          decoration: const BoxDecoration(
+            color: Color(0xFFF8F6F1),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            border: Border(
+              top: BorderSide(
+                color: Colors.white,
+                width: 0.5,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x0F000000),
-                  blurRadius: 20,
-                  offset: Offset(0, -4),
-                ),
-                BoxShadow(
-                  color: Color(0x05000000),
-                  blurRadius: 8,
-                  offset: Offset(0, -2),
-                ),
-              ],
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x0F000000),
+                blurRadius: 20,
+                offset: Offset(0, -4),
+              ),
+              BoxShadow(
+                color: Color(0x05000000),
+                blurRadius: 8,
+                offset: Offset(0, -2),
+              ),
+            ],
+          ),
             child: Row(
               children: [
                 _TabIcon(
@@ -175,8 +173,7 @@ class _SpontiBottomBar extends ConsumerWidget {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
 

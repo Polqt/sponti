@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:async' show TimeoutException;
 
 import 'package:sponti/config/config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -52,16 +52,31 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         throw AuthException('$providerLabel sign-in failed to launch.');
       }
 
+      // Wait for sign-in or explicit cancellation (signedOut/passwordRecovery
+      // won't fire here, but if user just closes the browser the stream never
+      // emits, so we rely on the timeout).
       final authState = await _client.auth.onAuthStateChange
-          .firstWhere((state) => state.event == AuthChangeEvent.signedIn)
-          .timeout(const Duration(seconds: 60));
+          .firstWhere(
+            (state) =>
+                state.event == AuthChangeEvent.signedIn ||
+                state.event == AuthChangeEvent.signedOut,
+          )
+          .timeout(const Duration(seconds: 120));
+
+      if (authState.event == AuthChangeEvent.signedOut ||
+          authState.session == null) {
+        throw AuthException('$providerLabel sign-in was cancelled.');
+      }
 
       final user = authState.session?.user;
       if (user == null) {
         throw AuthException('$providerLabel sign-in failed.');
       }
       return user;
+    } on TimeoutException {
+      throw AuthException('$providerLabel sign-in timed out. Please try again.');
     } catch (e) {
+      if (e is AuthException) rethrow;
       throw AuthException(e.toString());
     }
   }

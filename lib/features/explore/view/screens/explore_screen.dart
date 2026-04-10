@@ -254,20 +254,27 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               ),
             ),
           ),
-          if (locationsAsync.hasError)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: bottomInset + (_isPanelExpanded ? 340 : 160),
-              child: GestureDetector(
-                onTap: () => ref.read(exploreProvider.notifier).refresh(),
-                child: const FloatingMessage(
-                  text: 'Unable to load explore spots. Tap to retry.',
-                  icon: Icons.error_outline_rounded,
-                  color: SpontiColors.error,
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: bottomInset + (_isPanelExpanded ? 340 : 160),
+            child: AnimatedOpacity(
+              opacity: locationsAsync.hasError ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOut,
+              child: IgnorePointer(
+                ignoring: !locationsAsync.hasError,
+                child: GestureDetector(
+                  onTap: () => ref.read(exploreProvider.notifier).refresh(),
+                  child: const FloatingMessage(
+                    text: 'Unable to load explore spots. Tap to retry.',
+                    icon: Icons.error_outline_rounded,
+                    color: SpontiColors.error,
+                  ),
                 ),
               ),
             ),
+          ),
           if (_selectedLocation == null)
             ExploreBottomPanel(
               locationsAsync: locationsAsync,

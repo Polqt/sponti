@@ -60,8 +60,6 @@ class AppEmptyState extends StatelessWidget {
   }
 }
 
-// ─── Error State ─────────────────────────────────────────────────────────────
-
 /// Displayed when an async operation fails.
 ///
 /// ```dart

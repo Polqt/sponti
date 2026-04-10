@@ -31,7 +31,7 @@ class AuthViewModel extends AsyncNotifier<AuthUser?> {
     final result = await repository.signInWithGoogle();
     return result.fold(
       (failure) {
-        state = AsyncError(failure.message, StackTrace.current);
+        state = AsyncData(repository.currentUser);
         return false;
       },
       (user) {
@@ -47,7 +47,7 @@ class AuthViewModel extends AsyncNotifier<AuthUser?> {
     final result = await repository.signInWithFacebook();
     return result.fold(
       (failure) {
-        state = AsyncError(failure.message, StackTrace.current);
+        state = AsyncData(repository.currentUser);
         return false;
       },
       (user) {

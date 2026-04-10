@@ -4,8 +4,6 @@ import 'package:sponti/features/suggestions/repository/suggestions_remote_data_s
 import 'package:sponti/features/suggestions/model/suggestion_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
-// --- Failures ---
-
 sealed class SuggestionFailure {
   const SuggestionFailure(this.message);
   final String message;
@@ -27,8 +25,6 @@ class SuggestionUnknownFailure extends SuggestionFailure {
   const SuggestionUnknownFailure(super.message);
 }
 
-// --- Interface ---
-
 abstract interface class SuggestionsRepository {
   Future<Either<SuggestionFailure, List<SuggestionModel>>> fetchMySuggestions();
   Future<Either<SuggestionFailure, SuggestionModel>> fetchSuggestionById(
@@ -42,8 +38,6 @@ abstract interface class SuggestionsRepository {
   );
   Future<Either<SuggestionFailure, Unit>> deleteSuggestion(String id);
 }
-
-// --- Implementation ---
 
 class SuggestionsRepositoryImpl implements SuggestionsRepository {
   const SuggestionsRepositoryImpl(this._dataSource);

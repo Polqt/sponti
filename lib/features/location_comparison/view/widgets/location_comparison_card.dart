@@ -33,7 +33,6 @@ class LocationComparisonCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Photo ──────────────────────────────────────────
           SizedBox(
             height: 148,
             width: double.infinity,
@@ -50,7 +49,6 @@ class LocationComparisonCard extends StatelessWidget {
                   )
                 else
                   CategoryGradient(category: location.category),
-                // Gradient overlay for name legibility
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -64,7 +62,6 @@ class LocationComparisonCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Category pill top-left
                 Positioned(
                   top: 10,
                   left: 10,
@@ -96,13 +93,11 @@ class LocationComparisonCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Open/Closed badge top-right
                 Positioned(
                   top: 10,
                   right: 10,
                   child: _OpenBadge(isOpen: location.isOpenNow),
                 ),
-                // Name bottom
                 Positioned(
                   left: 12,
                   right: 12,
@@ -128,7 +123,6 @@ class LocationComparisonCard extends StatelessWidget {
               ],
             ),
           ),
-          // ── Details ────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
             child: Column(
@@ -157,7 +151,6 @@ class LocationComparisonCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 const _Divider(),
                 const SizedBox(height: 10),
-                // Amenities row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
