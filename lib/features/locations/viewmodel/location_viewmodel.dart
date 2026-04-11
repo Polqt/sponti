@@ -163,18 +163,78 @@ class LocationsViewModel extends AsyncNotifier<List<Location>> {
   LocationPageCursor? _nextCursor;
   bool _hasMore = false;
   bool _isFetchingNextPage = false;
+  int _offset = 0;
 
   bool get hasMore => _hasMore;
 
   @override
-  Future<List<Location>> build() => _fetch();
+  Future<List<Location>> build() {
+    final filter = ref.watch(locationFilterProvider);
+    return _fetch(filter);
+  }
 
-  Future<List<Location>> _fetch() async {
+  String _rankingRpcValue(LocationRanking ranking) => switch (ranking) {
+    LocationRanking.trending => 'trending',
+    LocationRanking.popular => 'popular',
+    LocationRanking.lowkey => 'lowkey',
+    LocationRanking.newest => 'new',
+  };
+
+  List<Location> _mapRpcRowsToLocations(dynamic response) {
+    final remote = ref.read(locationRemoteDataSourceProvider);
+    final rows = response is List<dynamic> ? response : const <dynamic>[];
+
+    return rows
+        .map(
+          (row) => LocationModel.fromJson(
+            remote.resolvePhotoUrls(
+              Map<String, dynamic>.from(row as Map),
+            ),
+          ),
+        )
+        .cast<Location>()
+        .toList(growable: false);
+  }
+
+  Future<List<Location>> _fetchRankedLocations(
+    LocationFilter filter, {
+    required int offset,
+    int limit = 30,
+  }) async {
+    final ranking = filter.selectedRanking;
+    if (ranking == null) return const <Location>[];
+
+    final response = await Supabase.instance.client.rpc(
+      SupabaseRPC.getTrendingLocations,
+      params: {
+        'ranking_filter': _rankingRpcValue(ranking),
+        'category_filter': filter.selectedCategory?.name,
+        'price_filter': filter.selectedPrice?.name,
+        'now_open_only': false,
+        'has_wifi_only': filter.hasWifi,
+        'pet_friendly_only': filter.isPetFriendly,
+        'has_parking_only': filter.hasParking,
+        'limit_count': limit + 1,
+        'offset_count': offset,
+      },
+    );
+
+    final all = _mapRpcRowsToLocations(response);
+    _hasMore = all.length > limit;
+    _offset = offset + (_hasMore ? limit : all.length);
+    return _hasMore ? all.take(limit).toList(growable: false) : all;
+  }
+
+  Future<List<Location>> _fetch(LocationFilter filter) async {
     _nextCursor = null;
     _hasMore = false;
+    _offset = 0;
 
-    final filter = ref.read(locationFilterProvider);
     final repository = ref.read(locationRepositoryProvider);
+    if (filter.selectedRanking != null) {
+      return _fetchRankedLocations(filter, offset: 0);
+    }
+
     if (filter.selectedCategory != null) {
       final result = await repository.filterByCategory(
         filter.selectedCategory!,
@@ -200,19 +260,28 @@ class LocationsViewModel extends AsyncNotifier<List<Location>> {
   }
 
   Future<void> refresh() async {
+    final filter = ref.read(locationFilterProvider);
     state = const AsyncLoading();
-    state = await AsyncValue.guard(_fetch);
+    state = await AsyncValue.guard(() => _fetch(filter));
   }
 
   /// Appends the next page of locations to the current list.
   /// No-op when already at the last page, cursor mode is off, or mid-fetch.
   Future<void> fetchNextPage() async {
-    if (!_hasMore || _nextCursor == null || _isFetchingNextPage) return;
+    if (!_hasMore || _isFetchingNextPage) return;
     final current = state.valueOrNull;
     if (current == null) return;
 
     _isFetchingNextPage = true;
     try {
+      final filter = ref.read(locationFilterProvider);
+      if (filter.selectedRanking != null) {
+        final next = await _fetchRankedLocations(filter, offset: _offset);
+        state = AsyncData([...current, ...next]);
+        return;
+      }
+
+      if (_nextCursor == null) return;
       final repository = ref.read(locationRepositoryProvider);
       final result = await repository.getLocationsPage(cursor: _nextCursor);
       result.fold(
