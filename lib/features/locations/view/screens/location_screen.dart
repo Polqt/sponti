@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
@@ -34,6 +35,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   late final StateController<bool> _shellBarHiddenController;
   late final StateController<double> _shellChromeProgressController;
+  late final AppLifecycleListener _appLifecycleListener;
 
   gmaps.GoogleMapController? _mapController;
   gmaps.CameraPosition _cameraPosition = const gmaps.CameraPosition(
@@ -49,6 +51,10 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   bool _panelWasExpandedBeforeDetails = false;
   bool _isExplorePanelVisible = false;
   bool _isExplorePanelExpanded = false;
+  bool _retryLocateOnResume = false;
+  FilteredLocationsResult? _cachedFilteredResult;
+  List<Location>? _cachedSourceLocations;
+  LocationFilter? _cachedFilter;
 
   @override
   void initState() {
@@ -56,6 +62,16 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _shellBarHiddenController = ref.read(shellBarHiddenProvider.notifier);
     _shellChromeProgressController = ref.read(
       shellChromeProgressProvider.notifier,
+    );
+    _appLifecycleListener = AppLifecycleListener(
+      onResume: () {
+        if (!_retryLocateOnResume || !mounted) return;
+        _retryLocateOnResume = false;
+        Future<void>.delayed(const Duration(milliseconds: 300), () {
+          if (!mounted) return;
+          _moveToCurrentLocation();
+        });
+      },
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -90,11 +106,10 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   void _setShellHidden(bool hidden) => _shellBarHiddenController.state = hidden;
 
-  Future<void> _onCategoryChanged(LocationCategory? category) async {
+  void _onCategoryChanged(LocationCategory? category) {
     final filterNotifier = ref.read(locationFilterProvider.notifier);
     filterNotifier.setCategory(category);
     filterNotifier.setRanking(null);
-    await ref.read(locationsProvider.notifier).refresh();
     _openPanel();
   }
 
@@ -218,27 +233,96 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   }
 
   Future<void> _moveToCurrentLocation() async {
-    await ref.read(currentLocationProvider.notifier).locate();
+    final result = await ref.read(currentLocationProvider.notifier).locate();
     if (!mounted) return;
 
-    final currentLocation = ref.read(currentLocationProvider);
-    if (!currentLocation.hasCoordinates || _mapController == null) return;
+    switch (result.status) {
+      case CurrentLocationRequestStatus.success:
+        final currentLocation = ref.read(currentLocationProvider);
+        if (!currentLocation.hasCoordinates || _mapController == null) return;
 
-    await _mapController!.animateCamera(
-      gmaps.CameraUpdate.newCameraPosition(
-        gmaps.CameraPosition(
-          target: gmaps.LatLng(
-            currentLocation.latitude!,
-            currentLocation.longitude!,
+        await _mapController!.animateCamera(
+          gmaps.CameraUpdate.newCameraPosition(
+            gmaps.CameraPosition(
+              target: gmaps.LatLng(
+                currentLocation.latitude!,
+                currentLocation.longitude!,
+              ),
+              zoom: _cameraPosition.zoom < 16.3 ? 16.3 : _cameraPosition.zoom,
+              tilt: _cameraPosition.tilt < MapConstants.defaultTilt
+                  ? MapConstants.defaultTilt
+                  : _cameraPosition.tilt,
+              bearing: _cameraPosition.bearing,
+            ),
           ),
-          zoom: _cameraPosition.zoom < 16.3 ? 16.3 : _cameraPosition.zoom,
-          tilt: _cameraPosition.tilt < MapConstants.defaultTilt
-              ? MapConstants.defaultTilt
-              : _cameraPosition.tilt,
-          bearing: _cameraPosition.bearing,
+        );
+        return;
+      case CurrentLocationRequestStatus.serviceDisabled:
+        await _promptToEnableLocationServices();
+        return;
+      case CurrentLocationRequestStatus.permissionDeniedForever:
+        await _promptToOpenAppSettings();
+        return;
+      case CurrentLocationRequestStatus.permissionDenied:
+      case CurrentLocationRequestStatus.failure:
+        return;
+    }
+  }
+
+  Future<void> _promptToEnableLocationServices() async {
+    final shouldOpen = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Turn on location'),
+        content: const Text(
+          'Sponti needs your device location service turned on to center the map on where you are right now.',
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Open settings'),
+          ),
+        ],
       ),
     );
+
+    if (shouldOpen != true) return;
+
+    final opened = await Geolocator.openLocationSettings();
+    if (!mounted || !opened) return;
+    _retryLocateOnResume = true;
+  }
+
+  Future<void> _promptToOpenAppSettings() async {
+    final shouldOpen = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Allow location access'),
+        content: const Text(
+          'Location permission is permanently denied. Open app settings to allow Sponti to access your location, then come back and we will center the map for you.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Open app settings'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldOpen != true) return;
+
+    final opened = await Geolocator.openAppSettings();
+    if (!mounted || !opened) return;
+    _retryLocateOnResume = true;
   }
 
   @override
@@ -249,6 +333,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       shellChromeController.state = 0.0;
       shellBarController.state = false;
     });
+    _appLifecycleListener.dispose();
     _mapController?.dispose();
     _sheetProgress.dispose();
     super.dispose();
@@ -264,10 +349,18 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     );
     final isOnline = ref.watch(connectivityProvider).valueOrNull ?? true;
     final allLocations = locationsAsync.valueOrNull ?? const <Location>[];
-    final filteredResult = applyLocationFilters(
-      locations: allLocations,
-      filter: filter,
-    );
+    final shouldReuseFiltered = _cachedFilteredResult != null &&
+        identical(_cachedSourceLocations, allLocations) &&
+        _isSameFilter(_cachedFilter, filter);
+    final filteredResult = shouldReuseFiltered
+        ? _cachedFilteredResult!
+        : applyLocationFilters(
+            locations: allLocations,
+            filter: filter,
+          );
+    _cachedFilteredResult = filteredResult;
+    _cachedSourceLocations = allLocations;
+    _cachedFilter = filter;
     final locations = filteredResult.visibleLocations;
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final topInset = MediaQuery.viewPaddingOf(context).top;
@@ -395,4 +488,14 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       ),
     );
   }
+}
+
+bool _isSameFilter(LocationFilter? left, LocationFilter right) {
+  if (left == null) return false;
+  return left.selectedCategory == right.selectedCategory &&
+      left.selectedRanking == right.selectedRanking &&
+      left.selectedPrice == right.selectedPrice &&
+      left.hasWifi == right.hasWifi &&
+      left.isPetFriendly == right.isPetFriendly &&
+      left.hasParking == right.hasParking;
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +16,7 @@ import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/utils/location_map_markers.dart';
 import 'package:sponti/features/locations/view/widgets/location_detail_sheet.dart';
+import 'package:sponti/features/locations/view/widgets/map_pin.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/locations/viewmodel/map_zoom_provider.dart';
 
@@ -27,6 +30,7 @@ class ExploreScreen extends ConsumerStatefulWidget {
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   final _mapController = MapController();
   final ValueNotifier<double> _sheetProgress = ValueNotifier<double>(0.0);
+  StreamSubscription<MapEvent>? _mapEventSubscription;
 
   late final StateController<bool> _shellBarHiddenController;
   late final StateController<double> _shellChromeProgressController;
@@ -42,8 +46,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     super.initState();
     _shellBarHiddenController = ref.read(shellBarHiddenProvider.notifier);
     _shellChromeProgressController = ref.read(shellChromeProgressProvider.notifier);
-    _mapController.mapEventStream.listen((event) {
-      if (event is MapEventMove || event is MapEventMoveEnd) {
+    _mapEventSubscription = _mapController.mapEventStream.listen((event) {
+      if (event is MapEventMoveEnd) {
         ref.read(mapZoomProvider.notifier).updateZoom(_mapController.camera.zoom);
       }
     });
@@ -53,6 +57,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
   @override
   void dispose() {
+    _mapEventSubscription?.cancel();
     _sheetProgress.dispose();
     _setShellHidden(false);
     _shellChromeProgressController.state = 0.0;
@@ -171,13 +176,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         : (locations.isNotEmpty ? locations.first.id : null);
     final selectedIndex =
         selectedId != null ? locations.indexWhere((l) => l.id == selectedId) : 0;
-    final currentZoom = (() {
-      try {
-        return _mapController.camera.zoom;
-      } catch (_) {
-        return 15.5;
-      }
-    })();
+    final iconScaleBase = ref.watch(mapPinIconScaleProvider);
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -218,7 +217,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   markers: buildLocationMarkers(
                     locations: locations,
                     selectedId: selectedId,
-                    zoom: currentZoom,
+                    iconScaleBase: iconScaleBase,
                     keyPrefix: 'explore_marker',
                     onTap: _showLocationDetails,
                     trendingIds: trendingIds,
@@ -254,20 +253,27 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               ),
             ),
           ),
-          if (locationsAsync.hasError)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: bottomInset + (_isPanelExpanded ? 340 : 160),
-              child: GestureDetector(
-                onTap: () => ref.read(exploreProvider.notifier).refresh(),
-                child: const FloatingMessage(
-                  text: 'Unable to load explore spots. Tap to retry.',
-                  icon: Icons.error_outline_rounded,
-                  color: SpontiColors.error,
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: bottomInset + (_isPanelExpanded ? 340 : 160),
+            child: AnimatedOpacity(
+              opacity: locationsAsync.hasError ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOut,
+              child: IgnorePointer(
+                ignoring: !locationsAsync.hasError,
+                child: GestureDetector(
+                  onTap: () => ref.read(exploreProvider.notifier).refresh(),
+                  child: const FloatingMessage(
+                    text: 'Unable to load explore spots. Tap to retry.',
+                    icon: Icons.error_outline_rounded,
+                    color: SpontiColors.error,
+                  ),
                 ),
               ),
             ),
+          ),
           if (_selectedLocation == null)
             ExploreBottomPanel(
               locationsAsync: locationsAsync,

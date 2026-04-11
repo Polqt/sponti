@@ -120,6 +120,12 @@ class _DiscoveryTopPickCardState extends State<DiscoveryTopPickCard>
                     ),
                   ),
                 ),
+                Positioned.fill(
+                  child: Image.asset(
+                    card.imagePath,
+                    fit: BoxFit.cover,
+                  ),
+                ),
                 // Decorative circle
                 Positioned(
                   right: -30,

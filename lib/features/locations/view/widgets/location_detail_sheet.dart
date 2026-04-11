@@ -24,16 +24,23 @@ class _LocationDetailSheetState extends State<LocationDetailSheet> {
   static const double _maxSize = 0.96;
   static const double _minVisibleSheetHeight = 28;
   static const double _dismissedSizeThreshold = 0.08;
+  static const double _extentNotifyStep = 0.01;
 
   late final DraggableScrollableController _controller;
   late final ScrollController _scrollController;
   bool _isDismissing = false;
+  double? _lastHandledExtent;
+  bool _showLiveLocationStream = false;
 
   @override
   void initState() {
     super.initState();
     _controller = DraggableScrollableController();
     _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _showLiveLocationStream = true);
+    });
   }
 
   @override
@@ -44,6 +51,11 @@ class _LocationDetailSheetState extends State<LocationDetailSheet> {
   }
 
   void _handleSheetExtentChanged(double extent) {
+    final previous = _lastHandledExtent;
+    if (previous != null && (extent - previous).abs() < _extentNotifyStep) {
+      return;
+    }
+    _lastHandledExtent = extent;
     if (_isDismissing || extent > _dismissedSizeThreshold) return;
 
     _dismissSheet();
@@ -158,32 +170,37 @@ class _LocationDetailSheetState extends State<LocationDetailSheet> {
                         child: const _SheetHandle(),
                       ),
                       Expanded(
-                        child: ClipRect(
-                          child: Stack(
-                            children: [
-                              SizedBox.shrink(
-                                child: ListView(
-                                  controller: sheetScrollController,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                ),
+                        child: Stack(
+                          children: [
+                            SizedBox.shrink(
+                              child: ListView(
+                                controller: sheetScrollController,
+                                physics: const NeverScrollableScrollPhysics(),
                               ),
-                              Consumer(
-                                builder: (context, ref, _) {
-                                  final liveLocation =
-                                      ref
-                                          .watch(locationDetailProvider(widget.location.id))
-                                          .valueOrNull ??
-                                      widget.location;
+                            ),
+                            Consumer(
+                              builder: (context, ref, _) {
+                                final liveLocation = _showLiveLocationStream
+                                    ? ref
+                                              .watch(
+                                                locationDetailProvider(
+                                                  widget.location.id,
+                                                ),
+                                              )
+                                              .valueOrNull ??
+                                          widget.location
+                                    : widget.location;
 
-                                  return LocationDetail(
+                                return RepaintBoundary(
+                                  child: LocationDetail(
                                     location: liveLocation,
                                     scrollController: _scrollController,
                                     bottomPadding: bottomPadding + 28,
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ],

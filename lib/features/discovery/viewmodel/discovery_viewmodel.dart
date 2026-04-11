@@ -28,6 +28,7 @@ class DiscoveryCardData {
     required this.chipColor,
     required this.placeholderColors,
     required this.icon,
+    required this.imagePath,
   });
 
   final String title;
@@ -35,6 +36,7 @@ class DiscoveryCardData {
   final Color chipColor;
   final List<Color> placeholderColors;
   final IconData icon;
+  final String imagePath;
 }
 
 const discoveryTopPicks = <DiscoveryCardData>[
@@ -44,6 +46,7 @@ const discoveryTopPicks = <DiscoveryCardData>[
     chipColor: Color(0xFFD4458C),
     placeholderColors: [Color(0xFFF5E5DC), Color(0xFFD7B89A)],
     icon: Icons.local_fire_department_rounded,
+    imagePath: 'assets/images/trending.png',
   ),
   DiscoveryCardData(
     title: 'Lowkey',
@@ -51,6 +54,7 @@ const discoveryTopPicks = <DiscoveryCardData>[
     chipColor: SpontiColors.info,
     placeholderColors: [Color(0xFFF6F1EB), Color(0xFFD7ECE9)],
     icon: Icons.visibility_off_rounded,
+    imagePath: 'assets/images/lowkey.png',
   ),
   DiscoveryCardData(
     title: 'Popular',
@@ -58,6 +62,7 @@ const discoveryTopPicks = <DiscoveryCardData>[
     chipColor: Color(0xFFE07A15),
     placeholderColors: [Color(0xFF321033), Color(0xFF6D235C)],
     icon: Icons.favorite_rounded,
+    imagePath: 'assets/images/popular.png',
   ),
   DiscoveryCardData(
     title: 'New',
@@ -65,6 +70,7 @@ const discoveryTopPicks = <DiscoveryCardData>[
     chipColor: SpontiColors.success,
     placeholderColors: [Color(0xFF20342A), Color(0xFF4E8E63)],
     icon: Icons.auto_awesome_rounded,
+    imagePath: 'assets/images/new.png',
   ),
 ];
 

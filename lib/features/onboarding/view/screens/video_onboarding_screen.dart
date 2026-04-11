@@ -117,7 +117,13 @@ class _VideoOnboardingScreenState extends ConsumerState<VideoOnboardingScreen> {
                   ),
               ],
             )
-          : const Center(child: CircularProgressIndicator()),
+          : Center(
+              child: Image.asset(
+                'assets/images/sponti_logo.png',
+                width: 160,
+                fit: BoxFit.contain,
+              ),
+            ),
     );
   }
 }

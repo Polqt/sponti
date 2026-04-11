@@ -22,7 +22,6 @@ class LocationComparisonScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ─────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Row(
@@ -85,7 +84,6 @@ class LocationComparisonScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
-            // ── Body ────────────────────────────────────────
             Expanded(
               child: pinnedIdsAsync.when(
                 loading: () => const Center(
@@ -153,7 +151,6 @@ class _ComparisonBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Scrollable horizontal cards
         Expanded(
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
@@ -165,7 +162,6 @@ class _ComparisonBody extends StatelessWidget {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Tap card to view detail
                   GestureDetector(
                     onTap: () => context.push(
                       RouteName.locationDetailPath(location.id),
@@ -173,7 +169,6 @@ class _ComparisonBody extends StatelessWidget {
                     child: LocationComparisonCard(location: location),
                   ),
                   const SizedBox(height: 10),
-                  // Remove pill button
                   GestureDetector(
                     onTap: () => ref
                         .read(pinnedComparisonIdsProvider.notifier)
@@ -216,7 +211,6 @@ class _ComparisonBody extends StatelessWidget {
             },
           ),
         ),
-        // ── Done button ─────────────────────────────────
         SafeArea(
           top: false,
           child: Padding(

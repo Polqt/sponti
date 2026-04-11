@@ -1,14 +1,10 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
-import 'package:sponti/core/widgets/app_badge.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
-import 'package:sponti/features/friends/viewmodel/friends_viewmodel.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 import 'package:sponti/features/surprise_me/view/screens/surprise_me_modal.dart';
 
@@ -38,31 +34,49 @@ class MainShell extends ConsumerWidget {
 
     return Scaffold(
       extendBody: true,
-      body: child,
-      bottomNavigationBar: AnimatedSlide(
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeInOutCubic,
-        offset: isBarHidden ? const Offset(0, 1.5) : Offset.zero,
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 220),
-          opacity: isBarHidden ? 0.0 : 1.0,
-          child: _SpontiBottomBar(
-            activeRoute: route,
-            avatarUrl: avatarUrl,
-            onTapExplore: () => context.go(RouteName.discovery),
-            onTapMap: () => context.go(RouteName.location),
-            onTapSurprise: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => const SurpriseMeModal(),
-              );
-            },
-            onTapSaved: () => context.go(RouteName.favorites),
-            onTapProfile: () => context.go(RouteName.profile),
+      body: Stack(
+        children: [
+          Positioned.fill(child: child),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              ignoring: isBarHidden,
+              child: AnimatedSlide(
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeInOutCubic,
+                offset: isBarHidden ? const Offset(0, 1.5) : Offset.zero,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 220),
+                  opacity: isBarHidden ? 0.0 : 1.0,
+                  child: SafeArea(
+                    top: false,
+                    left: false,
+                    right: false,
+                    minimum: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+                    child: _SpontiBottomBar(
+                      activeRoute: route,
+                      avatarUrl: avatarUrl,
+                      onTapExplore: () => context.go(RouteName.discovery),
+                      onTapMap: () => context.go(RouteName.location),
+                      onTapSurprise: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => const SurpriseMeModal(),
+                        );
+                      },
+                      onTapSaved: () => context.go(RouteName.favorites),
+                      onTapProfile: () => context.go(RouteName.profile),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -102,78 +116,62 @@ class _SpontiBottomBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pendingCount = ref.watch(pendingRequestCountProvider);
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final dockBottomInset = bottomInset > 0 ? bottomInset : 6.0;
-    final dockHeight = kShellBottomBarHeight + dockBottomInset;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: kShellBottomBarBottomGap),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: dockHeight,
-            padding: EdgeInsets.fromLTRB(8, 9, 8, dockBottomInset),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF8F6F1),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              border: Border(
-                top: BorderSide(
-                  color: Colors.white,
-                  width: 0.5,
-                ),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x0F000000),
-                  blurRadius: 20,
-                  offset: Offset(0, -4),
-                ),
-                BoxShadow(
-                  color: Color(0x05000000),
-                  blurRadius: 8,
-                  offset: Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                _TabIcon(
-                  icon: Icons.groups_2_outlined,
-                  activeIcon: Icons.groups_2_rounded,
-                  isActive: _isExploreActive,
-                  onTap: onTapExplore,
-                ),
-                _TabIcon(
-                  icon: Icons.map_outlined,
-                  activeIcon: Icons.map_rounded,
-                  isActive: _isMapActive,
-                  onTap: onTapMap,
-                ),
-                Expanded(
-                  flex: 2,
-                  child: _CenterSurpriseButton(onTap: onTapSurprise),
-                ),
-                _TabIcon(
-                  icon: Icons.local_offer_outlined,
-                  activeIcon: Icons.local_offer_rounded,
-                  isActive: _isSavedActive,
-                  onTap: onTapSaved,
-                ),
-                AppBadge(
-                  count: pendingCount,
-                  child: _ProfileTab(
-                    avatarUrl: avatarUrl,
-                    isActive: _isProfileActive,
-                    onTap: onTapProfile,
-                  ),
-                ),
-              ],
-            ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(30),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: kShellBottomBarHeight,
+        padding: const EdgeInsets.fromLTRB(8, 9, 8, 9),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF8F6F1),
+          borderRadius: BorderRadius.all(Radius.circular(30)),
+          border: Border.fromBorderSide(
+            BorderSide(color: Color(0xFFFDFBF8), width: 1),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x14000000),
+              blurRadius: 20,
+              offset: Offset(0, 6),
+            ),
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            _TabIcon(
+              icon: Icons.groups_2_outlined,
+              activeIcon: Icons.groups_2_rounded,
+              isActive: _isExploreActive,
+              onTap: onTapExplore,
+            ),
+            _TabIcon(
+              icon: Icons.map_outlined,
+              activeIcon: Icons.map_rounded,
+              isActive: _isMapActive,
+              onTap: onTapMap,
+            ),
+            Expanded(
+              flex: 2,
+              child: _CenterSurpriseButton(onTap: onTapSurprise),
+            ),
+            _TabIcon(
+              icon: Icons.local_offer_outlined,
+              activeIcon: Icons.local_offer_rounded,
+              isActive: _isSavedActive,
+              onTap: onTapSaved,
+            ),
+            _ProfileTab(
+              avatarUrl: avatarUrl,
+              isActive: _isProfileActive,
+              onTap: onTapProfile,
+            ),
+          ],
         ),
       ),
     );
@@ -267,7 +265,9 @@ class _CenterSurpriseButtonState extends State<_CenterSurpriseButton> {
               borderRadius: BorderRadius.circular(26),
               boxShadow: [
                 BoxShadow(
-                  color: SpontiColors.primary.withValues(alpha: _isPressed ? 0.3 : 0.4),
+                  color: SpontiColors.primary.withValues(
+                    alpha: _isPressed ? 0.3 : 0.4,
+                  ),
                   blurRadius: _isPressed ? 8 : 14,
                   offset: Offset(0, _isPressed ? 3 : 6),
                 ),

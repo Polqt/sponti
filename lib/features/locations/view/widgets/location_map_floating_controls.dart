@@ -6,7 +6,7 @@ import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/location_category_row.dart';
 
-/// Category row + active filter chips shown at the bottom of the map.
+
 class LocationMapFloatingControls extends StatelessWidget {
   const LocationMapFloatingControls({
     super.key,

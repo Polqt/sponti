@@ -73,7 +73,6 @@ class _CreateGroupPlanScreenState extends ConsumerState<CreateGroupPlanScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ──────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
               child: Row(
@@ -110,7 +109,6 @@ class _CreateGroupPlanScreenState extends ConsumerState<CreateGroupPlanScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            // ── Form ────────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -146,7 +144,6 @@ class _CreateGroupPlanScreenState extends ConsumerState<CreateGroupPlanScreen> {
                     const SizedBox(height: 24),
                     _HowItWorksCard(),
                     const SizedBox(height: 24),
-                    // ── CTA inline with content ────────────────
                     _CreateButton(
                       isLoading: _isLoading,
                       onTap: _createPlan,

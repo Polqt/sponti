@@ -12,7 +12,8 @@ class SignInScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authAsync = ref.watch(authProvider);
+    ref.watch(authProvider);
+    final oauthLoadingState = ref.watch(oauthLoadingStateProvider);
 
     ref.listen(authProvider, (_, next) {
       if (next.valueOrNull != null) context.go(RouteName.location);
@@ -61,7 +62,8 @@ class SignInScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 22),
                       _OAuthButton.facebook(
-                        isLoading: authAsync.isLoading,
+                        isLoading:
+                            oauthLoadingState == OAuthLoadingState.facebook,
                         onTap: () async {
                           final success = await ref
                               .read(authProvider.notifier)
@@ -87,7 +89,8 @@ class SignInScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 10),
                       _OAuthButton.google(
-                        isLoading: authAsync.isLoading,
+                        isLoading:
+                            oauthLoadingState == OAuthLoadingState.google,
                         onTap: () async {
                           final success = await ref
                               .read(authProvider.notifier)

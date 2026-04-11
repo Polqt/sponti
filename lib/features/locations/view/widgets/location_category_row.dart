@@ -48,7 +48,7 @@ class LocationCategoryRow extends StatelessWidget {
   }
 }
 
-class _CategoryPill extends StatefulWidget {
+class _CategoryPill extends StatelessWidget {
   const _CategoryPill({
     required this.label,
     required this.isSelected,
@@ -64,89 +64,42 @@ class _CategoryPill extends StatefulWidget {
   final Widget icon;
 
   @override
-  State<_CategoryPill> createState() => _CategoryPillState();
-}
-
-class _CategoryPillState extends State<_CategoryPill>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _scaleController;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 120),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.easeOutCubic),
-    );
-  }
-
-  @override
-  void dispose() {
-    _scaleController.dispose();
-    super.dispose();
-  }
-
-  void _handleTapDown(TapDownDetails details) {
-    _scaleController.forward();
-  }
-
-  void _handleTapUp(TapUpDetails details) {
-    _scaleController.reverse();
-  }
-
-  void _handleTapCancel() {
-    _scaleController.reverse();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final foreground = widget.isSelected ? widget.accent : SpontiColors.textSecondary;
-    
-    return ScaleTransition(
-      scale: _scaleAnimation,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: widget.onTap,
-          onTapDown: _handleTapDown,
-          onTapUp: _handleTapUp,
-          onTapCancel: _handleTapCancel,
-          borderRadius: BorderRadius.circular(22),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            height: 44,
+    final foreground = isSelected ? accent : SpontiColors.textSecondary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: SizedBox(
+          height: 44,
+          child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: widget.isSelected ? 14 : 8,
+              horizontal: isSelected ? 14 : 8,
               vertical: 4,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
+                Container(
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: widget.isSelected
-                        ? widget.accent.withValues(alpha: 0.14)
+                    color: isSelected
+                        ? accent.withValues(alpha: 0.14)
                         : Colors.white.withValues(alpha: 0.75),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: widget.isSelected
-                          ? widget.accent.withValues(alpha: 0.25)
+                      color: isSelected
+                          ? accent.withValues(alpha: 0.25)
                           : Colors.white.withValues(alpha: 0.85),
                       width: 1.5,
                     ),
                   ),
                   child: IconTheme(
                     data: IconThemeData(size: 18, color: foreground),
-                    child: Center(child: widget.icon),
+                    child: Center(child: icon),
                   ),
                 ),
               ],

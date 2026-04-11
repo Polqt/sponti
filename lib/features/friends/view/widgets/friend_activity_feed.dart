@@ -49,8 +49,6 @@ class FriendActivityFeed extends ConsumerWidget {
   }
 }
 
-// ─── Suggestions (vertical list, no section header) ─────────────────────────
-
 class _SuggestionsSection extends StatelessWidget {
   const _SuggestionsSection({required this.suggestionsAsync});
 
@@ -167,8 +165,6 @@ class _SuggestionSkeleton extends StatelessWidget {
     );
   }
 }
-
-// ─── Activity feed ───────────────────────────────────────────────────────────
 
 class _ActivityCard extends StatelessWidget {
   const _ActivityCard({required this.item});
@@ -320,8 +316,6 @@ class _LoadMoreButton extends ConsumerWidget {
     );
   }
 }
-
-// ─── Shared ───────────────────────────────────────────────────────────────────
 
 class _EmptyCard extends StatelessWidget {
   const _EmptyCard({

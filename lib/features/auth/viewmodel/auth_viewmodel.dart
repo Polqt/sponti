@@ -5,6 +5,8 @@ import 'package:sponti/features/auth/repository/auth_repository.dart';
 import 'package:sponti/features/auth/repository/auth_repository_impl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
+enum OAuthLoadingState { idle, google, facebook }
+
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
   return AuthRemoteDataSourceImpl(Supabase.instance.client);
 });
@@ -27,14 +29,19 @@ class AuthViewModel extends AsyncNotifier<AuthUser?> {
 
   Future<bool> signInWithGoogle() async {
     final repository = ref.read(authRepositoryProvider);
-    state = const AsyncLoading();
+    ref.read(oauthLoadingStateProvider.notifier).state =
+        OAuthLoadingState.google;
     final result = await repository.signInWithGoogle();
     return result.fold(
       (failure) {
-        state = AsyncError(failure.message, StackTrace.current);
+        ref.read(oauthLoadingStateProvider.notifier).state =
+            OAuthLoadingState.idle;
+        state = AsyncData(repository.currentUser);
         return false;
       },
       (user) {
+        ref.read(oauthLoadingStateProvider.notifier).state =
+            OAuthLoadingState.idle;
         state = AsyncData(user);
         return true;
       },
@@ -43,14 +50,19 @@ class AuthViewModel extends AsyncNotifier<AuthUser?> {
 
   Future<bool> signInWithFacebook() async {
     final repository = ref.read(authRepositoryProvider);
-    state = const AsyncLoading();
+    ref.read(oauthLoadingStateProvider.notifier).state =
+        OAuthLoadingState.facebook;
     final result = await repository.signInWithFacebook();
     return result.fold(
       (failure) {
-        state = AsyncError(failure.message, StackTrace.current);
+        ref.read(oauthLoadingStateProvider.notifier).state =
+            OAuthLoadingState.idle;
+        state = AsyncData(repository.currentUser);
         return false;
       },
       (user) {
+        ref.read(oauthLoadingStateProvider.notifier).state =
+            OAuthLoadingState.idle;
         state = AsyncData(user);
         return true;
       },
@@ -66,6 +78,8 @@ class AuthViewModel extends AsyncNotifier<AuthUser?> {
         return false;
       },
       (_) {
+        ref.read(oauthLoadingStateProvider.notifier).state =
+            OAuthLoadingState.idle;
         state = const AsyncData(null);
         return true;
       },
@@ -75,6 +89,10 @@ class AuthViewModel extends AsyncNotifier<AuthUser?> {
 
 final authProvider = AsyncNotifierProvider<AuthViewModel, AuthUser?>(
   AuthViewModel.new,
+);
+
+final oauthLoadingStateProvider = StateProvider<OAuthLoadingState>(
+  (ref) => OAuthLoadingState.idle,
 );
 
 final isAuthenticatedProvider = Provider<bool>((ref) {

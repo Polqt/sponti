@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
-        android:label="sponti"
+        android:label="Sponti"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <meta-data
@@ -38,7 +38,10 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="io.supabase.sponti" android:host="login-callback" />
+                <data
+                    android:scheme="io.supabase.sponti"
+                    android:host="login-callback"
+                    android:pathPrefix="/" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
