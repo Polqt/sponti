@@ -7,6 +7,7 @@ import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_button.dart';
 import 'package:sponti/core/widgets/location_feedback_widgets.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
+import 'package:sponti/features/locations/utils/location_explore_cache.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/locations/view/widgets/location_feedback_sections.dart';
 import 'package:sponti/features/reviews/model/review.dart';
@@ -140,6 +141,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
         ref.invalidate(reviewsByLocationProvider(widget.locationId));
         ref.invalidate(reviewsStreamProvider(widget.locationId));
         ref.invalidate(locationDetailProvider(widget.locationId));
+        invalidateLocationExploreRankingCaches(ref.invalidate);
         if (uploadResult.failedMessages.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(uploadResult.failedMessages.first)),

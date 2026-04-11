@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/widgets/app_button.dart';
+import 'package:sponti/features/locations/utils/location_explore_cache.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/reviews/viewmodel/reviews_viewmodel.dart';
 
@@ -38,6 +39,7 @@ class ReviewActionButton extends ConsumerWidget {
         ref.invalidate(reviewsStreamProvider(locationId));
         ref.invalidate(myReviewForLocationProvider(locationId));
         ref.invalidate(locationDetailProvider(locationId));
+        invalidateLocationExploreRankingCaches(ref.invalidate);
       },
     );
   }

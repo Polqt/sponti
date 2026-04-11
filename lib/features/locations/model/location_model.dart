@@ -17,6 +17,7 @@ class LocationModel extends Location {
     super.rating,
     super.reviewCount,
     super.checkInCount,
+    super.favoriteCount,
     super.isHiddenGem,
     super.isVerified,
     super.hasWifi,
@@ -69,6 +70,7 @@ class LocationModel extends Location {
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       reviewCount: (json['review_count'] as num?)?.toInt() ?? 0,
       checkInCount: (json['check_in_count'] as num?)?.toInt() ?? 0,
+      favoriteCount: (json['favorite_count'] as num?)?.toInt() ?? 0,
       isHiddenGem: json['is_hidden_gem'] as bool? ?? false,
       isVerified: json['is_verified'] as bool? ?? false,
       hasWifi: json['has_wifi'] as bool? ?? false,
@@ -114,6 +116,13 @@ class LocationModel extends Location {
     if (instagramHandle != null) map['instagram_handle'] = instagramHandle;
     if (submittedBy != null) map['submitted_by'] = submittedBy;
 
+    if (isSeeded) {
+      map['is_seeded'] = true;
+      if (seededAt != null) {
+        map['seeded_at'] = seededAt!.toUtc().toIso8601String();
+      }
+    }
+
     if (operatingHours != null) {
       map['open_time'] = operatingHours!.openTime;
       map['close_time'] = operatingHours!.closeTime;
@@ -140,6 +149,7 @@ class LocationModel extends Location {
     rating: entity.rating,
     reviewCount: entity.reviewCount,
     checkInCount: entity.checkInCount,
+    favoriteCount: entity.favoriteCount,
     isHiddenGem: entity.isHiddenGem,
     isVerified: entity.isVerified,
     hasWifi: entity.hasWifi,

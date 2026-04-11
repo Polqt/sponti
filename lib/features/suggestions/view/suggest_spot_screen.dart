@@ -124,6 +124,15 @@ class _SuggestSpotScreenState extends ConsumerState<SuggestSpotScreen> {
       return;
     }
 
+    if (_latitude == null || _longitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please drop a map pin so your spot appears on the map.'),
+        ),
+      );
+      return;
+    }
+
     final suggestion = SuggestionModel(
       id: '',
       userId: '',
@@ -265,7 +274,7 @@ class _SuggestionForm extends StatelessWidget {
             },
           ),
           const SizedBox(height: 16),
-          const _FieldLabel('map pin (optional)'),
+          const _FieldLabel('map pin (required)'),
           const SizedBox(height: 8),
           _DashedContainer(
             child: MapPinRow(
