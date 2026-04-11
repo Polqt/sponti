@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/suggestions/model/suggestion_model.dart';
 import 'package:sponti/features/suggestions/view/map_picker_screen.dart';
@@ -142,7 +141,7 @@ class _SuggestSpotScreenState extends ConsumerState<SuggestSpotScreen> {
   }
 
   Future<void> _openMapPicker() async {
-    final result = await Navigator.push<LatLng>(
+    final result = await Navigator.push<MapPickerResult>(
       context,
       MaterialPageRoute(
         fullscreenDialog: true,
@@ -152,8 +151,8 @@ class _SuggestSpotScreenState extends ConsumerState<SuggestSpotScreen> {
 
     if (result != null) {
       setState(() {
-        _latitude = result.latitude;
-        _longitude = result.longitude;
+        _latitude = result.coordinates.latitude;
+        _longitude = result.coordinates.longitude;
       });
     }
   }

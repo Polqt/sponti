@@ -95,7 +95,11 @@ final appRouter = GoRouter(
       path: RouteName.search,
       builder: (context, state) {
         final planId = state.uri.queryParameters['planId'];
-        return SearchScreen(voteForPlanId: planId);
+        final compareMode = state.uri.queryParameters['mode'] == 'compare';
+        return SearchScreen(
+          voteForPlanId: planId,
+          compareMode: compareMode,
+        );
       },
     ),
     GoRoute(
