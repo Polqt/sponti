@@ -96,6 +96,7 @@ class Location extends Equatable {
     this.rating = 0.0,
     this.reviewCount = 0,
     this.checkInCount = 0,
+    this.favoriteCount = 0,
     this.isHiddenGem = false,
     this.isVerified = false,
     this.hasWifi = false,
@@ -125,6 +126,7 @@ class Location extends Equatable {
   final double rating;
   final int reviewCount;
   final int checkInCount;
+  final int favoriteCount;
   final bool isHiddenGem;
   final bool isVerified;
   final bool hasWifi;
@@ -160,6 +162,7 @@ class Location extends Equatable {
     double? rating,
     int? reviewCount,
     int? checkInCount,
+    int? favoriteCount,
     bool? isHiddenGem,
     bool? isVerified,
     bool? hasWifi,
@@ -187,6 +190,7 @@ class Location extends Equatable {
     rating: rating ?? this.rating,
     reviewCount: reviewCount ?? this.reviewCount,
     checkInCount: checkInCount ?? this.checkInCount,
+    favoriteCount: favoriteCount ?? this.favoriteCount,
     isHiddenGem: isHiddenGem ?? this.isHiddenGem,
     isVerified: isVerified ?? this.isVerified,
     hasWifi: hasWifi ?? this.hasWifi,
@@ -217,6 +221,7 @@ class Location extends Equatable {
     rating,
     reviewCount,
     checkInCount,
+    favoriteCount,
     isHiddenGem,
     isVerified,
     hasWifi,

@@ -7,6 +7,7 @@ import 'package:sponti/features/favorites/repository/favorites_remote_data_sourc
 import 'package:sponti/features/favorites/repository/favorites_repository.dart';
 import 'package:sponti/features/favorites/repository/favorites_repository_impl.dart';
 import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/utils/location_explore_cache.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -107,6 +108,7 @@ class FavoritesViewModel extends AsyncNotifier<List<String>> {
   void _invalidateDependentProviders() {
     ref.invalidate(favoritesProvider);
     ref.invalidate(favoriteLocationsProvider);
+    invalidateLocationExploreRankingCaches(ref.invalidate);
     // Invalidate stats only - profile data hasn't changed, just the counts
     final userId = ref.read(currentUserIdProvider);
     if (userId != null) {
