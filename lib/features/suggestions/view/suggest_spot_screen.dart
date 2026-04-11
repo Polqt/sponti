@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart' show LatLng;
+import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/suggestions/model/suggestion_model.dart';
 import 'package:sponti/features/suggestions/view/map_picker_screen.dart';
 import 'package:sponti/features/suggestions/view/widgets/category_picker.dart';
@@ -8,7 +9,7 @@ import 'package:sponti/features/suggestions/view/widgets/map_pin_row.dart';
 import 'package:sponti/features/suggestions/view/widgets/success_sheet.dart';
 import 'package:sponti/features/suggestions/viewmodel/suggestions_viewmodel.dart';
 
-const _pageBackground = Color(0xFFF5F5F3);
+const _pageBackground = SpontiColors.surface;
 const _cardBorder = Color(0xFFDDDDDD);
 const _textPrimary = Color(0xFF111111);
 const _textMuted = Color(0xFF7A7A7A);
@@ -54,24 +55,28 @@ class _SuggestSpotScreenState extends ConsumerState<SuggestSpotScreen> {
 
     return Scaffold(
       backgroundColor: _pageBackground,
-      appBar: AppBar(
-        backgroundColor: _pageBackground,
-        elevation: 0,
-        centerTitle: false,
-        title: const Text(
-          'suggest a spot',
-          style: TextStyle(
-            color: _textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                'Suggest a spot',
+                style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  color: _textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Share a hidden gem with the community.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: SpontiColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 24),
               Expanded(
                 child: SingleChildScrollView(
                   child: _SuggestionForm(

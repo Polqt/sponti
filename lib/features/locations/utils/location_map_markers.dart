@@ -10,7 +10,7 @@ typedef LocationMarkerTapCallback = void Function(Location location);
 List<Marker> buildLocationMarkers({
   required List<Location> locations,
   required String? selectedId,
-  required double zoom,
+  required double iconScaleBase,
   required String keyPrefix,
   required LocationMarkerTapCallback onTap,
   LocationRankingSnapshot? rankingSnapshot,
@@ -53,6 +53,7 @@ List<Marker> buildLocationMarkers({
           key: ValueKey('${keyPrefix}_${data.location.id}'),
           category: data.location.category,
           isSelected: data.isSelected,
+          iconScaleBase: iconScaleBase,
           onTap: () => onTap(data.location),
           priceRange: data.location.priceRange,
           ranking: data.ranking,

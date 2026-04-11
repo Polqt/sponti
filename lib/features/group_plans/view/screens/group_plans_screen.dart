@@ -27,11 +27,17 @@ class GroupPlansScreen extends ConsumerWidget {
                   IconButton(
                     onPressed: () => context.pop(),
                     icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 28,
+                      height: 28,
+                    ),
+                    padding: EdgeInsets.zero,
                     style: IconButton.styleFrom(
                       foregroundColor: SpontiColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

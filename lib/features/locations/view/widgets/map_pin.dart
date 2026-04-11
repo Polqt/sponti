@@ -6,13 +6,14 @@ import 'package:sponti/features/locations/utils/location_ranking.dart';
 import 'package:sponti/features/locations/view/widgets/category.dart';
 import 'package:sponti/features/locations/viewmodel/map_zoom_provider.dart';
 
-class MapPin extends ConsumerWidget {
+class MapPin extends StatelessWidget {
   const MapPin({
     super.key,
     required this.category,
     required this.isSelected,
     required this.priceRange,
     required this.onTap,
+    required this.iconScaleBase,
     this.ranking,
     this.activeRankingFilter,
     this.activePriceFilter,
@@ -31,11 +32,13 @@ class MapPin extends ConsumerWidget {
   static const double canvasHeight = 152;
   static const double _basePinSize = 24;
   static const double _selectedPinSize = 28;
+  static const _pinHitSize = 44.0;
+
+  final double iconScaleBase;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final zoomState = ref.watch(mapZoomProvider);
-    final iconScale = zoomState.iconScale * (isSelected ? 1.15 : 1.0);
+  Widget build(BuildContext context) {
+    final iconScale = iconScaleBase * (isSelected ? 1.15 : 1.0);
     final rankingIndicator = resolveLocationMarkerRanking(
       ranking: ranking,
       activeRankingFilter: activeRankingFilter,
@@ -55,109 +58,111 @@ class MapPin extends ConsumerWidget {
         alignment: Alignment.center,
         children: [
           SizedBox(
-            width: 44,
-            height: 44,
+            width: _pinHitSize,
+            height: _pinHitSize,
             child: Center(
-              child: GestureDetector(
-                onTap: onTap,
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedScale(
-                  scale: iconScale,
-                  duration: const Duration(milliseconds: 160),
-                  curve: Curves.easeOutCubic,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        width: pinSize,
-                        height: pinSize,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: pinAccent == null
-                              ? null
-                              : Border.all(
-                                  color: pinAccent.withValues(
-                                    alpha: isSelected ? 0.95 : 0.72,
+                child: GestureDetector(
+                  onTap: onTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: Transform.scale(
+                    scale: iconScale,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: pinSize,
+                          height: pinSize,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: pinAccent == null
+                                ? null
+                                : Border.all(
+                                    color: pinAccent.withValues(
+                                      alpha: isSelected ? 0.95 : 0.72,
+                                    ),
+                                    width: isSelected ? 2.5 : 1.8,
                                   ),
-                                  width: isSelected ? 2.5 : 1.8,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.18),
+                                blurRadius: isSelected ? 12 : 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: LocationCategoryIcon(
+                              category: category,
+                              color: Colors.black.withValues(alpha: 0.75),
+                              size: isSelected ? 15 : 14,
+                            ),
+                          ),
+                        ),
+                        if (rankingIndicator != null)
+                          Positioned(
+                            top: -2,
+                            right: -2,
+                            child: Container(
+                              width: 9,
+                              height: 9,
+                              decoration: BoxDecoration(
+                                color: rankingIndicator.indicatorColor,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
                                 ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.18),
-                              blurRadius: isSelected ? 12 : 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: LocationCategoryIcon(
-                            category: category,
-                            color: Colors.black.withValues(alpha: 0.75),
-                            size: isSelected ? 15 : 14,
-                          ),
-                        ),
-                      ),
-                      if (rankingIndicator != null)
-                        Positioned(
-                          top: -2,
-                          right: -2,
-                          child: Container(
-                            width: 9,
-                            height: 9,
-                            decoration: BoxDecoration(
-                              color: rankingIndicator.indicatorColor,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 1.5,
                               ),
                             ),
                           ),
-                        ),
-                      if (isTrending)
-                        Positioned(
-                          top: -2,
-                          left: -2,
-                          child: Container(
-                            width: 11,
-                            height: 11,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF6B35),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 1.5,
+                        if (isTrending)
+                          Positioned(
+                            top: -2,
+                            left: -2,
+                            child: Container(
+                              width: 11,
+                              height: 11,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF6B35),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
+                                ),
                               ),
-                            ),
-                            child: const Center(
-                              child: Text(
-                                '🔥',
-                                style: TextStyle(fontSize: 5, height: 1),
+                              child: const Center(
+                                child: Text(
+                                  '🔥',
+                                  style: TextStyle(fontSize: 5, height: 1),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      if (activePriceFilter != null)
-                        Positioned(
-                          left: -4,
-                          bottom: -4,
-                          child: _PinPriceBadge(
-                            symbol: priceRange.symbol,
-                            color: priceRange.accentColor,
+                        if (activePriceFilter != null)
+                          Positioned(
+                            left: -4,
+                            bottom: -4,
+                            child: _PinPriceBadge(
+                              symbol: priceRange.symbol,
+                              color: priceRange.accentColor,
+                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
           ),
         ],
       ),
     );
   }
 }
+
+final mapPinIconScaleProvider = Provider<double>(
+  (ref) => ref.watch(mapZoomProvider.select((state) => state.iconScale)),
+);
 
 class _PinPriceBadge extends StatelessWidget {
   const _PinPriceBadge({required this.symbol, required this.color});

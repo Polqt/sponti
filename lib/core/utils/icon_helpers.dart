@@ -21,7 +21,7 @@ final Map<String, Future<ResolvedCategoryIcon>> _iconCache =
 Future<ResolvedCategoryIcon> resolveCategoryIcon(String assetPath) {
   return _iconCache.putIfAbsent(assetPath, () async {
     final svg = await rootBundle
-        .loadString(assetPath, cache: false)
+        .loadString(assetPath, cache: true)
         // ignore: invalid_return_type_for_catch_error
         .catchError((_) => null);
     final match = RegExp(

@@ -52,6 +52,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   bool _isExplorePanelVisible = false;
   bool _isExplorePanelExpanded = false;
   bool _retryLocateOnResume = false;
+  FilteredLocationsResult? _cachedFilteredResult;
+  List<Location>? _cachedSourceLocations;
+  LocationFilter? _cachedFilter;
 
   @override
   void initState() {
@@ -103,11 +106,10 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   void _setShellHidden(bool hidden) => _shellBarHiddenController.state = hidden;
 
-  Future<void> _onCategoryChanged(LocationCategory? category) async {
+  void _onCategoryChanged(LocationCategory? category) {
     final filterNotifier = ref.read(locationFilterProvider.notifier);
     filterNotifier.setCategory(category);
     filterNotifier.setRanking(null);
-    await ref.read(locationsProvider.notifier).refresh();
     _openPanel();
   }
 
@@ -347,10 +349,18 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     );
     final isOnline = ref.watch(connectivityProvider).valueOrNull ?? true;
     final allLocations = locationsAsync.valueOrNull ?? const <Location>[];
-    final filteredResult = applyLocationFilters(
-      locations: allLocations,
-      filter: filter,
-    );
+    final shouldReuseFiltered = _cachedFilteredResult != null &&
+        identical(_cachedSourceLocations, allLocations) &&
+        _isSameFilter(_cachedFilter, filter);
+    final filteredResult = shouldReuseFiltered
+        ? _cachedFilteredResult!
+        : applyLocationFilters(
+            locations: allLocations,
+            filter: filter,
+          );
+    _cachedFilteredResult = filteredResult;
+    _cachedSourceLocations = allLocations;
+    _cachedFilter = filter;
     final locations = filteredResult.visibleLocations;
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final topInset = MediaQuery.viewPaddingOf(context).top;
@@ -478,4 +488,14 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       ),
     );
   }
+}
+
+bool _isSameFilter(LocationFilter? left, LocationFilter right) {
+  if (left == null) return false;
+  return left.selectedCategory == right.selectedCategory &&
+      left.selectedRanking == right.selectedRanking &&
+      left.selectedPrice == right.selectedPrice &&
+      left.hasWifi == right.hasWifi &&
+      left.isPetFriendly == right.isPetFriendly &&
+      left.hasParking == right.hasParking;
 }

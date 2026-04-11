@@ -64,7 +64,9 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
   void didUpdateWidget(covariant LocationGoogleMapLayer oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final locationsChanged = !listEquals(widget.locations, oldWidget.locations);
+    final locationsChanged =
+        !identical(widget.locations, oldWidget.locations) &&
+        !listEquals(widget.locations, oldWidget.locations);
     final rankingSnapshotChanged = !_sameRankingSnapshot(
       widget.rankingSnapshot,
       oldWidget.rankingSnapshot,
@@ -80,11 +82,6 @@ class _LocationGoogleMapLayerState extends State<LocationGoogleMapLayer> {
     );
 
     if (locationsChanged || rankingSnapshotChanged || filterVisualsChanged) {
-      _rebuildMarkers();
-      return;
-    }
-
-    if (selectedChanged && currentLocationChanged) {
       _rebuildMarkers();
       return;
     }

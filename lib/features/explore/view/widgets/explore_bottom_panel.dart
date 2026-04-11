@@ -62,7 +62,9 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
   static const double _minSize = 0.25;
   static const double _midSize = 0.50;
   static const double _maxSize = 0.92;
-  static const double _expandThreshold = 0.35;
+  static const double _expandOnThreshold = 0.38;
+  static const double _collapseOnThreshold = 0.30;
+  static const double _progressNotifyStep = 0.05;
 
   late final DraggableScrollableController _sheetController;
   late final ScrollController _listScrollController;
@@ -70,14 +72,16 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
   final _itemKeys = <String, GlobalKey>{};
   int? _lastScrolledIndex;
   bool _scrollScheduled = false;
+  bool _didInitialSelectedScroll = false;
+  bool _expandedByExtent = false;
+  double? _lastProgressNotification;
 
   @override
   void initState() {
     super.initState();
     _sheetController = DraggableScrollableController();
-    _listScrollController = ScrollController()
-      ..addListener(_onListScroll);
-    _scheduleScrollSelectedIntoView();
+    _listScrollController = ScrollController()..addListener(_onListScroll);
+    _expandedByExtent = widget.isExpanded;
   }
 
   void _onListScroll() {
@@ -94,11 +98,23 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
     _pruneItemKeys();
 
     if (oldWidget.isExpanded != widget.isExpanded) {
-      _animateTo(widget.isExpanded ? _midSize : _minSize);
+      _expandedByExtent = widget.isExpanded;
+      if (_sheetController.isAttached) {
+        if (widget.isExpanded) {
+          if ((_sheetController.size - _midSize).abs() > 0.04) {
+            _animateTo(_midSize);
+          }
+        } else if (_sheetController.size > _midSize + 0.02) {
+          _animateTo(_minSize);
+        }
+      }
     }
 
-    if (oldWidget.selectedIndex != widget.selectedIndex ||
-        oldWidget.locations.length != widget.locations.length) {
+    final shouldScrollToSelection =
+        widget.isExpanded &&
+        (oldWidget.selectedIndex != widget.selectedIndex ||
+            oldWidget.locations.length != widget.locations.length);
+    if (shouldScrollToSelection) {
       _scheduleScrollSelectedIntoView();
     }
   }
@@ -148,9 +164,12 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
     _listScrollController.position.ensureVisible(
       renderObject,
       alignment: 0.18,
-      duration: const Duration(milliseconds: 260),
+      duration: _didInitialSelectedScroll
+          ? const Duration(milliseconds: 220)
+          : Duration.zero,
       curve: Curves.easeOutCubic,
     );
+    _didInitialSelectedScroll = true;
   }
 
   Future<void> _animateTo(double target) async {
@@ -190,6 +209,11 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
       return size > _midSize ? _midSize : _minSize;
     }
 
+    final collapseBiasThreshold = ((_minSize + _midSize) / 2) + 0.02;
+    if (velocity > 120 || size <= collapseBiasThreshold) {
+      return _minSize;
+    }
+
     final distMin = (size - _minSize).abs();
     final distMid = (size - _midSize).abs();
     final distMax = (size - _maxSize).abs();
@@ -206,11 +230,19 @@ class _ExploreBottomPanelState extends ConsumerState<ExploreBottomPanel> {
   void _onSheetNotification(DraggableScrollableNotification notification) {
     final progress = ((notification.extent - _minSize) / (_maxSize - _minSize))
         .clamp(0.0, 1.0);
-    widget.onSheetProgressChanged?.call(progress);
+    final steppedProgress = (progress / _progressNotifyStep).round() * _progressNotifyStep;
+    if (_lastProgressNotification == null ||
+        (steppedProgress - _lastProgressNotification!).abs() >= _progressNotifyStep) {
+      _lastProgressNotification = steppedProgress;
+      widget.onSheetProgressChanged?.call(steppedProgress.clamp(0.0, 1.0));
+    }
 
-    final expandedNow = notification.extent >= _expandThreshold;
-    if (expandedNow != widget.isExpanded) {
-      widget.onExpandChanged(expandedNow);
+    final extent = notification.extent;
+    final shouldExpand = !_expandedByExtent && extent >= _expandOnThreshold;
+    final shouldCollapse = _expandedByExtent && extent <= _collapseOnThreshold;
+    if (shouldExpand || shouldCollapse) {
+      _expandedByExtent = shouldExpand;
+      widget.onExpandChanged(_expandedByExtent);
     }
   }
 

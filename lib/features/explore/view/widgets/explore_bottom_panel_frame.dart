@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/explore/view/widgets/explore_budget_filter_modal.dart';
@@ -43,47 +41,47 @@ class ExploreBottomPanelFrame extends StatelessWidget {
   final ValueChanged<ExploreRanking?>? onRankingChanged;
   final ValueChanged<PriceRange?>? onPriceChanged;
   final Widget? amenityFilters;
+  static const _panelDecoration = BoxDecoration(
+    color: Color(0xFFF8F6F1),
+    borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+    border: Border.fromBorderSide(
+      BorderSide(color: Color(0xB8FFFFFF)),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: radius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F6F1).withValues(alpha: 0.97),
-            borderRadius: radius,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
-          ),
-          child: Column(
-            children: [
-              ExploreBottomPanelDragHandle(
-                screenHeight: screenHeight,
-                controller: controller,
-                minSize: minSize,
-                maxSize: maxSize,
-                onSnapNearest: onSnapNearest,
+      child: Container(
+        decoration: _panelDecoration.copyWith(borderRadius: radius),
+        child: Column(
+          children: [
+            ExploreBottomPanelDragHandle(
+              screenHeight: screenHeight,
+              controller: controller,
+              minSize: minSize,
+              maxSize: maxSize,
+              onSnapNearest: onSnapNearest,
+            ),
+            ExploreBottomPanelHeaderRow(
+              countText: countText,
+              filter: filter,
+              isExpanded: isExpanded,
+              onRankingChanged: onRankingChanged,
+              onPriceChanged: onPriceChanged,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: LocationCategoryRow(
+                selectedCategory: selectedCategory,
+                onChanged: onCategoryChanged,
               ),
-              ExploreBottomPanelHeaderRow(
-                countText: countText,
-                filter: filter,
-                isExpanded: isExpanded,
-                onRankingChanged: onRankingChanged,
-                onPriceChanged: onPriceChanged,
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: LocationCategoryRow(
-                  selectedCategory: selectedCategory,
-                  onChanged: onCategoryChanged,
-                ),
-              ),
-              ?amenityFilters,
-              const Divider(height: 1, thickness: 1, color: Color(0x14A68F7B)),
-              Expanded(child: child),
-            ],
-          ),
+            ),
+            ?amenityFilters,
+            const Divider(height: 1, thickness: 1, color: Color(0x14A68F7B)),
+            Expanded(child: child),
+          ],
         ),
       ),
     );

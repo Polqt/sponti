@@ -56,14 +56,19 @@ class MapZoomState {
 }
 
 class MapZoomNotifier extends Notifier<MapZoomState> {
+  static const double _zoomUpdateEpsilon = 0.08;
+
   @override
   MapZoomState build() => const MapZoomState();
 
   void updateZoom(double zoom) {
+    final normalizedZoom = (zoom * 100).roundToDouble() / 100;
     final newTier = ZoomTier.fromZoom(zoom);
-    if (zoom != state.zoom || newTier != state.tier) {
-      state = MapZoomState(zoom: zoom, tier: newTier);
-    }
+    final zoomChangedEnough = (normalizedZoom - state.zoom).abs() >=
+        _zoomUpdateEpsilon;
+    if (!zoomChangedEnough && newTier == state.tier) return;
+
+    state = MapZoomState(zoom: normalizedZoom, tier: newTier);
   }
 }
 
