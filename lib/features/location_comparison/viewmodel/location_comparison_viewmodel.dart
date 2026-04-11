@@ -22,20 +22,31 @@ class LocationComparisonViewModel extends AsyncNotifier<List<String>> {
     final current = [...await future];
     final isPinned = current.contains(locationId);
     if (isPinned) {
-      final updated = current.where((id) => id != locationId).toList(growable: false);
-      state = AsyncData(updated);
-      await _local.savePinnedIds(updated);
+      await unpin(locationId);
       return true;
     }
 
-    if (current.length >= kLocationComparisonMaxPins) {
-      return false;
-    }
+    return pin(locationId);
+  }
+
+  Future<bool> pin(String locationId) async {
+    final current = [...await future];
+    if (current.contains(locationId)) return true;
+    if (current.length >= kLocationComparisonMaxPins) return false;
 
     final updated = [...current, locationId];
     state = AsyncData(updated);
     await _local.savePinnedIds(updated);
     return true;
+  }
+
+  Future<void> unpin(String locationId) async {
+    final current = [...await future];
+    final updated = current
+        .where((id) => id != locationId)
+        .toList(growable: false);
+    state = AsyncData(updated);
+    await _local.savePinnedIds(updated);
   }
 
   Future<void> clear() async {

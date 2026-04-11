@@ -1,6 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+
+class MapPickerResult {
+  const MapPickerResult({
+    required this.coordinates,
+  });
+
+  final LatLng coordinates;
+}
 
 class MapPickerScreen extends StatefulWidget {
   const MapPickerScreen({super.key});
@@ -10,14 +20,102 @@ class MapPickerScreen extends StatefulWidget {
 }
 
 class _MapPickerScreenState extends State<MapPickerScreen> {
-  LatLng? _pinned;
-  final MapController _mapController = MapController();
-
   static const LatLng _bacolodCenter = LatLng(10.6713, 122.9511);
   static const double _defaultZoom = 14.0;
 
-  void _onTap(TapPosition tapPosition, LatLng point) {
+  final MapController _mapController = MapController();
+
+  LatLng? _pinned;
+  String? _locationLabel;
+  bool _isLocatingUser = false;
+
+  Future<void> _onTap(TapPosition tapPosition, LatLng point) async {
+    await _pin(point);
+  }
+
+  Future<void> _pin(LatLng point) async {
     setState(() => _pinned = point);
+    final label = await _resolveLabel(point);
+    if (!mounted) return;
+    setState(() => _locationLabel = label);
+  }
+
+  Future<void> _useCurrentLocation() async {
+    if (_isLocatingUser) return;
+
+    setState(() => _isLocatingUser = true);
+    try {
+      final enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) {
+        _showMessage('Turn on location services to use your current location.');
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      final granted =
+          permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
+      if (!granted) {
+        _showMessage(
+          permission == LocationPermission.deniedForever
+              ? 'Location permission is permanently denied.'
+              : 'Location permission is required to use your current location.',
+        );
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+        ),
+      );
+      if (!mounted) return;
+
+      final point = LatLng(position.latitude, position.longitude);
+      _mapController.move(point, 16);
+      await _pin(point);
+    } catch (_) {
+      _showMessage('Unable to fetch your current location right now.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLocatingUser = false);
+      }
+    }
+  }
+
+  Future<String?> _resolveLabel(LatLng point) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        point.latitude,
+        point.longitude,
+      );
+      if (placemarks.isEmpty) return null;
+
+      final placemark = placemarks.first;
+      final parts = <String?>[
+        placemark.street,
+        placemark.subLocality,
+        placemark.locality,
+      ]
+          .whereType<String>()
+          .map((value) => value.trim())
+          .where((value) => value.isNotEmpty && value.toLowerCase() != 'unnamed road')
+          .toList(growable: false);
+
+      return parts.isEmpty ? null : parts.join(', ');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -112,7 +210,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Text(
-                              'tap the map to drop a pin',
+                              'tap the map or use your current location',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Color(0xFFAAAAAA),
@@ -121,6 +219,26 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  Positioned(
+                    right: 16,
+                    bottom: 212,
+                    child: FloatingActionButton.small(
+                      heroTag: 'suggest_spot_locate_me',
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF111111),
+                      onPressed: _isLocatingUser ? null : _useCurrentLocation,
+                      child: _isLocatingUser
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF111111),
+                              ),
+                            )
+                          : const Icon(Icons.my_location_rounded, size: 18),
                     ),
                   ),
                   if (_pinned != null)
@@ -153,13 +271,25 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${_pinned!.latitude.toStringAsFixed(4)}° N, ${_pinned!.longitude.toStringAsFixed(4)}° E',
+                              '${_pinned!.latitude.toStringAsFixed(5)}, ${_pinned!.longitude.toStringAsFixed(5)}',
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF111111),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
+                            if ((_locationLabel ?? '').isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                _locationLabel!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF555555),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -174,7 +304,10 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                   GestureDetector(
                     onTap: _pinned == null
                         ? null
-                        : () => Navigator.pop(context, _pinned),
+                        : () => Navigator.pop(
+                            context,
+                            MapPickerResult(coordinates: _pinned!),
+                          ),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       height: 52,

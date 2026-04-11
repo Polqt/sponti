@@ -246,6 +246,10 @@ final locationDetailProvider = FutureProvider.autoDispose
 /// Set before navigating to /location; cleared after consumed.
 final pendingLocationProvider = StateProvider<Location?>((ref) => null);
 
+/// When true, the location map/detail flow should offer adding a tapped place
+/// into the comparison tray instead of behaving like a normal browse session.
+final compareSelectionModeProvider = StateProvider<bool>((ref) => false);
+
 /// IDs of locations that have above-average check-in activity in the last 7
 /// days, sourced from the location_metrics_daily materialized view.
 /// Returns an empty set when FEATURE_LOCATION_METRICS is off.

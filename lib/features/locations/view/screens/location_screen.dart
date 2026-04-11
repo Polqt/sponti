@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/config/shell/shell_provider.dart';
 import 'package:sponti/core/constants/app_constants.dart';
 import 'package:sponti/core/constants/map_constants.dart';
@@ -17,6 +19,7 @@ import 'package:sponti/features/locations/view/widgets/location_screen_explore_p
 import 'package:sponti/features/locations/view/widgets/location_screen_map_controls.dart';
 import 'package:sponti/features/locations/viewmodel/current_location_viewmodel.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
+import 'package:sponti/features/location_comparison/viewmodel/location_comparison_viewmodel.dart';
 
 class LocationScreen extends ConsumerStatefulWidget {
   const LocationScreen({super.key});
@@ -55,6 +58,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   FilteredLocationsResult? _cachedFilteredResult;
   List<Location>? _cachedSourceLocations;
   LocationFilter? _cachedFilter;
+  bool _isComparePromptOpen = false;
 
   @override
   void initState() {
@@ -200,6 +204,66 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     _focusLocation(location);
     _setSheetProgress(1.0);
     _setShellHidden(true);
+    _maybePromptCompareSelection(location);
+  }
+
+  void _maybePromptCompareSelection(Location location) {
+    final isCompareMode = ref.read(compareSelectionModeProvider);
+    if (!isCompareMode || _isComparePromptOpen) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || _isComparePromptOpen) return;
+      final pinnedIds = ref.read(pinnedComparisonIdSetProvider);
+      if (pinnedIds.contains(location.id)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This location is already in compare.'),
+          ),
+        );
+        return;
+      }
+
+      _isComparePromptOpen = true;
+      final shouldAdd = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Add to compare?'),
+          content: Text(
+            'Add ${location.name} to your comparison list?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      );
+      _isComparePromptOpen = false;
+
+      if (!mounted || shouldAdd != true) return;
+
+      final didPin = await ref
+          .read(pinnedComparisonIdsProvider.notifier)
+          .pin(location.id);
+      if (!mounted) return;
+
+      if (!didPin) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You can compare up to 3 locations only.'),
+          ),
+        );
+        return;
+      }
+
+      ref.read(compareSelectionModeProvider.notifier).state = false;
+      context.push(RouteName.locationComparisonPath());
+    });
   }
 
   void _restorePanelFromDetails() {
