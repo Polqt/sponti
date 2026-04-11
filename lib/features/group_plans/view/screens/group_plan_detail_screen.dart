@@ -63,6 +63,13 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                     .where((participant) => participant.isAccepted)
                     .length +
                 1;
+            final errorMessage = state.errorMessage;
+            final shouldShowInlineError =
+                errorMessage != null &&
+                !(!isOnline &&
+                    errorMessage.toLowerCase().contains(
+                      'group plans are read-only until the connection returns',
+                    ));
 
             return Column(
               children: [
@@ -183,13 +190,30 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                             canParticipate: canParticipate,
                             isOnline: isOnline,
                           ),
+                          if (shouldShowInlineError)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: _ErrorCard(message: errorMessage),
+                            ),
                         ],
-                        if (plan.status == PlanStatus.decided)
+                        if (plan.status == PlanStatus.decided) ...[
                           GroupPlanDecidedBanner(
                             winningLocationId: plan.winningLocationId,
                           ),
-                        if (plan.status == PlanStatus.cancelled)
+                          if (shouldShowInlineError)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: _ErrorCard(message: errorMessage),
+                            ),
+                        ],
+                        if (plan.status == PlanStatus.cancelled) ...[
                           const GroupPlanCancelledBanner(),
+                          if (shouldShowInlineError)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: _ErrorCard(message: errorMessage),
+                            ),
+                        ],
                         if (state.participants.isNotEmpty) ...[
                           const SizedBox(height: 18),
                           const GroupPlanSectionLabel(
@@ -201,14 +225,6 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                             participants: state.participants,
                           ),
                         ],
-                        if (state.errorMessage != null)
-                          if (!(isOnline == false &&
-                              state.errorMessage ==
-                                  'You are offline. Group plans are read-only until the connection returns.'))
-                          Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: _ErrorCard(message: state.errorMessage!),
-                          ),
                       ],
                     ),
                   ),

@@ -160,7 +160,8 @@ class GroupPlanParticipantStatusSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pendingCount = participants.where((participant) => participant.isPending).length;
+    final pendingCount =
+        participants.where((participant) => participant.isPending).length;
     final acceptedCount =
         participants.where((participant) => participant.isAccepted).length;
     final declinedCount =
