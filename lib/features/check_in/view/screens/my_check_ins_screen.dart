@@ -156,6 +156,9 @@ class _MyCheckInItem extends ConsumerWidget {
     final locationAsync = ref.watch(locationDetailProvider(checkIn.locationId));
     final pinnedIds = ref.watch(pinnedComparisonIdSetProvider);
     final formattedDate = DateFormat.yMMMd().format(checkIn.createdAt);
+    final note = checkIn.note?.trim();
+    final hasVisibleNote =
+        note != null && note.isNotEmpty && !note.startsWith('__seed_beta__');
 
     return locationAsync.when(
       loading: () => const SizedBox(
@@ -227,7 +230,7 @@ class _MyCheckInItem extends ConsumerWidget {
               ],
             ),
           ),
-          if (checkIn.note case final note? when note.trim().isNotEmpty) ...[
+          if (hasVisibleNote) ...[
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),

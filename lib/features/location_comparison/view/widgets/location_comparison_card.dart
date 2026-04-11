@@ -199,37 +199,63 @@ class LocationComparisonCard extends StatelessWidget {
                         color: SpontiColors.outline.withValues(alpha: 0.7),
                       ),
                       SizedBox(height: theme.sectionGap),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      if (useTightLayout)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
-                            Expanded(
-                              child: _AmenityDot(
-                                icon: Icons.wifi_rounded,
-                                label: 'Wi-Fi',
-                                isActive: location.hasWifi,
-                                theme: theme,
-                              ),
+                            _AmenityChip(
+                              icon: Icons.wifi_rounded,
+                              label: 'Wi-Fi',
+                              isActive: location.hasWifi,
+                              theme: theme,
                             ),
-                            Expanded(
-                              child: _AmenityDot(
-                                icon: Icons.pets_rounded,
-                                label: 'Pets',
-                                isActive: location.isPetFriendly,
-                                theme: theme,
-                              ),
+                            _AmenityChip(
+                              icon: Icons.pets_rounded,
+                              label: 'Pets',
+                              isActive: location.isPetFriendly,
+                              theme: theme,
                             ),
-                            Expanded(
-                              child: _AmenityDot(
-                                icon: Icons.local_parking_rounded,
-                                label: 'Park',
-                                isActive: location.hasParking,
-                                theme: theme,
-                              ),
+                            _AmenityChip(
+                              icon: Icons.local_parking_rounded,
+                              label: 'Park',
+                              isActive: location.hasParking,
+                              theme: theme,
                             ),
                           ],
+                        )
+                      else
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: _AmenityDot(
+                                  icon: Icons.wifi_rounded,
+                                  label: 'Wi-Fi',
+                                  isActive: location.hasWifi,
+                                  theme: theme,
+                                ),
+                              ),
+                              Expanded(
+                                child: _AmenityDot(
+                                  icon: Icons.pets_rounded,
+                                  label: 'Pets',
+                                  isActive: location.isPetFriendly,
+                                  theme: theme,
+                                ),
+                              ),
+                              Expanded(
+                                child: _AmenityDot(
+                                  icon: Icons.local_parking_rounded,
+                                  label: 'Park',
+                                  isActive: location.hasParking,
+                                  theme: theme,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -356,6 +382,51 @@ class _AmenityDot extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AmenityChip extends StatelessWidget {
+  const _AmenityChip({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.theme,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final _CardTheme theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isActive ? SpontiColors.primary : SpontiColors.textMuted;
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: theme.metricHorizontalPadding,
+        vertical: theme.metricVerticalPadding - 1,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isActive ? 0.10 : 0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: theme.metricIconSize, color: color),
+          SizedBox(width: theme.metricIconGap),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: theme.metricFontSize,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

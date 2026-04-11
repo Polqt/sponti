@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/group_plans/viewmodel/group_plans_viewmodel.dart';
-import 'package:sponti/features/location_comparison/viewmodel/location_comparison_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/search/view/widgets/search_results_content.dart';
@@ -89,22 +88,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     context.go(RouteName.location);
   }
 
-  Future<void> _handleLocationTap(BuildContext context, Location location) async {
-    if (widget.compareMode) {
-      _openCompareMap(location: location);
-      return;
-    }
-
-    final planId = widget.voteForPlanId;
-    if (planId != null) {
-      await ref.read(groupPlanDetailProvider(planId).notifier).vote(location.id);
-      if (!context.mounted) return;
-      context.pop();
-      return;
-    }
-
-    context.push(RouteName.locationDetailPath(location.id));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -240,8 +223,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 resultsAsync: resultsAsync,
                                 results: results,
                                 onSuggestionTap: _applySuggestion,
-                                onLocationTap: (location) =>
-                                    _handleLocationTap(context, location),
                                 onLocationTap: (location) async {
                                   final planId = widget.voteForPlanId;
                                   if (planId != null) {
