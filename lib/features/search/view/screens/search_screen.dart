@@ -242,6 +242,34 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 onSuggestionTap: _applySuggestion,
                                 onLocationTap: (location) =>
                                     _handleLocationTap(context, location),
+                                onLocationTap: (location) async {
+                                  final planId = widget.voteForPlanId;
+                                  if (planId != null) {
+                                    final didVote = await ref
+                                        .read(groupPlanDetailProvider(planId).notifier)
+                                        .vote(location.id);
+                                    if (!context.mounted) return;
+                                    if (didVote) {
+                                      context.pop();
+                                    } else {
+                                      final message = ref
+                                          .read(groupPlanDetailProvider(planId))
+                                          .valueOrNull
+                                          ?.errorMessage;
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            message ?? 'Could not cast vote.',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    context.push(
+                                      RouteName.locationDetailPath(location.id),
+                                    );
+                                  }
+                                },
                               ),
                             );
                           },

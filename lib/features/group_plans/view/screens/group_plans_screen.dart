@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
+import 'package:sponti/core/providers/connectivity_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/core/widgets/app_empty_state.dart';
 import 'package:sponti/features/group_plans/view/widgets/group_plan_card.dart';
+import 'package:sponti/features/group_plans/view/widgets/group_plan_offline_banner.dart';
+import 'package:sponti/features/group_plans/view/widgets/group_plan_page_header.dart';
 import 'package:sponti/features/group_plans/viewmodel/group_plans_viewmodel.dart';
 
 class GroupPlansScreen extends ConsumerWidget {
@@ -13,6 +16,12 @@ class GroupPlansScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final plansAsync = ref.watch(userGroupPlansProvider);
+    final isOnline = ref.watch(connectivityProvider).valueOrNull ?? true;
+
+    Future<void> openCreatePlan() async {
+      await context.push(RouteName.createGroupPlan);
+      ref.invalidate(userGroupPlansProvider);
+    }
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -20,48 +29,11 @@ class GroupPlansScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-                    visualDensity: VisualDensity.compact,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 28,
-                      height: 28,
-                    ),
-                    padding: EdgeInsets.zero,
-                    style: IconButton.styleFrom(
-                      foregroundColor: SpontiColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Let's Go Plans",
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Plan where to go with your crew',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SpontiColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            const GroupPlanPageHeader(
+              title: "Let's Go Plans",
+              subtitle: 'Plan where to go with your crew',
             ),
+            if (!isOnline) const GroupPlanOfflineBanner(),
             const SizedBox(height: 16),
             Expanded(
               child: plansAsync.when(
@@ -72,15 +44,12 @@ class GroupPlansScreen extends ConsumerWidget {
                 data: (plans) {
                   if (plans.isEmpty) {
                     return AppEmptyState(
-                      emoji: '🗺️',
+                      emoji: '\u{1F5FA}\u{FE0F}',
                       title: 'No plans yet',
                       subtitle:
                           'Start a plan and invite your crew to vote on where to go.',
-                      actionLabel: 'Create a plan',
-                      onAction: () async {
-                        await context.push(RouteName.createGroupPlan);
-                        ref.invalidate(userGroupPlansProvider);
-                      },
+                      actionLabel: isOnline ? 'Create a plan' : null,
+                      onAction: isOnline ? openCreatePlan : null,
                     );
                   }
 
@@ -101,50 +70,59 @@ class GroupPlansScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: _CreatePlanFab(
-        onPressed: () async {
-          await context.push(RouteName.createGroupPlan);
-          ref.invalidate(userGroupPlansProvider);
-        },
+        isEnabled: isOnline,
+        onPressed: openCreatePlan,
       ),
     );
   }
 }
 
 class _CreatePlanFab extends StatelessWidget {
-  const _CreatePlanFab({required this.onPressed});
+  const _CreatePlanFab({
+    required this.isEnabled,
+    required this.onPressed,
+  });
 
+  final bool isEnabled;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
+      onTap: isEnabled ? onPressed : null,
       child: Container(
         height: 52,
         padding: const EdgeInsets.symmetric(horizontal: 22),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [SpontiColors.primary, SpontiColors.primaryLight],
+          gradient: LinearGradient(
+            colors: isEnabled
+                ? const [SpontiColors.primary, SpontiColors.primaryLight]
+                : [
+                    SpontiColors.primary.withValues(alpha: 0.55),
+                    SpontiColors.primaryLight.withValues(alpha: 0.55),
+                  ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(26),
-          boxShadow: [
-            BoxShadow(
-              color: SpontiColors.primary.withValues(alpha: 0.40),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          boxShadow: isEnabled
+              ? [
+                  BoxShadow(
+                    color: SpontiColors.primary.withValues(alpha: 0.40),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : null,
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add_rounded, color: Colors.white, size: 20),
-            SizedBox(width: 8),
+            const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
             Text(
-              'New Plan',
-              style: TextStyle(
+              isEnabled ? 'New Plan' : 'Offline',
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
                 fontSize: 15,

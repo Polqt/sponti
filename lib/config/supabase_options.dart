@@ -1,3 +1,6 @@
+
+
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SupabaseOptions {
@@ -20,6 +23,7 @@ abstract final class SupabaseTables {
   static const String suggestions = 'suggestions';
   static const String groupPlans = 'group_plans';
   static const String planParticipants = 'plan_participants';
+  static const String planLocationSuggestions = 'plan_location_suggestions';
   static const String planVotes = 'plan_votes';
   static const String friendRequests = 'friend_requests';
   static const String friendConnections = 'friend_connections';

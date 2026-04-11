@@ -57,6 +57,9 @@ class PlanParticipantModel extends PlanParticipant {
     required super.planId,
     required super.userId,
     required super.joinedAt,
+    required super.status,
+    super.invitedBy,
+    super.respondedAt,
   });
 
   factory PlanParticipantModel.fromJson(Map<String, dynamic> json) {
@@ -65,10 +68,28 @@ class PlanParticipantModel extends PlanParticipant {
       planId: json['plan_id'] as String,
       userId: json['user_id'] as String,
       joinedAt: DateTime.parse(json['joined_at'] as String),
+      status: _parseParticipantStatus(json['status'] as String?),
+      invitedBy: json['invited_by'] as String?,
+      respondedAt: json['responded_at'] != null
+          ? DateTime.parse(json['responded_at'] as String)
+          : null,
     );
   }
 
-  Map<String, dynamic> toInsertJson() => {'plan_id': planId, 'user_id': userId};
+  Map<String, dynamic> toInsertJson() => {
+    'plan_id': planId,
+    'user_id': userId,
+    'status': status.name,
+    'invited_by': invitedBy,
+  };
+
+  static PlanParticipationStatus _parseParticipantStatus(String? value) {
+    return switch (value) {
+      'accepted' => PlanParticipationStatus.accepted,
+      'declined' => PlanParticipationStatus.declined,
+      _ => PlanParticipationStatus.pending,
+    };
+  }
 }
 
 class PlanVoteModel extends PlanVote {
@@ -94,5 +115,31 @@ class PlanVoteModel extends PlanVote {
     'plan_id': planId,
     'user_id': userId,
     'location_id': locationId,
+  };
+}
+
+class PlanLocationSuggestionModel extends PlanLocationSuggestion {
+  const PlanLocationSuggestionModel({
+    required super.id,
+    required super.planId,
+    required super.locationId,
+    required super.suggestedBy,
+    required super.suggestedAt,
+  });
+
+  factory PlanLocationSuggestionModel.fromJson(Map<String, dynamic> json) {
+    return PlanLocationSuggestionModel(
+      id: json['id'] as String,
+      planId: json['plan_id'] as String,
+      locationId: json['location_id'] as String,
+      suggestedBy: json['suggested_by'] as String,
+      suggestedAt: DateTime.parse(json['suggested_at'] as String),
+    );
+  }
+
+  Map<String, dynamic> toInsertJson() => {
+    'plan_id': planId,
+    'location_id': locationId,
+    'suggested_by': suggestedBy,
   };
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sponti/config/routes/route_name.dart';
 import 'package:sponti/core/theme/app_colors.dart';
 import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
+import 'package:sponti/features/locations/utils/location_explore_cache.dart';
 import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 import 'package:sponti/features/profile/model/user_profile.dart';
 import 'package:sponti/features/profile/viewmodel/profile_viewmodel.dart';
@@ -17,6 +18,7 @@ void _invalidateReviewProviders(WidgetRef ref, String locationId) {
   ref.invalidate(reviewsStreamProvider(locationId));
   ref.invalidate(myReviewForLocationProvider(locationId));
   ref.invalidate(locationDetailProvider(locationId));
+  invalidateLocationExploreRankingCaches(ref.invalidate);
 }
 
 class ReviewCard extends ConsumerStatefulWidget {
@@ -35,6 +37,12 @@ class ReviewCard extends ConsumerStatefulWidget {
 
 class _ReviewCardState extends ConsumerState<ReviewCard> {
   bool _isDeleting = false;
+
+  void _navigateToReviewerProfile() {
+    final userId = widget.review.userId;
+    if (userId.isEmpty) return;
+    context.push(RouteName.userProfilePath(userId));
+  }
 
   Future<void> _openEdit() async {
     final didChange = await context.push<bool>(
@@ -112,6 +120,7 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
         _ReviewerAvatar(
           reviewer: reviewer,
           fallbackName: reviewerName,
+          onTap: _navigateToReviewerProfile,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -157,12 +166,31 @@ class _ReviewCardState extends ConsumerState<ReviewCard> {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            reviewerName,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: SpontiColors.textPrimary,
+                          child: Tooltip(
+                            message: 'View profile',
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _navigateToReviewerProfile,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 2,
+                                    horizontal: 2,
+                                  ),
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      reviewerName,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                        color: SpontiColors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -255,10 +283,12 @@ class _ReviewerAvatar extends StatelessWidget {
   const _ReviewerAvatar({
     required this.reviewer,
     required this.fallbackName,
+    required this.onTap,
   });
 
   final UserProfile? reviewer;
   final String fallbackName;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -266,28 +296,39 @@ class _ReviewerAvatar extends StatelessWidget {
         ? '?'
         : fallbackName.replaceFirst('@', '').trim()[0].toUpperCase();
 
-    return Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return Tooltip(
+      message: 'View profile',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: reviewer?.hasAvatar == true
+                  ? CachedNetworkImage(
+                      imageUrl: reviewer!.avatarUrl!,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, _, _) =>
+                          _AvatarFallback(initials: initials),
+                    )
+                  : _AvatarFallback(initials: initials),
+            ),
           ),
-        ],
-      ),
-      child: ClipOval(
-        child: reviewer?.hasAvatar == true
-            ? CachedNetworkImage(
-                imageUrl: reviewer!.avatarUrl!,
-                fit: BoxFit.cover,
-                errorWidget: (_, _, _) => _AvatarFallback(initials: initials),
-              )
-            : _AvatarFallback(initials: initials),
+        ),
       ),
     );
   }

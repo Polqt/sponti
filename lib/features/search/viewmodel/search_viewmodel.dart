@@ -18,6 +18,28 @@ String _searchCacheKey(String query, {required bool useRankedSearch}) {
   return '$strategy::$normalized';
 }
 
+final class _SearchTerms {
+  const _SearchTerms(this.normalized, this.tokens);
+
+  final String normalized;
+  final List<String> tokens;
+
+  factory _SearchTerms.fromQuery(String query) {
+    final normalized = normalizeSearchQuery(query).toLowerCase();
+    if (normalized.isEmpty) {
+      return const _SearchTerms('', <String>[]);
+    }
+
+    return _SearchTerms(
+      normalized,
+      normalized
+          .split(' ')
+          .where((token) => token.isNotEmpty)
+          .toList(growable: false),
+    );
+  }
+}
+
 String _normalizedSearchText(String value) =>
     normalizeSearchQuery(value).toLowerCase();
 
@@ -39,16 +61,6 @@ List<Location> _dedupeLocations(List<Location> locations) {
   }
 
   return List.unmodifiable(uniqueLocations.values);
-}
-
-List<String> _queryTokens(String query) {
-  final normalized = normalizeSearchQuery(query).toLowerCase();
-  if (normalized.isEmpty) return const <String>[];
-
-  return normalized
-      .split(' ')
-      .where((token) => token.isNotEmpty)
-      .toList(growable: false);
 }
 
 int _scoreTextMatch(String text, String query, List<String> tokens) {
@@ -97,12 +109,15 @@ int _locationSearchScore(Location location, String query, List<String> tokens) {
 
 List<Location> _rankLocations(List<Location> locations, String query) {
   final uniqueLocations = _dedupeLocations(locations);
-  final normalizedQuery = normalizeSearchQuery(query).toLowerCase();
-  final tokens = _queryTokens(normalizedQuery);
+  final terms = _SearchTerms.fromQuery(query);
   final rankedLocations = uniqueLocations.toList(growable: true);
   final scoreByLocationId = <String, int>{
     for (final location in rankedLocations)
-      location.id: _locationSearchScore(location, normalizedQuery, tokens),
+      location.id: _locationSearchScore(
+        location,
+        terms.normalized,
+        terms.tokens,
+      ),
   };
 
   rankedLocations.sort((left, right) {

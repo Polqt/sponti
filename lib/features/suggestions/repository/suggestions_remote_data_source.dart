@@ -59,6 +59,8 @@ class SuggestionsRemoteDataSourceImpl implements SuggestionsRemoteDataSource {
       'address': suggestion.address,
       'latitude': suggestion.latitude,
       'longitude': suggestion.longitude,
+      'status': suggestion.status,
+      if (suggestion.locationId != null) 'location_id': suggestion.locationId,
     });
   }
 
@@ -73,6 +75,8 @@ class SuggestionsRemoteDataSourceImpl implements SuggestionsRemoteDataSource {
           'address': suggestion.address,
           'latitude': suggestion.latitude,
           'longitude': suggestion.longitude,
+          'status': suggestion.status,
+          if (suggestion.locationId != null) 'location_id': suggestion.locationId,
         })
         .eq('id', suggestion.id)
         .eq('user_id', _currentUserId);
