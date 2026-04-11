@@ -34,7 +34,7 @@ class MapPinRow extends StatelessWidget {
               child: Text(
                 hasPin
                     ? '${latitude!.toStringAsFixed(5)}, ${longitude!.toStringAsFixed(5)}'
-                    : 'drop a pin on map (optional)',
+                    : 'drop a pin on the map (required)',
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,

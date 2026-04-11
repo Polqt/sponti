@@ -1,9 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sponti/features/locations/model/coordinates_model.dart';
+import 'package:sponti/features/locations/model/location.dart';
+import 'package:sponti/features/locations/model/location_model.dart';
+import 'package:sponti/features/locations/utils/location_explore_cache.dart';
+import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
+import 'package:sponti/features/suggestions/model/suggestion_model.dart';
 import 'package:sponti/features/suggestions/repository/suggestions_remote_data_source.dart';
 import 'package:sponti/features/suggestions/repository/suggestions_repository_impl.dart';
-import 'package:sponti/features/suggestions/model/suggestion_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // DI chain
@@ -53,16 +58,69 @@ class SubmitSuggestionNotifier extends AsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
 
+  /// Creates a [locations] row (map pin) then a linked [suggestions] row.
   Future<void> submit(SuggestionModel suggestion) async {
     state = const AsyncLoading();
-    final result = await ref
-        .read(suggestionsRepositoryProvider)
-        .insertSuggestion(suggestion);
-    state = result.fold(
-      (failure) => AsyncError(failure.message, StackTrace.current),
-      (_) {
-        ref.invalidate(mySuggestionsProvider);
-        return const AsyncData(null);
+
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      state = AsyncError('You must be logged in.', StackTrace.current);
+      return;
+    }
+    if (suggestion.latitude == null || suggestion.longitude == null) {
+      state = AsyncError(
+        'Drop a map pin so the spot can appear on the map.',
+        StackTrace.current,
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    final locationEntity = Location(
+      id: '',
+      name: suggestion.name.trim(),
+      description: (suggestion.description ?? '').trim(),
+      category: LocationCategory.fromString(suggestion.category),
+      coordinates: CoordinatesModel(
+        latitude: suggestion.latitude!,
+        longitude: suggestion.longitude!,
+      ),
+      address: suggestion.address.trim(),
+      priceRange: PriceRange.budget,
+      photoUrls: const [],
+      createdAt: now,
+      submittedBy: user.id,
+      isSeeded: true,
+      seededAt: now,
+    );
+    final locationModel = LocationModel.fromEntity(locationEntity);
+
+    final locationRepo = ref.read(locationRepositoryProvider);
+    final createdEither = await locationRepo.createLocation(locationModel);
+
+    await createdEither.fold<Future<void>>(
+      (failure) async {
+        state = AsyncError(failure.message, StackTrace.current);
+      },
+      (created) async {
+        final suggestionRow = suggestion.copyWith(
+          locationId: created.id,
+          status: 'approved',
+        );
+        final insertResult = await ref
+            .read(suggestionsRepositoryProvider)
+            .insertSuggestion(suggestionRow);
+        await insertResult.fold<Future<void>>(
+          (failure) async {
+            await locationRepo.deleteLocation(created.id);
+            state = AsyncError(failure.message, StackTrace.current);
+          },
+          (_) async {
+            invalidateLocationExploreRankingCaches(ref.invalidate);
+            ref.invalidate(mySuggestionsProvider);
+            state = const AsyncData(null);
+          },
+        );
       },
     );
   }

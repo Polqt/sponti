@@ -11,6 +11,7 @@ class SuggestionModel {
     this.longitude,
     this.reason,
     this.status = 'pending',
+    this.locationId,
   });
 
   final String id;
@@ -24,6 +25,8 @@ class SuggestionModel {
   final String? reason;
   final String status;
   final DateTime createdAt;
+  /// Published [locations] row when the suggestion was promoted to the map.
+  final String? locationId;
 
   factory SuggestionModel.fromJson(Map<String, dynamic> json) {
     return SuggestionModel(
@@ -37,6 +40,7 @@ class SuggestionModel {
       longitude: (json['longitude'] as num?)?.toDouble(),
       reason: json['reason'] as String?,
       status: json['status'] as String? ?? 'pending',
+      locationId: json['location_id'] as String?,
       createdAt:
           DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
@@ -55,6 +59,7 @@ class SuggestionModel {
       'longitude': longitude,
       'reason': reason,
       'status': status,
+      if (locationId != null) 'location_id': locationId,
       'created_at': createdAt.toUtc().toIso8601String(),
     };
   }
@@ -71,10 +76,12 @@ class SuggestionModel {
     String? reason,
     String? status,
     DateTime? createdAt,
+    String? locationId,
     bool clearDescription = false,
     bool clearLatitude = false,
     bool clearLongitude = false,
     bool clearReason = false,
+    bool clearLocationId = false,
   }) {
     return SuggestionModel(
       id: id ?? this.id,
@@ -88,6 +95,7 @@ class SuggestionModel {
       reason: clearReason ? null : (reason ?? this.reason),
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      locationId: clearLocationId ? null : (locationId ?? this.locationId),
     );
   }
 }

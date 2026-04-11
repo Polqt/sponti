@@ -116,6 +116,13 @@ class LocationModel extends Location {
     if (instagramHandle != null) map['instagram_handle'] = instagramHandle;
     if (submittedBy != null) map['submitted_by'] = submittedBy;
 
+    if (isSeeded) {
+      map['is_seeded'] = true;
+      if (seededAt != null) {
+        map['seeded_at'] = seededAt!.toUtc().toIso8601String();
+      }
+    }
+
     if (operatingHours != null) {
       map['open_time'] = operatingHours!.openTime;
       map['close_time'] = operatingHours!.closeTime;

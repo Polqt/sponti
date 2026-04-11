@@ -4,6 +4,16 @@ import 'package:sponti/features/explore/viewmodel/explore_viewmodel.dart';
 import 'package:sponti/features/locations/model/location.dart';
 import 'package:sponti/features/locations/utils/location_ranking_standards.dart';
 
+/// Community-submitted locations stay in the Lowkey tier until engagement
+/// crosses the same floors used elsewhere for trending / popular / reviews.
+bool _communitySubmissionGraduated(Location location) {
+  return location.checkInCount >=
+          LocationRankingStandards.trendingMinLifetimeCheckIns ||
+      location.favoriteCount >= LocationRankingStandards.popularMinFavorites ||
+      location.reviewCount >=
+          LocationRankingStandards.popularMinReviewsAbsolute;
+}
+
 enum LocationRanking {
   trending,
   popular,
@@ -76,6 +86,10 @@ class LocationRankingSnapshot {
       location.favoriteCount > 0;
 
   LocationRanking? rankingFor(Location location) {
+    if (location.submittedBy != null && !_communitySubmissionGraduated(location)) {
+      return LocationRanking.lowkey;
+    }
+
     final relevantDate = location.seededAt ?? location.createdAt;
     final isRecentSeeded =
         location.isSeeded && relevantDate.isAfter(thirtyDaysAgo);
