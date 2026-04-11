@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:sponti/config/routes/route_name.dart';
+import 'package:sponti/core/providers/connectivity_provider.dart';
 import 'package:sponti/core/theme/app_colors.dart';
+import 'package:sponti/features/auth/viewmodel/auth_viewmodel.dart';
+import 'package:sponti/features/friends/view/widgets/invite_friends_modal.dart';
 import 'package:sponti/features/group_plans/models/group_plan.dart';
+import 'package:sponti/features/group_plans/view/widgets/group_plan_detail_actions.dart';
+import 'package:sponti/features/group_plans/view/widgets/group_plan_detail_invite_widgets.dart';
+import 'package:sponti/features/group_plans/view/widgets/group_plan_detail_result_banners.dart';
+import 'package:sponti/features/group_plans/view/widgets/group_plan_detail_sections.dart';
+import 'package:sponti/features/group_plans/view/widgets/group_plan_offline_banner.dart';
+import 'package:sponti/features/group_plans/view/widgets/group_plan_page_header.dart';
 import 'package:sponti/features/group_plans/view/widgets/vote_card.dart';
 import 'package:sponti/features/group_plans/viewmodel/group_plans_viewmodel.dart';
-import 'package:sponti/features/friends/view/widgets/invite_friends_modal.dart';
-import 'package:sponti/features/locations/viewmodel/location_viewmodel.dart';
 
 class GroupPlanDetailScreen extends ConsumerWidget {
   const GroupPlanDetailScreen({required this.planId, super.key});
@@ -20,7 +25,9 @@ class GroupPlanDetailScreen extends ConsumerWidget {
     final voteCounts = ref.watch(planVoteCountsProvider(planId));
     final candidateIds = ref.watch(planCandidateIdsProvider(planId));
     final winner = ref.watch(planWinnerProvider(planId));
-    final totalVotes = voteCounts.values.fold(0, (a, b) => a + b);
+    final totalVotes = voteCounts.values.fold(0, (sum, value) => sum + value);
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final isOnline = ref.watch(connectivityProvider).valueOrNull ?? true;
 
     return Scaffold(
       backgroundColor: SpontiColors.surface,
@@ -41,55 +48,51 @@ class GroupPlanDetailScreen extends ConsumerWidget {
               return const Center(child: Text('Plan not found'));
             }
 
+            final currentParticipant = state.participantForUser(currentUserId);
+            final isCreator = currentUserId == plan.createdBy;
+            final canRespondToInvite =
+                plan.status == PlanStatus.voting &&
+                currentParticipant?.isPending == true;
+            final hasDeclinedInvite = currentParticipant?.isDeclined == true;
+            final canParticipate =
+                plan.status == PlanStatus.voting &&
+                (isCreator || currentParticipant?.isAccepted == true);
+            final canVote = isOnline && canParticipate;
+            final acceptedParticipantCount =
+                state.participants
+                    .where((participant) => participant.isAccepted)
+                    .length +
+                1;
+
             return Column(
               children: [
+                GroupPlanPageHeader(title: plan.name),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed: () => context.pop(),
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 20,
-                        ),
-                        style: IconButton.styleFrom(
-                          foregroundColor: SpontiColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              plan.name,
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.4,
-                                  ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            _StatusRow(
-                              plan: plan,
-                              participantCount: state.participants.length,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: GroupPlanStatusRow(
+                      plan: plan,
+                      acceptedParticipantCount: acceptedParticipantCount,
+                      invitedParticipantCount: state.participants.length,
+                    ),
                   ),
                 ),
+                if (!isOnline)
+                  const GroupPlanOfflineBanner(
+                    message:
+                        'You are offline. Group plan details are read-only until the connection returns.',
+                  ),
                 if (plan.description.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                    child: Text(
-                      plan.description,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: SpontiColors.textSecondary,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        plan.description,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: SpontiColors.textSecondary,
+                        ),
                       ),
                     ),
                   ),
@@ -100,17 +103,59 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Voting section
+                        if (canRespondToInvite) ...[
+                          GroupPlanInviteResponseCard(
+                            isLoading: state.isLoading,
+                            isEnabled: isOnline,
+                            onAccept: () => ref
+                                .read(groupPlanDetailProvider(planId).notifier)
+                                .respondToInvite(
+                                  PlanParticipationStatus.accepted,
+                                ),
+                            onDecline: () => ref
+                                .read(groupPlanDetailProvider(planId).notifier)
+                                .respondToInvite(
+                                  PlanParticipationStatus.declined,
+                                ),
+                          ),
+                          const SizedBox(height: 16),
+                        ] else if (hasDeclinedInvite) ...[
+                          const GroupPlanInfoBanner(
+                            icon: Icons.block_rounded,
+                            title: 'Invite declined',
+                            subtitle:
+                                'You declined this plan invite, so voting is disabled for you.',
+                            color: SpontiColors.error,
+                          ),
+                          const SizedBox(height: 16),
+                        ] else if (!isCreator &&
+                            currentParticipant?.isAccepted == true) ...[
+                          const GroupPlanInfoBanner(
+                            icon: Icons.verified_rounded,
+                            title: 'You joined the plan',
+                            subtitle:
+                                'You can suggest another spot and vote on the current options.',
+                            color: SpontiColors.success,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         if (plan.status == PlanStatus.voting) ...[
-                          _SectionLabel(
+                          GroupPlanSectionLabel(
                             icon: Icons.how_to_vote_rounded,
-                            label: candidateIds.isEmpty
+                            label: !isOnline
+                                ? 'Reconnect to suggest or vote'
+                                : !canParticipate
+                                ? 'Voting opens after you accept the invite'
+                                : candidateIds.isEmpty
                                 ? 'Be the first to vote'
                                 : '${candidateIds.length} location${candidateIds.length == 1 ? '' : 's'} nominated',
                           ),
                           const SizedBox(height: 12),
                           if (candidateIds.isEmpty)
-                            _EmptyVoteHint(planId: planId)
+                            GroupPlanEmptyVoteHint(
+                              isOnline: isOnline,
+                              canParticipate: canParticipate,
+                            )
                           else
                             ...candidateIds.map(
                               (locationId) => VoteCard(
@@ -120,55 +165,62 @@ class GroupPlanDetailScreen extends ConsumerWidget {
                                 isUserVote:
                                     state.userVote?.locationId == locationId,
                                 isWinner: winner == locationId,
-                                onVote: () => ref
-                                    .read(groupPlanDetailProvider(planId).notifier)
-                                    .vote(locationId),
+                                isVotingEnabled: canVote,
+                                onVote: canVote
+                                    ? () => ref
+                                          .read(
+                                            groupPlanDetailProvider(
+                                              planId,
+                                            ).notifier,
+                                          )
+                                          .vote(locationId)
+                                    : null,
                               ),
                             ),
                           const SizedBox(height: 16),
-                          // Add location button
-                          _AddLocationButton(planId: planId),
+                          GroupPlanAddLocationButton(
+                            planId: planId,
+                            canParticipate: canParticipate,
+                            isOnline: isOnline,
+                          ),
                         ],
-                        // Decided banner
                         if (plan.status == PlanStatus.decided)
-                          _DecidedBanner(
+                          GroupPlanDecidedBanner(
                             winningLocationId: plan.winningLocationId,
                           ),
-                        // Cancelled banner
                         if (plan.status == PlanStatus.cancelled)
-                          _CancelledBanner(),
+                          const GroupPlanCancelledBanner(),
+                        if (state.participants.isNotEmpty) ...[
+                          const SizedBox(height: 18),
+                          const GroupPlanSectionLabel(
+                            icon: Icons.group_rounded,
+                            label: 'Invite progress',
+                          ),
+                          const SizedBox(height: 12),
+                          GroupPlanParticipantStatusSummary(
+                            participants: state.participants,
+                          ),
+                        ],
                         if (state.errorMessage != null)
+                          if (!(isOnline == false &&
+                              state.errorMessage ==
+                                  'You are offline. Group plans are read-only until the connection returns.'))
                           Padding(
                             padding: const EdgeInsets.only(top: 12),
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: SpontiColors.error.withValues(alpha: 0.06),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: SpontiColors.error.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: Text(
-                                state.errorMessage!,
-                                style: const TextStyle(
-                                  color: SpontiColors.error,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
+                            child: _ErrorCard(message: state.errorMessage!),
                           ),
                       ],
                     ),
                   ),
                 ),
                 if (plan.status == PlanStatus.voting)
-                  _BottomActions(
+                  GroupPlanBottomActions(
                     planId: planId,
                     winner: winner,
                     isLoading: state.isLoading,
-                    existingParticipantIds:
-                        state.participants.toIdSet(),
+                    existingParticipantIds: state.participants.toIdSet(),
+                    canManagePlan: isCreator,
+                    isOnline: isOnline,
                     ref: ref,
                     context: context,
                   ),
@@ -181,455 +233,23 @@ class GroupPlanDetailScreen extends ConsumerWidget {
   }
 }
 
-class _StatusRow extends StatelessWidget {
-  const _StatusRow({required this.plan, required this.participantCount});
+class _ErrorCard extends StatelessWidget {
+  const _ErrorCard({required this.message});
 
-  final GroupPlan plan;
-  final int participantCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final statusStyle = _statusStyle(plan.status);
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-          decoration: BoxDecoration(
-            color: statusStyle.$1.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            statusStyle.$2,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: statusStyle.$1,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Icon(
-          Icons.people_alt_rounded,
-          size: 13,
-          color: SpontiColors.textMuted,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          '$participantCount ${participantCount == 1 ? 'member' : 'members'}',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: SpontiColors.textMuted,
-          ),
-        ),
-      ],
-    );
-  }
-
-  (Color, String) _statusStyle(PlanStatus s) => switch (s) {
-    PlanStatus.voting => (SpontiColors.info, 'Voting open'),
-    PlanStatus.decided => (SpontiColors.success, 'Decided'),
-    PlanStatus.cancelled => (SpontiColors.error, 'Cancelled'),
-  };
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 15, color: SpontiColors.textSecondary),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: SpontiColors.textSecondary,
-            letterSpacing: 0.2,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _EmptyVoteHint extends StatelessWidget {
-  const _EmptyVoteHint({required this.planId});
-
-  final String planId;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: SpontiColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: SpontiColors.outline),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: SpontiColors.info.withValues(alpha: 0.10),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.add_location_alt_rounded,
-              size: 26,
-              color: SpontiColors.info,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'No locations yet',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: SpontiColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Search for a spot below and add your vote.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: SpontiColors.textSecondary,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AddLocationButton extends StatelessWidget {
-  const _AddLocationButton({required this.planId});
-
-  final String planId;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push(RouteName.searchVotePath(planId)),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 15),
-        decoration: BoxDecoration(
-          color: SpontiColors.primary,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: SpontiColors.primary.withValues(alpha: 0.28),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.add_location_alt_rounded,
-              size: 18,
-              color: Colors.white,
-            ),
-            SizedBox(width: 8),
-            Text(
-              'Search & vote for a location',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomActions extends StatelessWidget {
-  const _BottomActions({
-    required this.planId,
-    required this.winner,
-    required this.isLoading,
-    required this.existingParticipantIds,
-    required this.ref,
-    required this.context,
-  });
-
-  final String planId;
-  final String? winner;
-  final bool isLoading;
-  final Set<String> existingParticipantIds;
-  final WidgetRef ref;
-  final BuildContext context;
-
-  @override
-  Widget build(BuildContext _) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => InviteFriendsModal.show(
-                  context,
-                  planId: planId,
-                  existingParticipantIds: existingParticipantIds,
-                ),
-                icon: const Icon(Icons.person_add_rounded, size: 16),
-                label: const Text('Invite Friends'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: SpontiColors.secondary,
-                  side: const BorderSide(color: SpontiColors.secondary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  textStyle: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (winner != null)
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton.icon(
-                  onPressed: isLoading
-                      ? null
-                      : () => ref
-                            .read(groupPlanDetailProvider(planId).notifier)
-                            .decidePlan(winner!),
-                  icon: const Icon(Icons.check_circle_rounded, size: 18),
-                  label: const Text('Lock in the winner'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: SpontiColors.success,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    textStyle: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-              ),
-            if (winner != null) const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: isLoading
-                    ? null
-                    : () async {
-                        final confirmed = await _confirmCancel(context);
-                        if (confirmed) {
-                          final ok = await ref
-                              .read(groupPlanDetailProvider(planId).notifier)
-                              .cancelPlan();
-                          if (ok && context.mounted) context.pop();
-                        }
-                      },
-                style: TextButton.styleFrom(
-                  foregroundColor: SpontiColors.textMuted,
-                  textStyle: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                child: const Text('Cancel this plan'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<bool> _confirmCancel(BuildContext ctx) async {
-    return await showDialog<bool>(
-          context: ctx,
-          builder: (_) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: const Text(
-              'Cancel plan?',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-            content: const Text(
-              'This cannot be undone. Everyone in the plan will lose their votes.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Keep it'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                style: TextButton.styleFrom(
-                  foregroundColor: SpontiColors.error,
-                ),
-                child: const Text('Yes, cancel'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-  }
-}
-
-class _DecidedBanner extends ConsumerWidget {
-  const _DecidedBanner({required this.winningLocationId});
-
-  final String? winningLocationId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final locationName = winningLocationId != null
-        ? ref
-              .watch(locationDetailProvider(winningLocationId!))
-              .valueOrNull
-              ?.name
-        : null;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: SpontiColors.success.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: SpontiColors.success.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: SpontiColors.success.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.check_circle_rounded,
-              color: SpontiColors.success,
-              size: 28,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "You're going here!",
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: SpontiColors.success,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            locationName ?? winningLocationId ?? '—',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: SpontiColors.textPrimary,
-            ),
-          ),
-          if (winningLocationId != null) ...[
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => context.push(
-                  RouteName.locationDetailPath(winningLocationId!),
-                ),
-                icon: const Icon(Icons.place_rounded, size: 16),
-                label: const Text('View location'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: SpontiColors.success,
-                  side: BorderSide(
-                    color: SpontiColors.success.withValues(alpha: 0.5),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _CancelledBanner extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: SpontiColors.error.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: SpontiColors.error.withValues(alpha: 0.25),
-        ),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: SpontiColors.error.withValues(alpha: 0.2)),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: SpontiColors.error.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.cancel_rounded,
-              color: SpontiColors.error,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Plan cancelled',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: SpontiColors.error,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'This plan was cancelled and is no longer active.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: SpontiColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: Text(
+        message,
+        style: const TextStyle(color: SpontiColors.error, fontSize: 13),
       ),
     );
   }

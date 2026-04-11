@@ -39,6 +39,17 @@ class GroupPlansRepositoryImpl extends BaseRepository
   ) => guard(() => _remote.getPlanParticipants(planId));
 
   @override
+  Future<Either<Failure, void>> respondToInvite({
+    required String planId,
+    required PlanParticipationStatus status,
+  }) => guard(() => _remote.respondToInvite(planId: planId, status: status));
+
+  @override
+  Future<Either<Failure, List<PlanLocationSuggestion>>> getPlanSuggestions(
+    String planId,
+  ) => guard(() => _remote.getPlanSuggestions(planId));
+
+  @override
   Future<Either<Failure, void>> vote({
     required String planId,
     required String locationId,

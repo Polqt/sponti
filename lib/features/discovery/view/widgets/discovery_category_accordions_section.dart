@@ -47,8 +47,6 @@ class DiscoveryCategoryAccordionsSection extends ConsumerWidget {
               DiscoveryCategoryAccordionTile(
                 category: discoveryCategories[index],
                 isExpanded: state.isCategoryExpanded(discoveryCategories[index]),
-                isFirst: index == 0,
-                isLast: index == discoveryCategories.length - 1,
                 onTap: () => notifier.toggleCategory(discoveryCategories[index]),
               ),
             ],
@@ -64,15 +62,11 @@ class DiscoveryCategoryAccordionTile extends StatelessWidget {
     super.key,
     required this.category,
     required this.isExpanded,
-    required this.isFirst,
-    required this.isLast,
     required this.onTap,
   });
 
   final LocationCategory category;
   final bool isExpanded;
-  final bool isFirst;
-  final bool isLast;
   final VoidCallback onTap;
 
   @override

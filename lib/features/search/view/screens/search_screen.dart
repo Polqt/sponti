@@ -202,11 +202,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 onLocationTap: (location) async {
                                   final planId = widget.voteForPlanId;
                                   if (planId != null) {
-                                    await ref
+                                    final didVote = await ref
                                         .read(groupPlanDetailProvider(planId).notifier)
                                         .vote(location.id);
                                     if (!context.mounted) return;
-                                    context.pop();
+                                    if (didVote) {
+                                      context.pop();
+                                    } else {
+                                      final message = ref
+                                          .read(groupPlanDetailProvider(planId))
+                                          .valueOrNull
+                                          ?.errorMessage;
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            message ?? 'Could not cast vote.',
+                                          ),
+                                        ),
+                                      );
+                                    }
                                   } else {
                                     context.push(
                                       RouteName.locationDetailPath(location.id),

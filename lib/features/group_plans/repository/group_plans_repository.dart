@@ -21,6 +21,15 @@ abstract interface class GroupPlansRepository {
     String planId,
   );
 
+  Future<Either<Failure, void>> respondToInvite({
+    required String planId,
+    required PlanParticipationStatus status,
+  });
+
+  Future<Either<Failure, List<PlanLocationSuggestion>>> getPlanSuggestions(
+    String planId,
+  );
+
   Future<Either<Failure, void>> vote({
     required String planId,
     required String locationId,

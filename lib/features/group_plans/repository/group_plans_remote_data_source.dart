@@ -18,6 +18,13 @@ abstract interface class GroupPlansRemoteDataSource {
 
   Future<List<PlanParticipant>> getPlanParticipants(String planId);
 
+  Future<void> respondToInvite({
+    required String planId,
+    required PlanParticipationStatus status,
+  });
+
+  Future<List<PlanLocationSuggestion>> getPlanSuggestions(String planId);
+
   Future<void> vote({required String planId, required String locationId});
 
   Future<List<PlanVote>> getPlanVotes(String planId);
@@ -136,11 +143,20 @@ class GroupPlansRemoteDataSourceImpl implements GroupPlansRemoteDataSource {
     required String userId,
   }) async {
     try {
+      final inviterId = _client.auth.currentUser?.id;
+      if (inviterId == null) {
+        throw const AuthException(
+          'You must be signed in to invite participants.',
+        );
+      }
+
       final model = PlanParticipantModel(
         id: '',
         planId: planId,
         userId: userId,
         joinedAt: DateTime.now(),
+        status: PlanParticipationStatus.pending,
+        invitedBy: inviterId,
       );
 
       await _client
@@ -173,6 +189,57 @@ class GroupPlansRemoteDataSourceImpl implements GroupPlansRemoteDataSource {
   }
 
   @override
+  Future<void> respondToInvite({
+    required String planId,
+    required PlanParticipationStatus status,
+  }) async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw const AuthException(
+          'You must be signed in to respond to this invite.',
+        );
+      }
+
+      await _client
+          .from(SupabaseTables.planParticipants)
+          .update({
+            'status': status.name,
+            'responded_at': DateTime.now().toIso8601String(),
+          })
+          .eq('plan_id', planId)
+          .eq('user_id', userId);
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<List<PlanLocationSuggestion>> getPlanSuggestions(String planId) async {
+    try {
+      final response = await _client
+          .from(SupabaseTables.planLocationSuggestions)
+          .select()
+          .eq('plan_id', planId)
+          .order('suggested_at', ascending: true);
+
+      return (response as List<dynamic>)
+          .map(
+            (item) => PlanLocationSuggestionModel.fromJson(
+              item as Map<String, dynamic>,
+            ),
+          )
+          .toList(growable: false);
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
   Future<void> vote({
     required String planId,
     required String locationId,
@@ -181,6 +248,27 @@ class GroupPlansRemoteDataSourceImpl implements GroupPlansRemoteDataSource {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) {
         throw const AuthException('You must be signed in to vote.');
+      }
+
+      final suggestion = PlanLocationSuggestionModel(
+        id: '',
+        planId: planId,
+        locationId: locationId,
+        suggestedBy: userId,
+        suggestedAt: DateTime.now(),
+      );
+
+      try {
+        await _client
+            .from(SupabaseTables.planLocationSuggestions)
+            .insert(suggestion.toInsertJson());
+      } on PostgrestException catch (e) {
+        final isDuplicateSuggestion =
+            e.code == '23505' ||
+            e.message.toLowerCase().contains('duplicate key value');
+        if (!isDuplicateSuggestion) {
+          throw ServerException(e.message);
+        }
       }
 
       final model = PlanVoteModel(

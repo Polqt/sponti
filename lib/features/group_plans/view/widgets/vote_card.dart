@@ -12,7 +12,8 @@ class VoteCard extends ConsumerWidget {
     required this.totalVotes,
     required this.isUserVote,
     required this.isWinner,
-    required this.onVote,
+    required this.isVotingEnabled,
+    this.onVote,
     super.key,
   });
 
@@ -21,13 +22,14 @@ class VoteCard extends ConsumerWidget {
   final int totalVotes;
   final bool isUserVote;
   final bool isWinner;
-  final VoidCallback onVote;
+  final bool isVotingEnabled;
+  final VoidCallback? onVote;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locationAsync = ref.watch(locationDetailProvider(locationId));
     final location = locationAsync.valueOrNull;
-    final locationName = location?.name ?? '…';
+    final locationName = location?.name ?? '...';
 
     final ratio = totalVotes > 0 ? voteCount / totalVotes : 0.0;
     final barColor = isWinner
@@ -53,7 +55,7 @@ class VoteCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(18),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: onVote,
+          onTap: isVotingEnabled ? onVote : null,
           splashColor: SpontiColors.primary.withValues(alpha: 0.06),
           child: Container(
             decoration: BoxDecoration(
@@ -67,17 +69,18 @@ class VoteCard extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
                   child: Row(
                     children: [
-                      // Thumbnail or gradient
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: SizedBox(
                           width: 48,
                           height: 48,
                           child: location != null
-                              ? (location.hasPhotos
-                                  ? _NetworkThumb(url: location.primaryPhoto,
-                                      category: location.category)
-                                  : CategoryGradient(category: location.category))
+                              ? location.hasPhotos
+                                  ? _NetworkThumb(
+                                      url: location.primaryPhoto,
+                                      category: location.category,
+                                    )
+                                  : CategoryGradient(category: location.category)
                               : Container(color: SpontiColors.surfaceVariant),
                         ),
                       ),
@@ -88,8 +91,7 @@ class VoteCard extends ConsumerWidget {
                           children: [
                             Text(
                               locationName,
-                              style: Theme.of(context).textTheme.titleSmall
-                                  ?.copyWith(
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: SpontiColors.textPrimary,
                                   ),
@@ -99,23 +101,23 @@ class VoteCard extends ConsumerWidget {
                             const SizedBox(height: 3),
                             Text(
                               '$voteCount vote${voteCount == 1 ? '' : 's'}',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: SpontiColors.textMuted),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: SpontiColors.textMuted,
+                                  ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 10),
-                      // Right side: badge or vote count bubble
                       if (isWinner)
                         _Badge(
-                          label: '🏆 Leading',
+                          label: 'Leading',
                           bg: SpontiColors.success.withValues(alpha: 0.12),
                           fg: SpontiColors.success,
                         )
                       else if (isUserVote)
                         _Badge(
-                          label: '✓ Voted',
+                          label: 'Voted',
                           bg: SpontiColors.primary.withValues(alpha: 0.10),
                           fg: SpontiColors.primary,
                         )
@@ -124,7 +126,6 @@ class VoteCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                // Progress bar
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                     bottom: Radius.circular(18),
@@ -198,7 +199,7 @@ class _VoteOrb extends StatelessWidget {
     return Container(
       width: 36,
       height: 36,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: SpontiColors.surfaceVariant,
         shape: BoxShape.circle,
       ),
